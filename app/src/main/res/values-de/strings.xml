@@ -15,6 +15,23 @@
     <string name="library_empty">Noch keine Texte in diesem Ordner</string>
     <string name="action_change_folder">Ordner wechseln</string>
 
+    <string name="editor_back">Zurück zur Liste</string>
+    <string name="editor_empty">Schreib etwas…</string>
+
+    <string name="format_bold">Fett</string>
+    <string name="format_italic">Kursiv</string>
+    <string name="format_heading">Überschrift</string>
+
+    <string name="editor_readonly_title">Dieser Text ist nur zum Lesen geöffnet</string>
+    <string name="editor_readonly_body">Pocket Prose kann nicht sicher sein, diesen Text unverändert zu speichern, und ändert ihn deshalb gar nicht. Du kannst ihn hier lesen und anderswo bearbeiten.</string>
+
+    <string name="conflict_title">Dieser Text wurde anderswo geändert</string>
+    <string name="conflict_body">Während du geschrieben hast, wurde dieser Text auf einem anderen Gerät bearbeitet. Pocket Prose hat keine der beiden Fassungen angetastet.</string>
+    <string name="conflict_keep_both">Beide behalten</string>
+    <string name="conflict_discard">Meine Änderungen verwerfen</string>
+
+    <string name="save_failed">Nicht gespeichert: %1$s</string>
+
     <string name="drawer_open">Schlagwörter anzeigen</string>
     <string name="drawer_all_notes">Alle Texte</string>
     <string name="drawer_tags">Schlagwörter</string>

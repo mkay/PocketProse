@@ -43,12 +43,17 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.text.input.TextFieldState
 import de.singular.writer.ui.DrawerWidth
+import de.singular.writer.ui.EditorScreen
+import de.singular.writer.ui.ConflictDialog
 import de.singular.writer.ui.LibraryScreen
 import de.singular.writer.ui.PocketProseTheme
 import de.singular.writer.ui.TagDrawer
+import de.singular.writer.vault.IndexedNote
 import de.singular.writer.vault.IndexDump
 import de.singular.writer.vault.NoteIndex
+import de.singular.writer.vault.SaveResult
 import de.singular.writer.vault.Vault
 import de.singular.writer.vault.VaultFailure
 import kotlinx.coroutines.launch
@@ -101,7 +106,20 @@ private fun PocketProseApp() {
     var searching by remember { mutableStateOf(false) }
     var selectedTag by remember { mutableStateOf<String?>(null) }
 
-    val drawerState = rememberDrawerState(DrawerValue.Closed)
+    // The note being written in, if any. Held as the uri rather than the IndexedNote so a refresh
+    // underneath us re-resolves it rather than pinning a stale copy.
+    var openNoteUri by remember { mutableStateOf<String?>(null) }
+    val openNote: IndexedNote? = remember(index, openNoteUri) {
+        openNoteUri?.let { uri -> index.notes.firstOrNull { it.file.uri.toString() == uri } }
+    }
+    // One buffer per note. Keyed on the uri so switching notes starts a fresh one, and not on the
+    // content, so a background refresh does not throw away what is being typed.
+    val editorState = remember(openNoteUri) { TextFieldState(openNote?.note?.body.orEmpty()) }
+
+    // A conflict holds the editor open with the user's text intact until they choose. Never
+    // overwrite, never merge — see SaveResult.Conflict.
+    var conflict by remember { mutableStateOf(false) }
+    var message by remember { mutableStateOf<String?>(null) }
 
     fun refresh() = scope.launch {
         val (loaded, failure) = vault.readAll()
@@ -116,6 +134,36 @@ private fun PocketProseApp() {
         // Debug builds only, and app-private — see IndexDump.
         IndexDump.write(context, loaded)
     }
+
+    /**
+     * Save the open note, if it needs saving.
+     *
+     * Called on leaving the editor and on the app going to the background — not on a timer and not
+     * on every keystroke. `Note.withBody` makes an unchanged body a no-op on disk, so the common
+     * case of opening a note and closing it writes nothing at all, which is what keeps the
+     * archive's dates intact.
+     */
+    suspend fun saveOpenNote(): Boolean {
+        val note = openNote ?: return true
+        return when (val result = vault.save(note, editorState.text.toString())) {
+            is SaveResult.Unchanged, is SaveResult.Refused -> true
+            is SaveResult.Saved -> {
+                // The uri changes: the swap in Vault.save deletes the old document and renames the
+                // temp into its place, and the provider hands the result a new document id. Without
+                // re-pointing here, backgrounding the app mid-note would leave this pointing at a
+                // document that no longer exists — the editor would close by itself on return, and
+                // anything typed after that would have nowhere to go.
+                openNoteUri = result.uri.toString()
+                refresh()
+                true
+            }
+            is SaveResult.Conflict -> { conflict = true; false }
+            is SaveResult.Failed -> { message = result.reason; false }
+        }
+    }
+
+    val drawerState = rememberDrawerState(DrawerValue.Closed)
+
 
     /**
      * `OpenDocumentTree` rather than a path. The app never proposes a location — no `Documents/`
@@ -138,7 +186,13 @@ private fun PocketProseApp() {
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_START) refresh()
+            when (event) {
+                Lifecycle.Event.ON_START -> refresh()
+                // Leaving the app is the other moment a note must reach disk. Without this, a note
+                // written and then swiped away would be lost.
+                Lifecycle.Event.ON_STOP -> scope.launch { saveOpenNote() }
+                else -> Unit
+            }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
@@ -160,6 +214,43 @@ private fun PocketProseApp() {
         query = ""
     }
     BackHandler(enabled = !drawerState.isOpen && !searching && selectedTag != null) { selectedTag = null }
+
+    if (openNote != null) {
+        fun leave() = scope.launch { if (saveOpenNote()) openNoteUri = null }
+
+        EditorScreen(
+            title = openNote.title,
+            body = editorState,
+            // The gate from phase 2: a note whose bytes the parser cannot reproduce is never
+            // written, because writing it would corrupt it. It is false for no note in the archive.
+            editable = openNote.roundTrips,
+            onBack = { leave() },
+            message = message,
+            onMessageShown = { message = null },
+        )
+        BackHandler { leave() }
+
+        if (conflict) {
+            ConflictDialog(
+                onKeepBoth = {
+                    scope.launch {
+                        val result = vault.saveCopy(openNote, editorState.text.toString())
+                        conflict = false
+                        if (result is SaveResult.Failed) message = result.reason else {
+                            refresh()
+                            openNoteUri = null
+                        }
+                    }
+                },
+                onDiscard = {
+                    conflict = false
+                    openNoteUri = null
+                    scope.launch { refresh() }
+                },
+            )
+        }
+        return
+    }
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -210,9 +301,7 @@ private fun PocketProseApp() {
             selectedTag = selectedTag,
             onOpenDrawer = { scope.launch { drawerState.open() } },
             onChooseFolder = { pickFolder.launch(null) },
-            // Phase 4. Tapping a note does nothing yet, deliberately: the editor is the one screen
-            // that writes, and it is not being wired up before it can do so safely.
-            onOpenNote = {},
+            onOpenNote = { openNoteUri = it.file.uri.toString() },
         )
     }
 }

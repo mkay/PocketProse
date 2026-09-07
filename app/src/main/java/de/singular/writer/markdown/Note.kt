@@ -2,6 +2,10 @@
 
 package de.singular.writer.markdown
 
+import java.time.Instant
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
+
 /**
  * A note, parsed — and able to give back the exact bytes it was made from.
  *
@@ -49,10 +53,56 @@ data class Note(
     /** The exact bytes this note was read from, when nothing has been changed. */
     fun render(): String = frontmatter.raw + body
 
+    /**
+     * This note with a new body and a fresh `updated` stamp.
+     *
+     * **Returns `null` when [newBody] is identical to the current one.** That is the whole point:
+     * `CLAUDE.md` forbids touching a file the app did not need to write, and an editor that stamps
+     * `updated` every time a note is opened and closed would rewrite the entire archive within a
+     * week of use — destroying exactly the history the archive is kept for. A no-op edit must be a
+     * no-op on disk, and the only reliable way to know is to compare the bytes.
+     *
+     * `created` is never touched. Only `updated` moves, and only here.
+     *
+     * The stamp is ISO 8601 UTC with milliseconds and a literal `Z`, matching what every note in the
+     * archive already carries — see the file format contract. It is passed in rather than read from
+     * the clock so this stays a pure function and the test can pin it.
+     */
+    fun withBody(newBody: String, now: Instant): Note? {
+        val kept = keepTrailingNewline(newBody)
+        if (kept == body) return null
+        return copy(frontmatter = frontmatter.withKey("updated", stamp(now)), body = kept)
+    }
+
+    /**
+     * Give [newBody] back its final newline, if the note had one.
+     *
+     * All 168 notes in the archive end with a newline, as text files have since Unix. The editor
+     * loses it the moment someone puts the cursor at the very end and types — the last line is then
+     * simply the last line, with nothing after it — and the file quietly becomes the one note in the
+     * folder that `diff` complains about.
+     *
+     * This restores a property the file already had rather than imposing one: a note that arrived
+     * without a trailing newline keeps arriving and leaving without one. Note that the comparison in
+     * [withBody] happens *after* this, so deleting the final newline and nothing else is correctly
+     * seen as no change at all, and writes nothing.
+     */
+    private fun keepTrailingNewline(newBody: String): String =
+        if (body.endsWith("\n") && newBody.isNotEmpty() && !newBody.endsWith("\n")) newBody + "\n" else newBody
+
     companion object {
+        private val STAMP: DateTimeFormatter = DateTimeFormatter
+            .ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
+            .withZone(ZoneOffset.UTC)
+
+        /** [now] in the archive's own timestamp spelling. */
+        fun stamp(now: Instant): String = STAMP.format(now)
+
         fun parse(text: String): Note {
             val (frontmatter, body) = Frontmatter.split(text)
             return Note(frontmatter, body)
         }
     }
+
+
 }

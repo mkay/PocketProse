@@ -97,7 +97,13 @@ Rows sort by **`updated`**, not `created`. The two differ on 48 of the 168 notes
 
 Tags sit on **one line, right-aligned, with a `+N` chip** for what does not fit. Wrapping was tried and made rows of uneven height, which reads as broken. The count is decided by measuring, in a `SubcomposeLayout`: how many chips fit depends on how wide `+N` is and `N` depends on how many fit, so it walks the count down until the row fits rather than guessing at character widths.
 
-**4 — Editor.** The `BasicTextField(state:)` plus `OutputTransformation` spike, promoted to the real screen. Always editable, no chrome, format bar on selection only. The first writes happen here, so item 8 is re-verified afterwards: open every note, edit none, `md5sum` unchanged.
+**4 — Editor. Done.** Always editable, no chrome, format bar on selection only, and the Markdown invisible until the cursor reaches it.
+
+The spike came out better than the plan feared. `OutputTransformation` owns the cursor mapping, so the dangerous arithmetic never had to be written; and `TextFieldBuffer.originalSelection` is readable inside the transformation, so the fade-in needs no rebuilding and no feedback loop. **The fallback to dimmed markers was not needed.** What stayed ours is *which* ranges to hide, which is `markdown/LiveText.kt` — pure Kotlin, tested at every marker position in all 168 notes, with one test asserting that what disappears is only marker characters and never a word the author typed.
+
+Saving checks four things in order, each preventing one way of losing writing: refuse a note that did not round-trip; do nothing if the body is unchanged; re-read and compare by content hash before writing; then temp-file, verify, swap. A conflict keeps both — the user's version is written as a numbered sibling, matching how the archive already numbers `Wer geht vor 2.md`.
+
+Verified on the device: opening several notes and editing one changed exactly that one file, and inside it exactly two lines — `updated`, and the text typed. `created` untouched, key order and quoting preserved, no temp files left behind.
 
 **5 — Images and attachments.** Relative-path resolution against the note's own folder, both the `attachments/` form and the flat sibling form, a small `BitmapFactory` loader with an LRU cache, and PDF links opening by intent. No Coil — 26 images at 151×164 do not justify a dependency. Done when items 4 and 5 pass.
 
@@ -105,11 +111,17 @@ Tags sit on **one line, right-aligned, with a `+N` chip** for what does not fit.
 
 **7 — Sync, conflicts, polish.** Foreground re-read, pull-to-refresh, keep-both on conflict with the difference surfaced, never auto-delete on a vanished file. Then settings, about, German strings, fastlane metadata and the F-Droid layout.
 
-## The risk worth naming
+## The risk that was named, and how it resolved
 
-Hiding `**` means the displayed text is shorter than the stored text, and a wrong offset mapping is a crash on somebody's song. `BasicTextField(state: TextFieldState)` with an `OutputTransformation` maintains that correspondence for us, which is far safer than hand-writing an `OffsetMapping`. The genuine unknown is the fade-in-on-cursor behaviour, because an `OutputTransformation` is not handed the selection and must be rebuilt as it changes, which risks a render feedback loop.
+Hiding `**` makes the displayed text shorter than the stored text, and a wrong offset mapping is a crash on somebody's song. This was spiked before any editor UI was designed, on the understanding that a bad result meant falling back to dimmed markers.
 
-**This is spiked before any editor UI is designed.** If it does not come out clean, the fallback is dimmed markers rather than hidden ones — a decision to take on a working prototype, not in advance, and one that changes the product enough to be worth knowing early.
+It resolved cleanly on both counts. `OutputTransformation` hands over a `TextFieldBuffer` and takes responsibility for the cursor mapping itself, so the offset arithmetic that would have been hand-written is Compose's. And the fade-in did not need the transformation rebuilt on every cursor move — `TextFieldBuffer.originalSelection` is readable right inside `transformOutput`, in the original coordinate space, which is exactly what the decision logic wants. One instance, no rebuilding, no feedback loop. `TextFieldBuffer.addStyle` being public means hiding and styling happen in one pass rather than needing two mechanisms.
+
+**The fallback was not needed.** What remains ours is which ranges to hide, and that lives in `markdown/LiveText.kt` with no Android in it.
+
+## The risk that is left
+
+SAF cannot do an atomic replace, so the swap in `Vault.save` is delete-then-rename with a window of milliseconds. `recoverTemp` restores an interrupted write on the next listing. See the note on `Vault.save` — writing in place would move the truncation inside the user's own file, which no recovery undoes.
 
 ## Definition of done
 

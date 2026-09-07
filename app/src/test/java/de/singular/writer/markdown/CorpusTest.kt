@@ -223,6 +223,54 @@ class CorpusTest {
     }
 
     @Test
+    fun `live styling never hides a character the author typed`() {
+        // The editor hides markup, and only markup. Run every note past the scanner and check that
+        // what disappears is exclusively marker characters — asterisks, underscores, backticks, and
+        // a heading's hashes and the space after them. Anything else vanishing from the screen would
+        // be a word the author wrote going missing while they looked at it.
+        val corpus = corpus()
+        val allowed = setOf('*', '_', '`', '#', ' ', '\t')
+        for ((name, text) in corpus) {
+            val body = Note.parse(text).body
+            val live = Live.of(body, IntRange(-5, -5))
+            for (h in live.hide) {
+                val removed = body.substring(h.start, h.end)
+                assertTrue(
+                    "$name: live styling would hide \"$removed\"",
+                    removed.all { it in allowed },
+                )
+            }
+        }
+    }
+
+    @Test
+    fun `live styling survives the cursor being anywhere in any note`() {
+        // The invariant that matters is structural: hidden ranges ordered, non-overlapping, inside
+        // the text, and every style landing inside what survives. Checked at every marker character
+        // in the archive, which is where the edges actually are.
+        val corpus = corpus()
+        for ((name, text) in corpus) {
+            val body = Note.parse(text).body
+            val probes = body.indices.filter { body[it] in "*_`#" } + listOf(0, body.length)
+            for (cursor in probes) {
+                val live = Live.of(body, cursor..cursor)
+                var last = 0
+                for (h in live.hide) {
+                    assertTrue("$name at $cursor: ranges out of order", h.start >= last)
+                    assertTrue("$name at $cursor: range past end", h.end <= body.length)
+                    assertTrue("$name at $cursor: empty range", h.end > h.start)
+                    last = h.end
+                }
+                val visible = body.length - live.hide.sumOf { it.end - it.start }
+                for (st in live.styles) {
+                    assertTrue("$name at $cursor: style before 0", st.start >= 0)
+                    assertTrue("$name at $cursor: style past visible end", st.end <= visible)
+                }
+            }
+        }
+    }
+
+    @Test
     fun `rules in bodies are read as rules and never as headings`() {
         val corpus = corpus()
         val withRule = corpus.filterValues { text ->

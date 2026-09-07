@@ -34,8 +34,10 @@ author. A free licence rather than a reservation, deliberately: F-Droid's
 inclusion policy weighs an app's assets as well as its source, and artwork held
 back earns the NonFreeAssets flag.
 
-The icon currently in the tree is a placeholder drawn by hand, not the finished
-artwork. It is covered by the same grant.
+The icon is generated from `assets/icon_mk1.svg`, which lives beside this
+repository rather than in it — CC BY rather than the GPL for exactly that reason,
+since the GPL would oblige the editable source to ship alongside. Re-export from
+there rather than hand-editing the path data in the drawable.
 
 
 THE NAME

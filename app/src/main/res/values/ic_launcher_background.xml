@@ -1,9 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!--
-      The tile the page sits on. Deep stone rather than black, so the icon reads as warm at the
-      size a launcher actually draws it. Placeholder along with the foreground — see
-      drawable/ic_launcher_foreground.xml.
+      The tile the stack of paper sits on.
+
+      Deep taupe rather than black: it is the app's own hue (350) taken to icon strength, so the
+      icon and the app agree without the icon inheriting the palette's deliberately low contrast.
+      The foreground is open artwork on transparency, so this shows through and around it whatever
+      mask the launcher cuts.
+
+      The page edges read 14:1 against it, which is what makes the stack legible at 48dp.
     -->
-    <color name="ic_launcher_background">#1C1917</color>
+    <color name="ic_launcher_background">#241C1D</color>
 </resources>

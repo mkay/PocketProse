@@ -11,6 +11,7 @@ import java.security.MessageDigest
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.text.Normalizer
+import java.time.Instant
 
 /**
  * One file in the folder, as the listing sees it — before anything has been read out of it.
@@ -128,12 +129,17 @@ class Vault(context: Context) {
             ?: return@withContext VaultListing(error = VaultFailure.FOLDER_UNREADABLE)
 
         val files = ArrayList<NoteFile>()
+        val temps = ArrayList<NoteFile>()
         cursor.use {
             while (it.moveToNext()) {
                 val id = it.getString(0) ?: continue
                 val name = it.getString(1) ?: continue
                 val mime = it.getString(2) ?: ""
                 if (mime == DocumentsContract.Document.MIME_TYPE_DIR) continue
+                if (name.endsWith(TEMP_SUFFIX)) {
+                    temps += NoteFile(documentUri(tree, id), name, 0, 0)
+                    continue
+                }
                 if (!isNote(name)) continue
                 files += NoteFile(
                     uri = documentUri(tree, id),
@@ -142,6 +148,12 @@ class Vault(context: Context) {
                     modifiedAt = if (it.isNull(4)) 0L else it.getLong(4),
                 )
             }
+        }
+        // Anything left over from an interrupted write is dealt with before the listing is
+        // returned, so a recovered note appears in the very listing that found the temp file.
+        if (temps.isNotEmpty()) {
+            recoverTemp(tree, temps, files.map { it.name }.toSet())
+            return@withContext list()
         }
         VaultListing(
             files = files.sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { f -> f.name }),
@@ -197,6 +209,151 @@ class Vault(context: Context) {
     }
 
     /**
+     * Write [newBody] into [note], if and only if that is safe and necessary.
+     *
+     * The order of the checks is the design, and each one exists to prevent a specific way of
+     * losing the user's writing:
+     *
+     * 1. **Refuse a note we could not reproduce.** If the parser did not round-trip this note when
+     *    it was read, it will not round-trip it now, and writing would corrupt it.
+     * 2. **Do nothing if nothing changed.** `Note.withBody` returns null for an identical body, and
+     *    that is the common case — opening a note and closing it must leave the file alone, mtime
+     *    included. Without this the archive's dates would be destroyed by ordinary reading.
+     * 3. **Re-read and compare before writing.** The folder is synced; the file may have changed
+     *    since we loaded it. Compared by content hash rather than by timestamp, because a sync
+     *    client rewrites mtimes and because two edits inside one second share theirs.
+     * 4. **Write through a temp file**, then swap.
+     *
+     * ## On atomicity, honestly
+     *
+     * `CLAUDE.md` asks for "temp file plus rename, so a sync client never sees a truncated note".
+     * SAF cannot do a POSIX atomic replace: `DocumentsContract.renameDocument` refuses to overwrite
+     * an existing name, so the swap is necessarily delete-then-rename and there is a window — of
+     * milliseconds — in which neither name holds the finished file.
+     *
+     * That window is survivable and the alternative is not. If the process dies inside it, the
+     * temp file holds the complete new text and [recoverTemp] restores it on the next launch. The
+     * alternative — writing in place — puts the truncation *inside the user's own file*, which no
+     * amount of recovery undoes. This is a platform limit rather than a shortcut; do not "simplify"
+     * it back to an in-place write.
+     *
+     * The file's modification time is not set explicitly, because SAF offers no way to. It ends up
+     * as the moment of the write, which is within a second of the `updated` stamp — which is what
+     * mirroring the two was asking for.
+     */
+    suspend fun save(note: IndexedNote, newBody: String, now: Instant = Instant.now()): SaveResult =
+        withContext(Dispatchers.IO) {
+            if (!note.roundTrips) return@withContext SaveResult.Refused
+
+            val updated = note.note.withBody(newBody, now) ?: return@withContext SaveResult.Unchanged
+            val text = updated.render()
+
+            val current = read(note.file.uri)
+                ?: return@withContext SaveResult.Failed("the note could not be re-read")
+            if (sha256(current) != note.contentHash) {
+                return@withContext SaveResult.Conflict(current)
+            }
+
+            val parent = rootFolder()
+                ?: return@withContext SaveResult.Failed("the folder is no longer reachable")
+            val tempName = note.file.name + TEMP_SUFFIX
+            val temp = runCatching {
+                DocumentsContract.createDocument(resolver, parent, MIME_TEXT, tempName)
+            }.getOrNull() ?: return@withContext SaveResult.Failed("no temporary file could be made")
+
+            val bytes = text.toByteArray(Charsets.UTF_8)
+            val written = runCatching {
+                resolver.openOutputStream(temp, "wt")?.use { it.write(bytes); it.flush() } ?: error("no stream")
+                // Read it back before trusting it with the only copy. A short write here and a
+                // delete below would lose the note outright.
+                read(temp) == text
+            }.getOrDefault(false)
+            if (!written) {
+                runCatching { DocumentsContract.deleteDocument(resolver, temp) }
+                return@withContext SaveResult.Failed("the note could not be written in full")
+            }
+
+            val swapped = runCatching {
+                DocumentsContract.deleteDocument(resolver, note.file.uri)
+                DocumentsContract.renameDocument(resolver, temp, note.file.name)
+            }.getOrNull()
+            if (swapped == null) {
+                return@withContext SaveResult.Failed("the note could not be put back in place")
+            }
+            parseCache[sha256(text)] = updated
+            SaveResult.Saved(swapped, text, sha256(text))
+        }
+
+    /**
+     * Write [newBody] into a **new note beside** [note], leaving both.
+     *
+     * The answer to a conflict. `CLAUDE.md` forbids overwriting silently and forbids auto-merging,
+     * which leaves exactly one honest option when a note has changed on another device while it sat
+     * open here: keep both and let the user sort it out with the two of them in front of them.
+     *
+     * The copy takes the original's frontmatter — `created` included, because it is the same note's
+     * history — with a fresh `updated`. The filename gains a numbered suffix, and the numbering
+     * matches what the archive already does by hand: `Wer geht vor 2.md` sits beside
+     * `Wer geht vor.md`. No marker, no "(conflicted copy)" — the user names their own files.
+     */
+    suspend fun saveCopy(note: IndexedNote, newBody: String, now: Instant = Instant.now()): SaveResult =
+        withContext(Dispatchers.IO) {
+            if (!note.roundTrips) return@withContext SaveResult.Refused
+            val parent = rootFolder()
+                ?: return@withContext SaveResult.Failed("the folder is no longer reachable")
+
+            val stem = note.file.name.removeSuffix(".md")
+            val taken = list().files.map { it.name }.toSet()
+            val name = generateSequence(2) { it + 1 }
+                .map { "$stem $it.md" }
+                .first { it !in taken }
+
+            val text = note.note.copy(
+                frontmatter = note.note.frontmatter.withKey("updated", Note.stamp(now)),
+                body = newBody,
+            ).render()
+
+            val created = runCatching {
+                DocumentsContract.createDocument(resolver, parent, MIME_TEXT, name)
+            }.getOrNull() ?: return@withContext SaveResult.Failed("the copy could not be made")
+
+            val ok = runCatching {
+                resolver.openOutputStream(created, "wt")?.use {
+                    it.write(text.toByteArray(Charsets.UTF_8)); it.flush()
+                } ?: error("no stream")
+                read(created) == text
+            }.getOrDefault(false)
+            if (!ok) {
+                runCatching { DocumentsContract.deleteDocument(resolver, created) }
+                return@withContext SaveResult.Failed("the copy could not be written in full")
+            }
+            SaveResult.Saved(created, text, sha256(text))
+        }
+
+    /**
+     * Put back anything a write was interrupted in the middle of.
+     *
+     * Called on every listing, because the window it covers is a crash or a kill during the swap in
+     * [save] and the next launch is the only chance to notice. Two cases, distinguished by whether
+     * the real note is still there:
+     *
+     * - The note exists: the write died before the swap, so the temp is a stale draft and is
+     *   deleted. The note on disk is untouched and correct.
+     * - The note is gone: the write died *inside* the swap, after the delete and before the rename.
+     *   The temp holds the complete new text, so it is renamed into place. This is the case the
+     *   whole temp-file dance exists for.
+     */
+    private fun recoverTemp(tree: Uri, temps: List<NoteFile>, notes: Set<String>) {
+        for (temp in temps) {
+            val target = temp.name.removeSuffix(TEMP_SUFFIX)
+            runCatching {
+                if (target in notes) DocumentsContract.deleteDocument(resolver, temp.uri)
+                else DocumentsContract.renameDocument(resolver, temp.uri, target)
+            }
+        }
+    }
+
+    /**
      * Parsed notes by content hash, so an unchanged note is not re-parsed on every foreground.
      *
      * Keyed by content rather than by uri on purpose: the three byte-identical `Wer geht vor` notes
@@ -226,6 +383,18 @@ class Vault(context: Context) {
     companion object {
         private const val PREFS = "vault"
         private const val KEY_ROOT = "root_tree_uri"
+
+        /**
+         * What an in-progress write is called while it is being written.
+         *
+         * Long and unmistakable on purpose: it must never collide with a note the user made, and if
+         * one is ever left behind it should be obvious what left it. It keeps the `.md` in the
+         * middle (`Atlantik.md.pocketprose-tmp`) so the recovered name is a plain suffix strip.
+         */
+        const val TEMP_SUFFIX = ".pocketprose-tmp"
+
+        /** Providers disagree about Markdown's type; this is only what a new file is created as. */
+        private const val MIME_TEXT = "text/plain"
 
         /**
          * A filename in the form the archive is stored in.

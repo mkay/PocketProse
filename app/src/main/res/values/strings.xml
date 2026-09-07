@@ -49,6 +49,38 @@
     <!-- Opens the folder picker again, to point at a different folder. -->
     <string name="action_change_folder">Change folder</string>
 
+    <!-- ===== Editor ===== -->
+
+    <!-- Leaves the note and goes back to the list. -->
+    <string name="editor_back">Back to notes</string>
+    <!-- Placeholder in an empty note. 40 of the author's notes start life like this. -->
+    <string name="editor_empty">Start writing…</string>
+
+    <!-- The bar that appears over selected text. These are verbs, not format names: the audience
+         does not know what "emphasis" is and should not have to. -->
+    <string name="format_bold">Bold</string>
+    <string name="format_italic">Italic</string>
+    <string name="format_heading">Heading</string>
+
+    <!-- Shown instead of the editor when the app cannot reproduce a note's bytes exactly. It is
+         better to refuse to edit than to risk rewriting a note wrongly — see IndexedNote.roundTrips.
+         Deliberately blames the app, because it is the app's shortcoming. -->
+    <string name="editor_readonly_title">This note is open for reading only</string>
+    <string name="editor_readonly_body">Pocket Prose can\'t be certain it would save this note exactly as it found it, so it won\'t change it at all. You can still read it here, and edit it anywhere else.</string>
+
+    <!-- Shown when a note changed somewhere else (a laptop, another phone) while it was open here.
+         Not an error: this folder is synced, so it is an ordinary thing to happen. Never overwrite
+         and never merge — keep both and let the writer decide. -->
+    <string name="conflict_title">This note changed somewhere else</string>
+    <string name="conflict_body">While you were writing, this note was edited on another device. Pocket Prose has not touched either version.</string>
+    <!-- Writes what the user typed as a new note beside the original, keeping both. -->
+    <string name="conflict_keep_both">Keep both</string>
+    <!-- Throws away what the user typed here and shows the version from the other device. -->
+    <string name="conflict_discard">Discard my changes</string>
+
+    <!-- Shown briefly after something went wrong while saving. %1$s is a short reason. -->
+    <string name="save_failed">Couldn\'t save: %1$s</string>
+
     <!-- ===== Tag drawer ===== -->
 
     <!-- Opens the tag drawer. Spoken by a screen reader; never seen. -->
