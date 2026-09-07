@@ -6,6 +6,8 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.provider.DocumentsContract
+import de.singular.writer.markdown.Note
+import java.security.MessageDigest
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.text.Normalizer
@@ -148,6 +150,62 @@ class Vault(context: Context) {
     }
 
     /**
+     * The text of one note, or null if it cannot be read.
+     *
+     * UTF-8, and the bytes are taken exactly as they are — no line-ending translation, no trailing
+     * newline added or removed, no BOM stripped. Whatever comes back here is what [readAll] hands
+     * to the parser and what the app must be able to write again unchanged.
+     */
+    suspend fun read(uri: android.net.Uri): String? = withContext(Dispatchers.IO) {
+        runCatching {
+            resolver.openInputStream(uri)?.use { it.readBytes().toString(Charsets.UTF_8) }
+        }.getOrNull()
+    }
+
+    /**
+     * Every note in the folder, read and parsed.
+     *
+     * Reads all 168 files on every refresh, which sounds wasteful and is not: the archive is 107 KB
+     * in total, less than a single photo, and the alternative is trusting a timestamp.
+     *
+     * **Change is detected by content, never by mtime.** `CLAUDE.md` says so and the reason is
+     * Nextcloud: a sync client rewrites modification times whenever it feels like it, so a note can
+     * have a new mtime and identical bytes, or — worse, and this is the one that loses work — the
+     * same mtime after a genuine change made on another device within the same second. A SHA-256 of
+     * the bytes answers the only question that matters, and hashing 107 KB costs less than the
+     * provider round trip that fetched it.
+     *
+     * The parse cache is keyed on that hash, so a refresh where nothing changed re-parses nothing.
+     */
+    suspend fun readAll(): Pair<NoteIndex, VaultFailure?> = withContext(Dispatchers.IO) {
+        val listing = list()
+        if (listing.error != null && listing.files.isEmpty()) {
+            return@withContext NoteIndex(emptyList()) to listing.error
+        }
+        val indexed = listing.files.mapNotNull { file ->
+            val text = read(file.uri) ?: return@mapNotNull null
+            val hash = sha256(text)
+            val note = parseCache.getOrPut(hash) { Note.parse(text) }
+            IndexedNote(file, note, hash, roundTrips = note.render() == text)
+        }
+        // Files that vanished between the listing and now simply do not appear. They are never
+        // deleted from anything, and nothing is written to say they are gone — a half-synced folder
+        // must not destroy data, so the app's only response to a missing note is to stop showing it
+        // until it comes back.
+        parseCache.keys.retainAll(indexed.map { it.contentHash }.toSet())
+        NoteIndex(indexed) to listing.error
+    }
+
+    /**
+     * Parsed notes by content hash, so an unchanged note is not re-parsed on every foreground.
+     *
+     * Keyed by content rather than by uri on purpose: the three byte-identical `Wer geht vor` notes
+     * share one entry, which is correct — a [Note] is an immutable value, and which file it came
+     * from is [IndexedNote]'s business, not this cache's.
+     */
+    private val parseCache = HashMap<String, Note>()
+
+    /**
      * Whether a filename is one of ours.
      *
      * Extension only, and never the MIME type. Providers disagree wildly about what a `.md` file is
@@ -183,5 +241,10 @@ class Vault(context: Context) {
          * is for phase 5's attachment lookup and phase 2's change detection.
          */
         fun normalizedName(name: String): String = Normalizer.normalize(name, Normalizer.Form.NFC)
+
+        /** A note's identity-of-content, for detecting a change a timestamp would miss. */
+        fun sha256(text: String): String = MessageDigest.getInstance("SHA-256")
+            .digest(text.toByteArray(Charsets.UTF_8))
+            .joinToString("") { "%02x".format(it) }
     }
 }

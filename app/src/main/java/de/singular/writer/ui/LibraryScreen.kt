@@ -22,21 +22,20 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import de.singular.writer.R
-import de.singular.writer.vault.NoteFile
+import de.singular.writer.vault.NoteIndex
 import de.singular.writer.vault.VaultFailure
 
 /**
- * Phase 0's library: filenames and nothing else.
+ * Phase 2's library: titles, newest first.
  *
- * Deliberately not the real list. The rows here show the *file's* name, which the finished app must
- * never do — the archive has four files titled "Wer geht vor?" and eleven titles ending in a
- * question mark no filename can carry, so a library keyed on filenames is wrong in a way that would
- * be invisible on a tidier folder. This exists to prove the folder grant works and is replaced
- * wholesale in phase 3, once phase 1 can read a title out of a note.
+ * Still not the finished row — the excerpt, the date and the tag chips arrive in phase 3, along with
+ * the drawer and search. What it does have is the right *identity*: rows are notes rather than
+ * files, titled from the frontmatter, so the four notes called "Wer geht vor?" appear four times and
+ * the eleven titles ending in a question mark read correctly.
  */
 @Composable
 fun LibraryScreen(
-    files: List<NoteFile>,
+    index: NoteIndex,
     folderName: String?,
     error: VaultFailure?,
     onChooseFolder: () -> Unit,
@@ -75,16 +74,16 @@ fun LibraryScreen(
                     color = MaterialTheme.colorScheme.onSurface,
                 )
                 Text(
-                    text = pluralStringResource(R.plurals.note_count, files.size, files.size),
+                    text = pluralStringResource(R.plurals.note_count, index.size, index.size),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             LazyColumn(Modifier.fillMaxSize()) {
-                items(files, key = { it.uri.toString() }) { file ->
+                items(index.notes, key = { it.file.uri.toString() }) { note ->
                     Text(
-                        text = file.name,
+                        text = note.title,
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier

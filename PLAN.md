@@ -32,6 +32,12 @@ This said 36 until phase 1 measured it properly. 36 was reached by grouping byte
 
 **The test fixture does not cover the tag hazard.** `Lyrics_Test` contains no `#` chord anywhere. In the whole archive there is exactly one sharp, in `Radio (Song Notes).md`: "Tarantino für zwei in F# Moll." — an `F#`, with no `F#m` and no `C#` despite what `CLAUDE.md` says. The rule survives it without a special case, `#` there being preceded by a letter rather than by whitespace, but the fixture cannot demonstrate that. Phase 1 covers it as a unit test and a sharp gets added to the fixture.
 
+**Percent tags are three, not two, and the frontmatter is not their index.** `100%`, `50%` and — unrecorded anywhere until now — `#75%`, in `Sieger sehen anders aus.md`. Both spellings occur in bodies: `#100%` bare 19 times, Bear's wrapped `#100%#` 11 times. **21 percent tags live in a body with no frontmatter entry**, and none the other way round, so `CLAUDE.md`'s "index them from frontmatter" would lose 21 tags the author can plainly see in their own text. What the app should do about that is an open question — see the end of this file.
+
+Two consequences already handled. A line reading `#album/debut #100% #busch` is a line of tags, not prose: requiring every word to be a *writable* hashtag made all of `Müde.md`'s first line prose, and its library row led with its own tags instead of with the song. And no percent tag anywhere in the archive is embedded in a sentence — all 33 sit on a tag line — so counting them costs no hidden words.
+
+**Three notes carry HTML comments, and one attachment folder does not exist.** 24 instances of `<!-- {"embed":"true", "preview":"true"} -->`, all beside a PDF link, all left by the Bear export. They are invisible in any renderer and are stripped for display — never from the file. More importantly, the three byte-identical `Wer geht vor` duplicates link into `Wer geht vor/`, the un-migrated Bear layout, and **that folder is not in the archive**: 24 dead links. Only `Wer geht vor.md` itself has the proper `## Anhänge` list into `attachments/`. Phase 5 must render a dead link as a link, without pretending to have the file, and must never repair one.
+
 **The setext hazard is latent, not live.** `CLAUDE.md` says five notes use `---` as a horizontal rule and that two of them put it directly after a line of text, where strict CommonMark would read it as a setext H2. Measured: **two** notes contain a bare `---` in the body (`Atlantik.md` and `Sieger sehen anders aus.md`) and **twenty** use `- - -`, one note using both, so 21 notes carry a rule. Every bare `---` in the archive follows a blank line or another rule — **none** directly follows prose, so the ambiguity does not occur in the data at all today.
 
 That does not make the decision optional. The moment the author types `---` under a line, a lyric would silently become a heading. `Blocks` therefore refuses setext unconditionally, and the case is pinned by a synthetic test rather than a corpus one, since the corpus cannot demonstrate it.
@@ -96,3 +102,9 @@ Hiding `**` means the displayed text is shorter than the stored text, and a wron
 ## Definition of done
 
 `CLAUDE.md`'s eight checks, unchanged, against a copy of the real archive. Item 8 is the one that matters and it is checked at the end of every phase from 2 onward, not only at the end.
+
+## Open question, for phase 6
+
+**Do body-only percent tags belong in the index?** 21 of them exist — `#100%` written in a note whose frontmatter does not list `100%`. Indexing from the frontmatter alone, as `CLAUDE.md` says, means the drawer shows `100%` on 11 notes when the author has written it on far more; indexing from the body too means the drawer disagrees with the frontmatter, and phase 6 has to decide whether saving a note reconciles them — which would write to 21 files that the user did not edit, and that is exactly the kind of unbidden tidying the prime directive forbids.
+
+The safe reading is: index from both so the drawer tells the truth about what is written, and never write a reconciliation the user did not ask for. That is a decision about the archive's meaning, so it is the author's to make.

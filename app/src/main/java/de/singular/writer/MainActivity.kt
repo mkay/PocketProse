@@ -31,7 +31,8 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.rememberCoroutineScope
 import de.singular.writer.ui.LibraryScreen
 import de.singular.writer.ui.PocketProseTheme
-import de.singular.writer.vault.NoteFile
+import de.singular.writer.vault.IndexDump
+import de.singular.writer.vault.NoteIndex
 import de.singular.writer.vault.Vault
 import de.singular.writer.vault.VaultFailure
 import kotlinx.coroutines.launch
@@ -77,15 +78,17 @@ private fun PocketProseApp() {
     val vault = remember { Vault(context) }
     val scope = rememberCoroutineScope()
 
-    var files by remember { mutableStateOf(emptyList<NoteFile>()) }
+    var index by remember { mutableStateOf(NoteIndex(emptyList())) }
     var folderName by remember { mutableStateOf<String?>(null) }
     var error by remember { mutableStateOf<VaultFailure?>(VaultFailure.NO_FOLDER_CHOSEN) }
 
     fun refresh() = scope.launch {
-        val listing = vault.list()
-        files = listing.files
-        error = listing.error
+        val (loaded, failure) = vault.readAll()
+        index = loaded
+        error = failure
         folderName = vault.rootName()
+        // Debug builds only, and app-private — see IndexDump. This is how phase 2 is verified.
+        IndexDump.write(context, loaded)
     }
 
     /**
@@ -113,7 +116,7 @@ private fun PocketProseApp() {
     LaunchedEffect(Unit) { refresh() }
 
     LibraryScreen(
-        files = files,
+        index = index,
         folderName = folderName,
         error = error,
         onChooseFolder = { pickFolder.launch(null) },

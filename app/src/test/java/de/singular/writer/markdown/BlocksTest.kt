@@ -46,8 +46,31 @@ class BlocksTest {
     }
 
     @Test
-    fun `the wrapped percent tag is prose, because it is not a hashtag`() {
-        assertEquals(listOf(Block.Paragraph("#100%#")), Blocks.parse("#100%#"))
+    fun `a percent tag counts towards a tag line in both its spellings`() {
+        // Müde.md reads exactly this. Requiring every word to be a writable hashtag made the whole
+        // line prose, and the library row led with the note's own tags instead of with the song.
+        assertEquals(
+            listOf(Block.TagLine(listOf("album/debut", "busch"))),
+            Blocks.parse("#album/debut #100% #busch"),
+        )
+        assertEquals(listOf(Block.TagLine(emptyList())), Blocks.parse("#100%#"))
+        assertEquals(listOf(Block.TagLine(emptyList())), Blocks.parse("#75%"))
+    }
+
+    @Test
+    fun `a percent tag inside a sentence leaves the sentence visible`() {
+        // No note in the archive does this, but hiding a line of prose would be unforgivable, so
+        // the "entirely tags" requirement is pinned rather than assumed.
+        assertEquals(
+            listOf(Block.Paragraph("das ist zu #100% mein Ernst")),
+            Blocks.parse("das ist zu #100% mein Ernst"),
+        )
+    }
+
+    @Test
+    fun `an HTML comment does not stop a line being read as prose`() {
+        val line = "[Graphic.pdf](Wer%20geht%20vor/Graphic.pdf)<!-- {\"embed\":\"true\"} -->x3"
+        assertEquals(listOf(Block.Paragraph(line)), Blocks.parse(line))
     }
 
     @Test

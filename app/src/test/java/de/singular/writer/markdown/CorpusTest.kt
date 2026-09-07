@@ -107,9 +107,11 @@ class CorpusTest {
     }
 
     @Test
-    fun `frontmatter and inline hashtags agree across the whole archive`() {
-        // Measured: they agree in all 168 notes today, once the two tags that cannot be written
-        // inline are set aside. The app's job is to keep it that way — see Tags.
+    fun `frontmatter and inline hashtags agree, for the tags that can be written inline`() {
+        // They agree in all 168 notes. Note the qualifier: this says nothing about percent tags,
+        // which the parser cannot see as hashtags at all — that blind spot is what made an earlier
+        // version of this test read as a clean bill of health for the whole archive. The percent
+        // situation is measured separately below, and it is not clean.
         val corpus = corpus()
         val disagreeing = corpus.filter { (_, text) ->
             val note = Note.parse(text)
@@ -117,6 +119,60 @@ class CorpusTest {
             Tags.inBody(note.body).toSet() != writable
         }.keys
         assertEquals(emptySet<String>(), disagreeing)
+    }
+
+    @Test
+    fun `percent tags are three, not two, and 21 of them live only in a body`() {
+        val corpus = corpus()
+        val distinct = corpus.values
+            .flatMap { Tags.percentInBody(Note.parse(it).body) + Note.parse(it).frontmatter.tags.filter { t -> "%" in t } }
+            .toSet()
+        // CLAUDE.md names 100% and 50%. `Sieger sehen anders aus.md` also carries #75%.
+        assertEquals(setOf("100%", "50%", "75%"), distinct)
+
+        var bodyOnly = 0
+        var frontmatterOnly = 0
+        for (text in corpus.values) {
+            val note = Note.parse(text)
+            val inBody = Tags.percentInBody(note.body).toSet()
+            val inFront = note.frontmatter.tags.filter { "%" in it }.toSet()
+            bodyOnly += (inBody - inFront).size
+            frontmatterOnly += (inFront - inBody).size
+        }
+        // The frontmatter is *not* the complete index of percent tags that CLAUDE.md assumes.
+        assertEquals(21, bodyOnly)
+        assertEquals(0, frontmatterOnly)
+    }
+
+    @Test
+    fun `no percent tag is embedded in prose, so hiding its line hides no words`() {
+        val corpus = corpus()
+        val embedded = corpus.filterValues { text ->
+            Note.parse(text).blocks.any { it is Block.Paragraph && Tags.percentInBody(it.text).isNotEmpty() }
+        }.keys
+        assertEquals(emptySet<String>(), embedded)
+    }
+
+    @Test
+    fun `the Bear export's embed comments are three notes' worth and never reach a reader`() {
+        val corpus = corpus()
+        val withComments = corpus.filterValues { "<!--" in it }
+        assertEquals(3, withComments.size)
+        assertEquals(24, corpus.values.sumOf { Regex("<!--").findAll(it).count() })
+        assertTrue(withComments.values.none { "<!--" in Excerpt.of(Note.parse(it)) })
+    }
+
+    @Test
+    fun `the duplicate Wer geht vor notes link into a folder that does not exist`() {
+        // Wer geht vor.md has a proper `## Anhänge` list into attachments/. Its three byte-identical
+        // duplicates still point at `Wer geht vor/`, the un-migrated Bear layout, and that folder is
+        // not in the archive — 24 dead links. Phase 5 must show such a link without pretending to
+        // have the file behind it, and must never "repair" one.
+        val corpus = corpus()
+        val dead = corpus.filterValues { "Wer%20geht%20vor/" in it }
+        assertEquals(setOf("Wer geht vor 2.md", "Wer geht vor 3.md", "Wer geht vor 4.md"), dead.keys)
+        assertEquals(24, dead.values.sumOf { Regex("Wer%20geht%20vor/").findAll(it).count() })
+        assertTrue("attachments/wer-geht-vor-pasted-graphic-10.pdf" in corpus.getValue("Wer geht vor.md"))
     }
 
     @Test

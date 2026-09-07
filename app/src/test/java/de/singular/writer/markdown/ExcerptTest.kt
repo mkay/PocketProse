@@ -35,6 +35,23 @@ class ExcerptTest {
     }
 
     @Test
+    fun `the Bear export's embed comments do not reach the reader`() {
+        // 24 of these across three notes, all beside a PDF link. Invisible in any renderer, and
+        // stripped for display only — never removed from the file.
+        val body = "[Pasted Graphic 12.pdf](Wer%20geht%20vor/x.pdf)<!-- {\"embed\":\"true\"} -->x3\n"
+        val note = Note.parse("---\ntitle: \"x\"\ntags: []\n---\n\n$body")
+        assertEquals("Pasted Graphic 12.pdfx3", Excerpt.of(note))
+    }
+
+    @Test
+    fun `a note whose first line is tags plus a percent tag excerpts to its song`() {
+        val note = Note.parse(
+            "---\ntitle: \"Müde\"\ntags:\n  - \"busch\"\n---\n\n#album/debut #100% #busch\n\nDu wirst nicht zurück kommen\n",
+        )
+        assertEquals("Du wirst nicht zurück kommen", Excerpt.of(note))
+    }
+
+    @Test
     fun `a long note is cut on a word boundary and marked`() {
         val body = "wort ".repeat(80)
         val note = Note.parse("---\ntitle: \"x\"\ntags: []\n---\n\n$body\n")

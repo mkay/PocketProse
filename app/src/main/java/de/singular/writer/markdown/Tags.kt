@@ -39,6 +39,38 @@ object Tags {
     private val HASHTAG = Regex("""(?<=^|\s)#([\p{L}][\w/-]*)""", RegexOption.MULTILINE)
 
     /**
+     * A percent tag as it is actually written in a body: `#100%`, or Bear's wrapped `#100%#`.
+     *
+     * Measured across the archive: `#100%` appears 19 times unwrapped and 11 times wrapped, `#50%`
+     * once each way, and `#75%` once — a third percent tag that `CLAUDE.md` does not mention. Both
+     * spellings occur, so both are recognised.
+     *
+     * Recognised is **not** the same as parsed into a tag. This exists so that a line reading
+     * `#album/debut #100% #busch` is understood to be a line of tags and is not shown to the user as
+     * though it were the first line of their song. What the app does with the tag itself is
+     * [percentInBody]'s business.
+     */
+    private val PERCENT_WORD = Regex("""#(\d+%)#?""")
+
+    /** One word, tested as an ordinary writable hashtag. */
+    private val HASHTAG_WORD = Regex("""#[\p{L}][\w/-]*""")
+
+    /**
+     * Whether a single whitespace-delimited word is a tag of either kind.
+     *
+     * Used to decide whether a whole line is a line of tags. Measured: no percent tag in the archive
+     * is embedded in a sentence — all 33 of them sit on a line with other tags, or alone — so
+     * treating such a line as tags hides no prose.
+     */
+    fun isTagWord(word: String): Boolean =
+        HASHTAG_WORD.matches(word) || PERCENT_WORD.matches(word)
+
+    /** The percent tags written in [body], normalised to bare `100%` form without the `#`. */
+    fun percentInBody(body: String): List<String> =
+        Regex("""(?<=^|\s)#(\d+%)#?""", RegexOption.MULTILINE)
+            .findAll(body).map { it.groupValues[1] }.toList()
+
+    /**
      * The two tags that cannot be written as hashtags at all: `100%` (11 notes) and `50%` (1).
      *
      * `%` is not in the vocabulary above and the author decided deliberately to keep these names

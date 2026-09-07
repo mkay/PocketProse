@@ -11,6 +11,16 @@ package de.singular.writer.markdown
  */
 object Inline {
 
+    /**
+     * `<!-- ... -->` — an HTML comment.
+     *
+     * Three notes carry 24 of these, all of them the same `<!-- {"embed":"true", "preview":"true"} -->`
+     * left behind beside a PDF link by the Bear export. They are invisible in any Markdown renderer
+     * and must stay invisible here — but they are also bytes the user never asked us to touch, so
+     * they are stripped for *display* only and never removed from a file.
+     */
+    private val COMMENT = Regex("""<!--.*?-->""", RegexOption.DOT_MATCHES_ALL)
+
     /** `![alt](path)` — dropped entirely from an excerpt, since a picture has no first line. */
     private val IMAGE = Regex("""!\[([^\]]*)]\([^)]*\)""")
 
@@ -30,6 +40,7 @@ object Inline {
      * file, and nothing here ever reaches disk.
      */
     fun strip(text: String): String = text
+        .replace(COMMENT, "")
         .replace(IMAGE, "")
         .replace(LINK) { it.groupValues[1] }
         .replace(EMPHASIS) { it.groupValues[2] }
