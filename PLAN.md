@@ -137,6 +137,16 @@ Two things phase 6 found and did not fix. Returning to the foreground refreshes 
 
 The author kept them anyway. The files are the database, both copies are in the files, and an app that removes one of them because its own code would be simpler has the relationship backwards. So the duplication is a fact of the archive to be preserved, not a defect to be tidied — which is the prime directive applied to the app's own convenience. Do not propose this again without the author raising it first.
 
+**Startup, measured rather than assumed (2026-09-07, Fairphone, real archive).** The library took several seconds to appear and showed "0 notes" while it did. Three causes, none of them the parser:
+
+The folder was read **twice** on every launch — the initial `LaunchedEffect` and the lifecycle's `ON_START`, which fires the moment the observer is registered. `refresh()` now coalesces onto one job rather than one of the callers being deleted, since the pair is what makes the first read certain and a quick background-and-return should not queue a second pass either.
+
+Notes were fetched **one at a time**. Every file is a separate round trip to the DocumentsProvider, so 168 of them cost 5774 ms of latency for 107 KB of text. Eight at a time costs 964 ms. The listing is a single cursor query at 270 ms and was never the problem.
+
+And the status strip said "0 notes" before anything had been read — a statement about the archive, and a false one, shown on every start in front of 168 notes. It now says nothing until there is an answer, at the height it will have once there is, so the list does not jump.
+
+Cold start to first frame is 1140 ms on a debug build, which is the remaining cost and is Compose's rather than the app's.
+
 **7 — Sync, conflicts, polish.** Foreground re-read, pull-to-refresh, keep-both on conflict with the difference surfaced, never auto-delete on a vanished file. Then settings, about, German strings, fastlane metadata and the F-Droid layout.
 
 Three things phase 6 handed it, all found by running against the real archive rather than the fixture:

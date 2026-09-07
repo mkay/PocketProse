@@ -78,6 +78,7 @@ import de.singular.writer.vault.NoteIndex
 import de.singular.writer.vault.SaveResult
 import de.singular.writer.vault.Vault
 import de.singular.writer.vault.VaultFailure
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
 /**
@@ -197,21 +198,33 @@ private fun PocketProseApp(settings: Settings) {
     var conflict by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf<String?>(null) }
 
-    fun refresh() = scope.launch {
-        val (loaded, failure) = vault.readAll()
-        loading = false
-        index = loaded
-        error = failure
-        folderName = vault.rootName()
-        // A synced-in image would otherwise stay missing until the app was restarted.
-        attachments.forget()
-        // A tag that no longer exists after a sync would otherwise filter the list down to nothing
-        // with no way to tell why.
-        if (selectedTag != null && index.allTags.none { it == selectedTag || it.startsWith("$selectedTag/") }) {
-            selectedTag = null
-        }
-        // Debug builds only, and app-private — see IndexDump.
-        IndexDump.write(context, loaded)
+    // The folder is read once at a time, however many things ask for it.
+    //
+    // Two things ask at startup — the initial `LaunchedEffect` and the lifecycle's `ON_START`, which
+    // fires as soon as the observer is registered — and before this they both ran, so every launch
+    // read all 168 notes twice. Coalescing is better than deleting one of the callers: the pair of
+    // them is what makes the first read certain, and a quick background-and-return should not queue
+    // a second pass either.
+    var reading by remember { mutableStateOf<Job?>(null) }
+
+    fun refresh(): Job {
+        reading?.let { if (it.isActive) return it }
+        return scope.launch {
+            val (loaded, failure) = vault.readAll()
+            loading = false
+            index = loaded
+            error = failure
+            folderName = vault.rootName()
+            // A synced-in image would otherwise stay missing until the app was restarted.
+            attachments.forget()
+            // A tag that no longer exists after a sync would otherwise filter the list down to nothing
+            // with no way to tell why.
+            if (selectedTag != null && index.allTags.none { it == selectedTag || it.startsWith("$selectedTag/") }) {
+                selectedTag = null
+            }
+            // Debug builds only, and app-private — see IndexDump.
+            IndexDump.write(context, loaded)
+        }.also { reading = it }
     }
 
     /**

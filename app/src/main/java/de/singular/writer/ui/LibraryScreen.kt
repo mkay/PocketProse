@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
@@ -159,7 +160,7 @@ fun LibraryScreen(
                 // The only rule below it is the one under the strip, dividing header from list.
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
             )
-            StatusStrip(count = notes.size, tag = selectedTag)
+            StatusStrip(count = notes.size, tag = selectedTag, counted = !loading)
             }
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
@@ -199,11 +200,14 @@ fun LibraryScreen(
  * anything useful with.
  */
 @Composable
-private fun StatusStrip(count: Int, tag: String?) {
+private fun StatusStrip(count: Int, tag: String?, counted: Boolean) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .fillMaxWidth()
+            // Held at the height it will have once the count arrives, so the list below does not
+            // jump up the screen the moment the folder finishes reading.
+            .heightIn(min = 28.dp)
             .padding(horizontal = 20.dp, vertical = 6.dp),
     ) {
         if (tag != null) {
@@ -219,12 +223,17 @@ private fun StatusStrip(count: Int, tag: String?) {
                 modifier = Modifier.weight(1f),
             )
         }
-        Text(
-            text = pluralStringResource(R.plurals.note_count, count, count),
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = 1,
-        )
+        // Nothing at all until the folder has actually been read. "0 notes" is a statement about
+        // the archive, and for the moment before the first read it is a false one — the strip said
+        // it on every start, in front of 168 notes.
+        if (counted) {
+            Text(
+                text = pluralStringResource(R.plurals.note_count, count, count),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+            )
+        }
     }
 }
 
