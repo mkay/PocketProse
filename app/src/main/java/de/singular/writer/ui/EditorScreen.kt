@@ -28,6 +28,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
@@ -426,18 +427,7 @@ private fun FormatBar(body: TextFieldState, modifier: Modifier = Modifier) {
             FormatIcon(R.drawable.ic_format_italic, R.string.format_italic, selected) {
                 body.wrapSelection("*")
             }
-            // Two, three and four hashes. The parser understands six levels and the archive uses one,
-            // so three is already more than a lyric needs — and each button wears the symbol for the
-            // level it actually writes rather than a generic "heading".
-            FormatIcon(R.drawable.ic_format_h2, R.string.format_heading, true) {
-                body.prefixLine("## ")
-            }
-            FormatIcon(R.drawable.ic_format_h3, R.string.format_heading_3, true) {
-                body.prefixLine("### ")
-            }
-            FormatIcon(R.drawable.ic_format_h4, R.string.format_heading_4, true) {
-                body.prefixLine("#### ")
-            }
+            HeadingControl(body, enabled = true)
             FormatIcon(R.drawable.ic_format_list_bulleted, R.string.format_bullet, true) {
                 body.prefixLine("- ")
             }
@@ -462,6 +452,75 @@ private fun FormatBar(body: TextFieldState, modifier: Modifier = Modifier) {
             }
         }
     }
+}
+
+/**
+ * The heading control: one button wearing the level of the line under the cursor, and a menu of the
+ * five it offers.
+ *
+ * Five buttons in a row said the same thing in six times the space, and the row already scrolls. One
+ * that *shows* the current level says something the five could not: what this line is. A plain line
+ * shows H2, which is what tapping through would give it.
+ *
+ * Picking the level a line already has takes the heading off — the same toggling the rest of the bar
+ * does — and the tick beside it in the menu is what says so.
+ *
+ * H1 is not offered. The parser reads all six, and the archive uses `##` and nothing else; a level
+ * above the note's own title is a heading with nothing to be a heading of.
+ */
+@Composable
+private fun HeadingControl(body: TextFieldState, enabled: Boolean) {
+    var open by remember { mutableStateOf(false) }
+    val level = FormatActions.headingLevelAt(body.text.toString(), body.selection.min)
+    val shown = if (level in LEVELS) level else LEVELS.first
+
+    Box {
+        FormatIcon(headingIcon(shown), headingLabel(shown), enabled) { open = true }
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            LEVELS.forEach { candidate ->
+                DropdownMenuItem(
+                    text = { Text(text = stringResource(headingLabel(candidate))) },
+                    leadingIcon = {
+                        Icon(
+                            painter = painterResource(headingIcon(candidate)),
+                            contentDescription = null,
+                        )
+                    },
+                    trailingIcon = {
+                        if (candidate == level) {
+                            Icon(
+                                imageVector = Icons.Filled.Check,
+                                contentDescription = null,
+                            )
+                        }
+                    },
+                    onClick = {
+                        open = false
+                        body.setHeading(candidate)
+                    },
+                )
+            }
+        }
+    }
+}
+
+/** The levels the bar offers. Six exist; the archive uses one. */
+private val LEVELS = 2..6
+
+private fun headingIcon(level: Int): Int = when (level) {
+    2 -> R.drawable.ic_format_h2
+    3 -> R.drawable.ic_format_h3
+    4 -> R.drawable.ic_format_h4
+    5 -> R.drawable.ic_format_h5
+    else -> R.drawable.ic_format_h6
+}
+
+private fun headingLabel(level: Int): Int = when (level) {
+    2 -> R.string.format_heading_2
+    3 -> R.string.format_heading_3
+    4 -> R.string.format_heading_4
+    5 -> R.string.format_heading_5
+    else -> R.string.format_heading_6
 }
 
 /** Separates what changes the words from what moves them. */
@@ -524,6 +583,15 @@ private fun TextFieldState.wrapSelection(marker: String) {
     val range = selection
     if (range.collapsed) return
     val result = FormatActions.wrap(text.toString(), range.min, range.max, marker)
+    edit {
+        replace(0, length, result.text)
+        selection = TextRange(result.selectionStart, result.selectionEnd)
+    }
+}
+
+/** Applies [FormatActions.heading], which swaps the line's mark rather than stacking another. */
+private fun TextFieldState.setHeading(level: Int) {
+    val result = FormatActions.heading(text.toString(), selection.min, level)
     edit {
         replace(0, length, result.text)
         selection = TextRange(result.selectionStart, result.selectionEnd)

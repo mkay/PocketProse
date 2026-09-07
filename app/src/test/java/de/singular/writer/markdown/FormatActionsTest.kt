@@ -168,4 +168,61 @@ class FormatActionsTest {
         val result = FormatActions.clear("**vorher** und **nachher**\n", 11, 15)
         assertEquals("**vorher** und **nachher**\n", result.text)
     }
+
+    // ===== headings, as one control over six levels =====
+
+    @Test
+    fun `a plain line reports no heading`() {
+        assertEquals(0, FormatActions.headingLevelAt("Du erreichst mich nicht\n", 4))
+    }
+
+    @Test
+    fun `a heading reports its own level, wherever the caret sits in it`() {
+        val text = "### Strophe\nund weiter\n"
+        assertEquals(3, FormatActions.headingLevelAt(text, 0))
+        assertEquals(3, FormatActions.headingLevelAt(text, 8))
+        // The line below it is not a heading, and the caret's line is what is asked about.
+        assertEquals(0, FormatActions.headingLevelAt(text, 14))
+    }
+
+    @Test
+    fun `a hash without a space is not a heading`() {
+        assertEquals(0, FormatActions.headingLevelAt("#lyrics/snippet\n", 3))
+    }
+
+    @Test
+    fun `making a heading puts the mark on and moves the caret with the words`() {
+        val result = FormatActions.heading("Strophe\n", at = 3, level = 2)
+        assertEquals("## Strophe\n", result.text)
+        assertEquals(6, result.selectionStart)
+    }
+
+    @Test
+    fun `changing the level replaces the mark instead of stacking another one`() {
+        // The bug this exists to prevent: prefixLine only knows whether *its* prefix is there, so
+        // asking for `### ` on `## Strophe` gave `### ## Strophe`.
+        assertEquals("#### Strophe\n", FormatActions.heading("## Strophe\n", at = 5, level = 4).text)
+        assertEquals("## Strophe\n", FormatActions.heading("###### Strophe\n", at = 9, level = 2).text)
+    }
+
+    @Test
+    fun `choosing the level a line already has takes the heading off`() {
+        val result = FormatActions.heading("## Strophe\n", at = 5, level = 2)
+        assertEquals("Strophe\n", result.text)
+        assertEquals(2, result.selectionStart)
+    }
+
+    @Test
+    fun `a heading on a line further down leaves the lines above it alone`() {
+        val text = "Erste Zeile\nStrophe\nDritte\n"
+        assertEquals("Erste Zeile\n## Strophe\nDritte\n", FormatActions.heading(text, at = 14, level = 2).text)
+    }
+
+    @Test
+    fun `what the heading action writes is what the parser reads back`() {
+        for (level in 2..6) {
+            val text = FormatActions.heading("Strophe\n", at = 0, level = level).text
+            assertEquals(listOf(Block.Heading(level, "Strophe")), Blocks.parse(text))
+        }
+    }
 }

@@ -182,4 +182,58 @@ object FormatActions {
         val next = text.indexOf('\n', lineEnd + 1).let { if (it < 0) text.length else it }
         return text.substring((lineEnd + 1).coerceAtMost(text.length), next).isBlank()
     }
+
+    /**
+     * The heading level of the line [at] sits on, or 0 for a line that is not a heading.
+     *
+     * What the bar's heading button wears: a control that always showed the same symbol would say
+     * nothing about the line under the cursor, and the whole point of collapsing six levels into one
+     * button is that the button then has room to answer "what is this line?".
+     */
+    fun headingLevelAt(text: String, at: Int): Int {
+        val line = lineAt(text, at)
+        return HEADING_MARK.find(line)?.groupValues?.get(1)?.length ?: 0
+    }
+
+    /**
+     * Make the line [at] sits on a heading of [level], or take the heading off if it already is one.
+     *
+     * A **replacement**, not an addition: `prefixLine` would have turned `## Strophe` into
+     * `### ## Strophe`, because it only knows whether the exact prefix it was given is there. Six
+     * levels in one control means changing one's mind about the level is the ordinary act, so the
+     * old mark comes off as the new one goes on.
+     *
+     * Choosing the level a line already has removes it, which is the way back and is the same
+     * toggling every other button in the bar does. The caret keeps its place in the words, moving by
+     * however much the mark grew or shrank rather than jumping to the start of the line.
+     */
+    fun heading(text: String, at: Int, level: Int): Formatted {
+        val caret = at.coerceIn(0, text.length)
+        val lineStart = lineStart(text, caret)
+        val existing = HEADING_MARK.find(lineAt(text, caret))?.value.orEmpty()
+        val wanted = if (existing.isNotEmpty() && existing.trimEnd().length == level) {
+            ""
+        } else {
+            "#".repeat(level.coerceIn(1, 6)) + " "
+        }
+
+        val result = text.substring(0, lineStart) + wanted +
+            text.substring(lineStart + existing.length)
+        val moved = (caret + wanted.length - existing.length).coerceAtLeast(lineStart)
+        return Formatted(result, moved, moved)
+    }
+
+    /** `## ` at the start of a line — the hashes and the whitespace that closes them. */
+    private val HEADING_MARK = Regex("""^(#{1,6})[ \t]+""")
+
+    /** Where the line holding [at] begins. */
+    private fun lineStart(text: String, at: Int): Int =
+        text.lastIndexOf('\n', (at - 1).coerceAtLeast(0)).let { if (it < 0 || at == 0) 0 else it + 1 }
+
+    /** The line holding [at], without its terminator. */
+    private fun lineAt(text: String, at: Int): String {
+        val start = lineStart(text, at)
+        val end = text.indexOf('\n', start).let { if (it < 0) text.length else it }
+        return text.substring(start, end)
+    }
 }

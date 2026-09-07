@@ -58,12 +58,15 @@
          does not know what "emphasis" is and should not have to. -->
     <string name="format_bold">Bold</string>
     <string name="format_italic">Italic</string>
-    <string name="format_heading">Heading</string>
     <string name="format_bullet">Bullet list</string>
-    <!-- Two more heading sizes. The bar offers three of the six the parser understands: the archive
-         uses one level and three is already more than a lyric needs. -->
-    <string name="format_heading_3">Smaller heading</string>
-    <string name="format_heading_4">Smallest heading</string>
+    <!-- The five sizes the heading menu offers, largest first. The parser understands six; the
+         first is not offered, because a heading above the note's own title has nothing to head.
+         Named by size rather than by number: the audience does not count heading levels. -->
+    <string name="format_heading_2">Large heading</string>
+    <string name="format_heading_3">Medium heading</string>
+    <string name="format_heading_4">Small heading</string>
+    <string name="format_heading_5">Smaller heading</string>
+    <string name="format_heading_6">Smallest heading</string>
     <!-- Puts a dividing line across the page. Called what it looks like, not what it is called in
          Markdown — "horizontal rule" is a typesetter's word. -->
     <string name="format_rule">Divider</string>
