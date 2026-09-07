@@ -193,7 +193,7 @@ class CorpusTest {
     }
 
     @Test
-    fun `the Bear export's embed comments are three notes' worth and never reach a reader`() {
+    fun `the export's embed comments are three notes' worth and never reach a reader`() {
         val corpus = corpus()
         val withComments = corpus.filterValues { "<!--" in it }
         assertEquals(3, withComments.size)
@@ -204,7 +204,7 @@ class CorpusTest {
     @Test
     fun `the duplicate Wer geht vor notes link into a folder that does not exist`() {
         // Wer geht vor.md has a proper `## Anhänge` list into attachments/. Its three byte-identical
-        // duplicates still point at `Wer geht vor/`, the un-migrated Bear layout, and that folder is
+        // duplicates still point at `Wer geht vor/`, the un-migrated layout it came with, and that folder is
         // not in the archive — 24 dead links. Phase 5 must show such a link without pretending to
         // have the file behind it, and must never "repair" one.
         val corpus = corpus()

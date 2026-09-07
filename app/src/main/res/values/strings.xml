@@ -85,7 +85,7 @@
          Every image in the author's archive is a chord diagram with an empty alt text. -->
     <string name="image_untitled">Picture in this note</string>
     <!-- Shown in place of a picture whose file is not in the folder. The archive has 24 links to a
-         folder the Bear export referred to and never created; the app says so and changes nothing. -->
+         folder the export referred to and never created; the app says so and changes nothing. -->
     <string name="image_missing">Picture not found: %1$s</string>
 
     <!-- Heading of the row of attached files at the foot of a note. -->

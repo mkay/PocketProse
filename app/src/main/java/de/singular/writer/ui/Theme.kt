@@ -15,7 +15,7 @@ import de.singular.writer.ThemeMode
 
 /**
  * The palette is a **taupe** neutral — a warm grey with a faint red-violet lean — at **deliberately
- * reduced contrast**, modelled on Bear's dark theme.
+ * reduced contrast**, modelled on another editor's dark theme.
  *
  * The hue was chosen on 2026-09-07 from five candidates rendered side by side at identical
  * luminance, so the choice cost nothing in legibility: only the hue moved. It is hue 350 at very low
@@ -25,18 +25,18 @@ import de.singular.writer.ThemeMode
  * ## The contrast decision
  *
  * This is the one thing in the file that looks like a mistake and is not. The author asked for
- * Bear's softer look on 2026-09-07, knowing it costs contrast, and the numbers below are matched to
- * measurements taken from a Bear screenshot rather than invented:
+ * that softer look on 2026-09-07, knowing it costs contrast, and the numbers below are matched to
+ * measurements taken from a screenshot of it rather than invented:
  *
- * | | Bear (measured) | here |
+ * | | reference (measured) | here |
  * |---|---|---|
  * | dark page | `#2F3235` | `#363031` |
  * | dark title | 5.30:1 | 5.35:1 |
  * | dark body | 4.49:1 | 4.50:1 |
  *
- * Two moves make that look, and only doing one of them fails: the page **lifts off black** (Bear's
+ * Two moves make that look, and only doing one of them fails: the page **lifts off black** (the
  * is 1.63:1 above it) *and* the type **comes down off white**. Lifting the page alone gives a washed
- * grey screen; dimming the type alone gives murk on black. `#363031` carries Bear's page
+ * grey screen; dimming the type alone gives murk on black. `#363031` carries the reference page
  * luminance exactly — same softness, our hue.
  *
  * What this gives up is real. The previous palette put body text at 18.11:1 on dark and 16.74:1 on
@@ -175,7 +175,7 @@ private val PocketDarkColors = darkColorScheme(
  * The paper a picture in a note is mounted on — **the one colour in the app that ignores the theme.**
  *
  * The archive's chord diagrams are 89% transparent PNGs whose ink is `#111111`: they were drawn in
- * Bear against a white page and carry no background of their own. Dropped straight onto this app's
+ * another editor against a white page and carry no background of their own. Dropped straight onto this app's
  * dark page they read at **1.46:1**, which is to say they vanish. Measured, after watching them do
  * exactly that on the Fairphone.
  *

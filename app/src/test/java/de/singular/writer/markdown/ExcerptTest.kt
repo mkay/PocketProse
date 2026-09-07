@@ -35,7 +35,7 @@ class ExcerptTest {
     }
 
     @Test
-    fun `the Bear export's embed comments do not reach the reader`() {
+    fun `the export's embed comments do not reach the reader`() {
         // 24 of these across three notes, all beside a PDF link. Invisible in any renderer, and
         // stripped for display only — never removed from the file.
         val body = "[Pasted Graphic 12.pdf](Wer%20geht%20vor/x.pdf)<!-- {\"embed\":\"true\"} -->x3\n"

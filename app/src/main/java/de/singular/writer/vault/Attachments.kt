@@ -26,7 +26,7 @@ import java.net.URLDecoder
  *
  * - **Both layouts.** `attachments/x.png` and a flat sibling `x.png` are both valid and both occur —
  *   the fixture folder has a note of each.
- * - **Percent-encoding.** The Bear export wrote `Wer%20geht%20vor/Pasted%20Graphic%2012.pdf`, so a
+ * - **Percent-encoding.** The export wrote `Wer%20geht%20vor/Pasted%20Graphic%2012.pdf`, so a
  *   path is decoded before it is walked.
  * - **A target that is not there.** Those same links point at a folder the archive does not contain:
  *   24 dead links across three notes. A missing file is an ordinary answer here — null — never an
@@ -54,7 +54,7 @@ class Attachments(private val vault: Vault, context: Context) {
     /**
      * The document a relative [path] points at, or **null if there is nothing there**.
      *
-     * Null is the expected answer for the 24 links into `Wer geht vor/`, a folder the Bear export
+     * Null is the expected answer for the 24 links into `Wer geht vor/`, a folder the export
      * referred to and the archive does not contain. The app shows such a link as a link, says
      * plainly that the file is missing, and does not touch it: repairing a link means guessing which
      * file was meant, and guessing wrong is worse than a dead link the user can see.
@@ -158,7 +158,7 @@ class Attachments(private val vault: Vault, context: Context) {
         /**
          * A link target as a filename.
          *
-         * Markdown percent-encodes spaces, and the Bear export leaned on it heavily:
+         * Markdown percent-encodes spaces, and the export leaned on it heavily:
          * `Wer%20geht%20vor/Pasted%20Graphic%2012.pdf`. Decoding is done per path segment so that an
          * encoded slash — which would be part of a name, not a separator — cannot invent a folder.
          */

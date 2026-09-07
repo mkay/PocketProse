@@ -105,7 +105,7 @@ private fun NoteImage(ref: ImageRef, attachments: Attachments) {
  * A picture the folder does not contain.
  *
  * Says so, quietly, and shows the path that was asked for. The archive has 24 of these: the three
- * duplicate `Wer geht vor` notes point into a folder the Bear export referred to and never created.
+ * duplicate `Wer geht vor` notes point into a folder the export referred to and never created.
  * The app never guesses which file was meant and never rewrites the link — a dead link the writer
  * can see is better than a silently altered one.
  */

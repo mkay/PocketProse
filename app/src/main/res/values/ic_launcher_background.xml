@@ -10,7 +10,7 @@
       This deliberately gives up on the sheets reading against the ground — their dark end is
       #0C0B0B and lands at 1.1:1 here, so the bottom of the stack merges into the tile and what the
       eye gets is the near-white page edges floating, with the sheets implied above them by the
-      gradient's lighter top. That is a look rather than a mistake: it is the same one Bear's dark
+      gradient's lighter top. That is a look rather than a mistake: it is the same one the reference dark
       theme has, and it is why this was chosen over the mid grey that made all three tones legible.
 
       The cost is that on a black wallpaper the tile has almost no edge of its own — 1.1:1 against a

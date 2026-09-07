@@ -11,7 +11,7 @@ import org.junit.Test
 class AttachmentsPathTest {
 
     @Test
-    fun `the Bear export's encoded paths decode to real names`() {
+    fun `the export's encoded paths decode to real names`() {
         assertEquals(
             "Wer geht vor/Pasted Graphic 12.pdf",
             Attachments.decode("Wer%20geht%20vor/Pasted%20Graphic%2012.pdf"),

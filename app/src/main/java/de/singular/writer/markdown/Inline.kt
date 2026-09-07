@@ -15,7 +15,7 @@ object Inline {
      * `<!-- ... -->` — an HTML comment.
      *
      * Three notes carry 24 of these, all of them the same `<!-- {"embed":"true", "preview":"true"} -->`
-     * left behind beside a PDF link by the Bear export. They are invisible in any Markdown renderer
+     * left behind beside a PDF link by the export. They are invisible in any Markdown renderer
      * and must stay invisible here — but they are also bytes the user never asked us to touch, so
      * they are stripped for *display* only and never removed from a file.
      */

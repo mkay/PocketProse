@@ -55,7 +55,7 @@ data class IndexedNote(
      * When the note was written, from the frontmatter — never the file's timestamp.
      *
      * `CLAUDE.md` calls the 2015–2025 span the archive's main value, and the file mtimes cannot
-     * carry it: the notes were exported out of Bear, copied onto a phone, and are now rewritten by
+     * carry it: the notes were exported out of another editor, copied onto a phone, and are now rewritten by
      * a sync client whenever it feels like it. Only `created` remembers.
      *
      * Null if the key is missing or unparseable, which no note in the archive currently is.
