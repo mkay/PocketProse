@@ -2,6 +2,12 @@
 
 package de.singular.writer.ui
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
@@ -9,6 +15,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.SubcomposeLayout
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -28,13 +35,13 @@ import de.singular.writer.R
  * anyone is looking.
  *
  * The chip count has to be decided by measuring, not by guessing at character widths: tags here run
- * from `50%` to `album/entsetzlich`, and a fixed cutoff would either truncate two short tags
+ * from `50` to `album/entsetzlich`, and a fixed cutoff would either truncate two short tags
  * needlessly or overflow on one long one.
  *
  * There is a circularity in that — how many chips fit depends on how wide the `+N` chip is, and `N`
  * depends on how many chips fit — which is what [SubcomposeLayout] is for. We measure the tags,
  * count how many fit outright, and if they do not all fit we walk `k` downward, re-composing the
- * `+N` chip for each candidate `N` until the row fits. Tags cap at five in the archive, so that loop
+ * `+N` chip for each candidate `N` until the row fits. Tags cap at six in the archive, so that loop
  * runs at most a handful of times and only for rows that actually overflow.
  */
 @Composable
@@ -88,6 +95,61 @@ fun TagRow(tags: List<String>, modifier: Modifier = Modifier) {
             }
             overflow?.place(x, (height - overflow.height) / 2)
         }
+    }
+}
+
+/**
+ * A note's own tags, at the foot of the editor — the chip row that is the whole of "the user never
+ * sees a `#`" on the one screen where the hashtags actually live.
+ *
+ * **Wrapping, not the library row's one line with a `+N`.** Truncating is right in a list, where a
+ * row is a glance and the writing above it is the point. It is wrong here: this is the place a tag
+ * is inspected and changed, and hiding one behind `+2` in the very control that edits it would be
+ * perverse. Notes carry at most six tags, so a wrap is at most a second line.
+ *
+ * The whole row is one target. Tapping anywhere on it opens [TagSheet]; there is no `✕` on a chip,
+ * because removing a tag rewrites the file and a mis-tap under the text somebody is writing in is
+ * the wrong price for that.
+ *
+ * A note with no tags still draws the row, as a single quiet "Add a tag" chip. 40 notes in the
+ * archive are nothing but a tag line and three carry none at all, so an empty row is an ordinary
+ * state and needs somewhere to start rather than nothing at all.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun NoteTagBar(chips: List<NoteDocument.Chip>, enabled: Boolean, onEdit: () -> Unit, modifier: Modifier = Modifier) {
+    val description = stringResource(R.string.note_tags_edit)
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable(enabled = enabled, onClickLabel = description, onClick = onEdit)
+            .padding(horizontal = 20.dp, vertical = 12.dp),
+    ) {
+        if (chips.isEmpty()) {
+            AddTagChip()
+        } else {
+            chips.forEach { TagChip(it.tag) }
+        }
+    }
+}
+
+/** The stand-in for a chip row on a note that has no tags yet. */
+@Composable
+private fun AddTagChip() {
+    Surface(
+        color = Color.Transparent,
+        shape = RoundedCornerShape(4.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+    ) {
+        Text(
+            text = stringResource(R.string.note_tags_none),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+        )
     }
 }
 

@@ -25,6 +25,15 @@
     <string name="editor_readonly_title">Dieser Text ist nur zum Lesen geöffnet</string>
     <string name="editor_readonly_body">Pocket Prose kann nicht sicher sein, diesen Text unverändert zu speichern, und ändert ihn deshalb gar nicht. Du kannst ihn hier lesen und anderswo bearbeiten.</string>
 
+    <string name="note_tags_edit">Schlagwörter bearbeiten</string>
+    <string name="note_tags_none">Schlagwort hinzufügen</string>
+    <string name="tag_sheet_title">Schlagwörter</string>
+    <string name="tag_sheet_new">Neues Schlagwort</string>
+    <string name="tag_sheet_add">Hinzufügen</string>
+    <string name="tag_sheet_done">Fertig</string>
+    <string name="tag_sheet_toggle">%1$s</string>
+    <string name="tag_sheet_untracked">Steht in diesem Text, aber nicht in seiner Schlagwortliste</string>
+
     <string name="conflict_title">Dieser Text wurde anderswo geändert</string>
     <string name="conflict_body">Während du geschrieben hast, wurde dieser Text auf einem anderen Gerät bearbeitet. Pocket Prose hat keine der beiden Fassungen angetastet.</string>
     <string name="conflict_keep_both">Beide behalten</string>

@@ -320,6 +320,7 @@ private fun PocketProseApp(settings: Settings) {
             },
             // The gate from phase 2: a note whose bytes the parser cannot reproduce is never
             // written, because writing it would corrupt it. It is false for no note in the archive.
+            knownTags = index.allTags,
             editable = openNote.roundTrips,
             onBack = { leave() },
             message = message,

@@ -87,6 +87,21 @@ class NoteDocument(body: String, tags: List<String>) {
     }
 
     /**
+     * Put a tag on this note, or take it off.
+     *
+     * Nothing reaches disk here. The set is written on the same occasions the body is — leaving the
+     * editor, or the app going to the background — so a mind changed twice inside the sheet costs
+     * no writes at all, and `Note.withTags` still makes a set that ended where it started a no-op.
+     *
+     * A new tag goes on the end. The order is the file's own and the app has no business sorting a
+     * list the user only added to.
+     */
+    fun toggleTag(tag: String) {
+        val normalized = Tags.normalize(tag)
+        retag(if (normalized in tags) tags - normalized else tags + normalized)
+    }
+
+    /**
      * Every tag to draw at the foot: the editable ones first, then anything the runs carry that the
      * frontmatter does not.
      *
@@ -138,6 +153,7 @@ fun EditorScreen(
     attachments: Attachments,
     links: List<LinkRef>,
     missingLinks: Set<String>,
+    knownTags: Set<String>,
     onOpenLink: (LinkRef) -> Unit,
     editable: Boolean,
     onBack: () -> Unit,
@@ -222,6 +238,23 @@ fun EditorScreen(
                     is Segment.Tags -> Unit
                 }
             }
+        }
+
+        // The note's tags, under the writing and above its files. Both are about the note rather
+        // than in it, and both belong after the last word rather than before the first.
+        var editingTags by remember(document) { mutableStateOf(false) }
+        NoteTagBar(
+            chips = document.chips(),
+            enabled = editable,
+            onEdit = { editingTags = true },
+        )
+        if (editingTags) {
+            TagSheet(
+                chips = document.chips(),
+                known = knownTags,
+                onToggle = document::toggleTag,
+                onDismiss = { editingTags = false },
+            )
         }
 
         AttachmentStrip(links = links, missing = missingLinks, onOpen = onOpenLink)
