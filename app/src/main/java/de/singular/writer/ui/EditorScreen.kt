@@ -59,6 +59,8 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalTextToolbar
+import androidx.compose.foundation.text.contextmenu.provider.LocalTextContextMenuDropdownProvider
+import androidx.compose.foundation.text.contextmenu.provider.LocalTextContextMenuToolbarProvider
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -221,8 +223,16 @@ fun EditorScreen(
     }
 
     // No floating selection popup anywhere in the editor: it lands on top of the line being
-    // selected, and this screen has a bar of its own for the same job. See NoTextToolbar.
-    CompositionLocalProvider(LocalTextToolbar provides NoTextToolbar) {
+    // selected, and this screen has a bar of its own for the same job.
+    //
+    // Both of Compose's mechanisms are replaced. A text field asks the newer
+    // `LocalTextContextMenuToolbarProvider`, so overriding `LocalTextToolbar` alone did nothing and
+    // the popup kept appearing. See NoTextToolbar.
+    CompositionLocalProvider(
+        LocalTextToolbar provides NoTextToolbar,
+        LocalTextContextMenuToolbarProvider provides NoTextContextMenu,
+        LocalTextContextMenuDropdownProvider provides NoTextContextMenu,
+    ) {
     Column(modifier.fillMaxSize()) {
         TopAppBar(
             title = {
