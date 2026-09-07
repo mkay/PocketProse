@@ -14,145 +14,163 @@ import androidx.compose.ui.unit.dp
 import de.singular.writer.ThemeMode
 
 /**
- * The whole palette is Tailwind's **stone** ramp, which is a warm neutral — a grey with earth in it
- * rather than a brown. That is the brief: "elegantly neutral in shades of earth-coloured grey".
+ * The palette is a **taupe** neutral — a warm grey with a faint red-violet lean — at **deliberately
+ * reduced contrast**, modelled on Bear's dark theme.
  *
- * The other three apps each hang a saturated accent off a neutral ground, because each of them has a
- * state worth shouting about — a take running, a chord landing, a loop armed. **This one has none.**
- * A writing app's screen is 90% page, the user is looking at their own words, and every colour the
- * app adds is competing with them. So the accent here is deliberately the quietest of the four, and
- * the surfaces do nearly all of the work.
+ * The hue was chosen on 2026-09-07 from five candidates rendered side by side at identical
+ * luminance, so the choice cost nothing in legibility: only the hue moved. It is hue 350 at very low
+ * saturation, which reads as paper rather than as a colour, and is the furthest of the five from the
+ * other three apps' palettes.
  *
- * All ratios below are measured, not estimated. Recompute them if you move a value.
+ * ## The contrast decision
+ *
+ * This is the one thing in the file that looks like a mistake and is not. The author asked for
+ * Bear's softer look on 2026-09-07, knowing it costs contrast, and the numbers below are matched to
+ * measurements taken from a Bear screenshot rather than invented:
+ *
+ * | | Bear (measured) | here |
+ * |---|---|---|
+ * | dark page | `#2F3235` | `#363031` |
+ * | dark title | 5.30:1 | 5.35:1 |
+ * | dark body | 4.49:1 | 4.50:1 |
+ *
+ * Two moves make that look, and only doing one of them fails: the page **lifts off black** (Bear's
+ * is 1.63:1 above it) *and* the type **comes down off white**. Lifting the page alone gives a washed
+ * grey screen; dimming the type alone gives murk on black. `#363031` carries Bear's page
+ * luminance exactly — same softness, our hue.
+ *
+ * What this gives up is real. The previous palette put body text at 18.11:1 on dark and 16.74:1 on
+ * light; this is a quarter of that. Body type on dark now sits just under the 4.5:1 that WCAG asks
+ * of small text, and on light just above it. **Do not "correct" these numbers as a tidy-up** — but
+ * equally, do not push them further down. If a legibility complaint ever arrives, the lever is the
+ * page: darkening it lifts every ratio at once without touching the type, which is the adjustment
+ * that keeps the look.
+ *
+ * Light is reduced in the same character but held a little higher — title 6.53:1 against dark's
+ * 5.35:1. A light page in sunlight is unforgiving in a way a dark page indoors is not, and the
+ * reference screenshot was a dark one, so there is nothing to match against there.
  */
 
 /**
- * The accent: a **clay**, four rungs apart between the themes.
- *
- * Light is clay-600 `#8A5A3C`, **5.57:1** on the page, and this app takes the number the other
- * three could not. TitleTrack's amber sits at 3.2:1 as a deliberate cost, because a gold that
- * clears 4.5:1 has gone brown and stopped being the colour the mark is. Clay has no such problem —
- * it *is* brown, so the legible step and the right step are the same step. There is no argument to
- * have here and no compromise to defend.
- *
- * Dark is clay-400 `#C4926E` at **7.23:1**, lighter for the same reason every dark accent is: the
- * ground moved away from it.
- *
- * Where this accent actually appears is a very short list — the format bar that pops up over a
- * selection, a chosen tag in the drawer, a text cursor. It is not a colour the app wears. If it
- * starts showing up in more places, that is the drift worth catching in review.
+ * The pages. Dark lifts off black by design (see above); light sits a hair off true white, which
+ * was confirmed on the Fairphone on 2026-09-07 as reading like paper rather than like a dirty white.
  */
-private val ClayOnLight = Color(0xFF8A5A3C) // clay-600
-private val ClayOnDark = Color(0xFFC4926E) // clay-400
+private val PageDark = Color(0xFF363031)
+private val PageLight = Color(0xFFFBFAFA)
 
 /**
- * Content sitting *on* the accent, and the two themes answer differently because their accents are
- * on opposite sides of mid.
+ * Type, in two weights.
  *
- * White on clay-600 reads **5.82:1**; stone-950 on clay-400 reads **7.23:1**. Each theme takes
- * whichever its own accent can carry, which is the same rule TitleTrack arrived at.
+ * `onSurface` is a note's title and the words in the editor. `onSurfaceVariant` is everything that
+ * supports them — the excerpt in a list row, the date, a tag, the "Nothing written yet" placeholder.
+ * The gap between them is deliberately narrow (5.24 against 4.43 on dark) because at this contrast
+ * level a wide split would make the secondary tier illegible rather than merely quieter.
  */
+private val InkDark = Color(0xFFACA5A6) // 5.35:1 on PageDark
+private val InkDarkMuted = Color(0xFFA09698) // 4.50:1
+private val InkLight = Color(0xFF64585A) // 6.53:1 on PageLight
+private val InkLightMuted = Color(0xFF786A6C) // 4.94:1
+
+/**
+ * The accent: a clay, and the quietest of the four apps' accents by a wide margin.
+ *
+ * Dark is `#C99681` at **5.03:1**, chosen to sit just *under* the title's 5.35:1. That ordering is
+ * the point — at reduced contrast the brightest thing on the screen is whatever the eye goes to
+ * first, and in a writing app that must be the writing. Its hue is pulled to 18 rather than left at the page's 350: a clay that shared the
+ * page's exact hue would read as the page lit up rather than as a different thing.
+ *
+ * Light is `#90563E` at **5.62:1**, just below the light title's 6.53:1 — the same ordering.
+ *
+ * Where it appears is a very short list: the format bar over a selection, a chosen tag, a text
+ * cursor. If it starts showing up elsewhere, that is the drift worth catching in review.
+ */
+private val ClayDark = Color(0xFFC99681)
+private val ClayLight = Color(0xFF90563E)
+
+/** Content on the accent: 5.21:1 on the dark clay, 5.86:1 on the light one. */
+private val OnClayDark = Color(0xFF3F2A22)
 private val OnClayLight = Color(0xFFFFFFFF)
-private val OnClayDark = Color(0xFF0C0A09) // stone-950
 
 /**
- * The accent's ends, for a tinted container: pale clay as the ground on a light screen and as the
- * content on a dark one, deep clay the other way round. The pairing reads **9.89:1** on light and
- * **11.63:1** on dark, and each container sits barely off its own page — 1.20:1 and 1.36:1 — which
- * is all a tinted surface should do here.
+ * A selected surface — the drawer's current tag, and Material's `secondaryContainer` generally.
+ *
+ * Barely off the page on purpose (1.20:1 on both themes). At this contrast level a selection
+ * wash that announces itself would be the loudest thing on a screen whose whole point is to be
+ * quiet; the label going to full weight is what actually says "this one".
  */
-private val ClayPale = Color(0xFFF0E4DA)
-private val ClayDeep = Color(0xFF3A2418)
-private val OnClayPale = Color(0xFF4A2E1D)
+private val SelectedDark = Color(0xFF4B3939)
+private val OnSelectedDark = Color(0xFFDEC8BE) // 6.75:1 on SelectedDark
+private val SelectedLight = Color(0xFFF1E2E3)
+private val OnSelectedLight = Color(0xFF6F4432) // 6.56:1 on SelectedLight
 
 /**
- * **The light page is stone-50 `#FAFAF9`, not white, and that is the one value in this file worth
- * arguing about.**
+ * The light theme. Reduced in the same character as dark, held a little higher — see the file note.
  *
- * TitleTrack went the other way on 2026-07-29 and the reasoning is on its `TrackLightColors`: a page
- * 1.05:1 off true white is below the threshold at which a hue reads as a decision, so all it buys is
- * looking slightly unclean beside a white system surface — a dialog, the keyboard, the shade. This
- * page is 1.04:1 off white and is wide open to exactly that objection.
- *
- * It is taken anyway, for two reasons. The brief asks for earth-coloured grey, and a light theme
- * whose largest area is pure white has not delivered it — the warmth would live only in a ramp the
- * editor screen barely shows, since a distraction-free editor is page and type and nothing else.
- * And stone is a **grey**, where the cream TitleTrack rejected (`#FEF9F1`, a yellow at 1.05:1) was a
- * hue trying to be invisible; a desaturated warm grey next to white reads as paper rather than as a
- * smudge, which is the distinction that argument turns on.
- *
- * That is a claim about how it looks on glass, so **check it on the device before trusting it**. If
- * it reads dirty beside the keyboard on the Fairphone, the fix is `#FFFFFF` here and nothing else —
- * the ramp above already carries the warmth and does not move.
- */
-private val PageLight = Color(0xFFFAFAF9) // stone-50
-private val PageDark = Color(0xFF0C0A09) // stone-950
-
-/**
- * Body type: stone-900 on light at **16.74:1**, stone-100 on dark at **18.11:1**. Secondary type —
- * the date and tag line under a note, the placeholder on a note with nothing in it — is stone-600 at
- * **7.30:1** and stone-400 at **7.83:1**.
- *
- * Both secondaries are well clear of 4.5:1 on purpose. They carry the library list's small print at
- * a size a phone shows in daylight, and this is the app's most-read screen after the editor.
+ * The container ramp is compressed into a tenth of a stop (1.11 to 1.19 against the page), which is
+ * all a tinted surface should do here: a tag chip needs to be findable, not framed.
  */
 private val PocketLightColors = lightColorScheme(
-    primary = ClayOnLight,
+    primary = ClayLight,
     onPrimary = OnClayLight,
-    primaryContainer = ClayPale,
-    onPrimaryContainer = OnClayPale,
-    secondaryContainer = ClayPale,
-    onSecondaryContainer = OnClayPale,
+    primaryContainer = SelectedLight,
+    onPrimaryContainer = OnSelectedLight,
+    secondaryContainer = SelectedLight,
+    onSecondaryContainer = OnSelectedLight,
     background = PageLight,
-    onBackground = Color(0xFF1C1917),
+    onBackground = InkLight,
     surface = PageLight,
-    onSurface = Color(0xFF1C1917), // stone-900
-    surfaceVariant = Color(0xFFE7E5E4), // stone-200
-    onSurfaceVariant = Color(0xFF57534E), // stone-600
-    surfaceContainerLowest = Color(0xFFFFFFFF),
-    surfaceContainerLow = Color(0xFFF5F5F4), // stone-100
-    surfaceContainer = Color(0xFFF0EFEE),
-    surfaceContainerHigh = Color(0xFFE7E5E4), // stone-200
-    surfaceContainerHighest = Color(0xFFDEDBD9),
-    outline = Color(0xFFA8A29E), // stone-400
-    outlineVariant = Color(0xFFD6D3D1), // stone-300
+    onSurface = InkLight,
+    surfaceVariant = Color(0xFFEBE5E6),
+    onSurfaceVariant = InkLightMuted,
+    surfaceContainerLowest = Color(0xFFFEFEFE),
+    surfaceContainerLow = Color(0xFFF7F4F4),
+    surfaceContainer = Color(0xFFF2EEEE),
+    surfaceContainerHigh = Color(0xFFEBE5E6),
+    surfaceContainerHighest = Color(0xFFE5DDDF),
+    outline = Color(0xFFAEA0A2), // 2.41:1 — a drawn edge, not type
+    outlineVariant = Color(0xFFE5DDDF), // 1.28:1 — the divider between rows
 )
 
 /**
- * The dark theme is stated in full rather than left to Material, which is the opposite of what
- * TitleTrack settled on — and for the opposite reason. There the accent had turned warm and the
- * retint was closing a gap that no longer existed. Here the *whole palette* is the warm neutral and
- * the accent is the quiet part, so leaving Material's faintly violet greys in place would put the
- * one cool thing in the app underneath everything else.
+ * The dark theme, stated in full rather than left to Material.
  *
- * The ramp climbs stone-950 → `#14100E` → stone-900 → stone-800 → `#33302C`, landing at 1.04, 1.13,
- * 1.30 and 1.51 against the page. The top step is a real step because a dark ramp has room to spend;
- * the light one is compressed into a third of that range because white does not.
+ * Material's own dark surfaces are near-black and faintly violet, which is wrong here twice over:
+ * this page is deliberately lifted well off black, and the whole palette is warm. Leaving the
+ * defaults in place would put the one cool thing in the app underneath everything else.
  */
 private val PocketDarkColors = darkColorScheme(
-    primary = ClayOnDark,
+    primary = ClayDark,
     onPrimary = OnClayDark,
-    primaryContainer = ClayDeep,
-    onPrimaryContainer = ClayPale,
-    secondaryContainer = ClayDeep,
-    onSecondaryContainer = ClayPale,
+    primaryContainer = SelectedDark,
+    onPrimaryContainer = OnSelectedDark,
+    secondaryContainer = SelectedDark,
+    onSecondaryContainer = OnSelectedDark,
     background = PageDark,
-    onBackground = Color(0xFFF5F5F4),
+    onBackground = InkDark,
     surface = PageDark,
-    onSurface = Color(0xFFF5F5F4), // stone-100
-    surfaceVariant = Color(0xFF292524), // stone-800
-    onSurfaceVariant = Color(0xFFA8A29E), // stone-400
-    surfaceContainerLowest = Color(0xFF000000),
-    surfaceContainerLow = Color(0xFF14100E),
-    surfaceContainer = Color(0xFF1C1917), // stone-900
-    surfaceContainerHigh = Color(0xFF292524), // stone-800
-    surfaceContainerHighest = Color(0xFF33302C),
-    outline = Color(0xFF78716C), // stone-500
-    outlineVariant = Color(0xFF44403C), // stone-700
+    onSurface = InkDark,
+    surfaceVariant = Color(0xFF463E3F),
+    onSurfaceVariant = InkDarkMuted,
+    surfaceContainerLowest = Color(0xFF2B2727),
+    surfaceContainerLow = Color(0xFF2F2A2A),
+    surfaceContainer = Color(0xFF3E3739),
+    surfaceContainerHigh = Color(0xFF463E3F),
+    surfaceContainerHighest = Color(0xFF4E4546),
+    outline = Color(0xFF6D6364), // 2.23:1
+    outlineVariant = Color(0xFF463F40), // 1.26:1
 )
 
 /** Controls use a gentle corner rather than the fully-rounded Material default, as in the others. */
 val ControlShape = RoundedCornerShape(5.dp)
+
+/**
+ * How wide the tag drawer is.
+ *
+ * Material's default is 360dp, which on the Fairphone's 393dp-wide screen covers all but a sliver
+ * and reads as a page rather than as a panel over one. 300dp leaves the list visibly behind it,
+ * which is what tells you the drawer is a temporary thing you are looking past.
+ */
+val DrawerWidth = 300.dp
 
 /** Whether [mode] means dark right now — resolving SYSTEM against the OS setting. */
 @Composable

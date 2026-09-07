@@ -15,6 +15,25 @@
     <string name="library_empty">Noch keine Texte in diesem Ordner</string>
     <string name="action_change_folder">Ordner wechseln</string>
 
+    <string name="drawer_open">Schlagwörter anzeigen</string>
+    <string name="drawer_all_notes">Alle Texte</string>
+    <string name="drawer_tags">Schlagwörter</string>
+    <string name="drawer_expand">Unterschlagwörter anzeigen</string>
+    <string name="drawer_collapse">Unterschlagwörter ausblenden</string>
+
+    <string name="search_open">Suchen</string>
+    <string name="search_close">Suche schließen</string>
+    <string name="search_hint">Texte durchsuchen</string>
+    <string name="search_no_results">Nichts passt zu „%1$s“</string>
+    <string name="filter_no_results">Keine Texte mit diesem Schlagwort</string>
+    <string name="filter_showing">Gefiltert nach %1$s</string>
+
+    <string name="tag_overflow">+%1$d</string>
+    <plurals name="tag_overflow_description">
+        <item quantity="one">%1$d weiteres Schlagwort</item>
+        <item quantity="other">%1$d weitere Schlagwörter</item>
+    </plurals>
+
     <plurals name="note_count">
         <item quantity="one">%1$d Text</item>
         <item quantity="other">%1$d Texte</item>

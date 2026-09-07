@@ -69,9 +69,15 @@ The `markdown/` split mirrors TitleTrack's `audio/` and Crystal Ball's `chords/`
 
 ## Palette
 
-Warm neutral throughout: Tailwind's `stone` ramp rather than TitleTrack's cool one, `#FAFAF9` down to `#0C0A09`, with `#78716C` as the mid. Surfaces carry the character and the accent is nearly absent — for a writing app the page is the design. A single restrained clay accent appears mostly as shape (the selection format bar, a chosen tag) and barely as type.
+**Taupe, at deliberately reduced contrast, modelled on Bear.** Settled in phase 3 against measurement rather than taste, and documented in full in `Theme.kt`.
 
-Exact accent value and its contrast numbers get settled in phase 0 against measurement, and documented in `Theme.kt` in the same style as TitleTrack's — the reasoning recorded beside the constant so a later tidy-up cannot quietly undo a decision.
+The author asked for Bear's softer look on 2026-09-07. Sampling a Bear screenshot gave its actual numbers — page `#2F3235`, titles 5.30:1, body 4.49:1 — and the palette matches them: page `#363031`, titles 5.35:1, body 4.50:1. Two moves make that look and doing only one fails: the page lifts off black *and* the type comes down off white. Lift the page alone and the screen washes out; dim the type alone and it turns to murk.
+
+The hue was then chosen from five candidates rendered side by side at identical luminance, so the choice cost nothing in legibility — only the hue moved. Taupe, hue 350 at very low saturation, reads as paper rather than as a colour and sits furthest from the other three apps' palettes. The clay accent is pulled to hue 18 rather than left at the page's 350: an accent sharing the page's exact hue reads as the page lit up rather than as a different thing.
+
+The accent is deliberately dimmer than the title — 5.03:1 against 5.35:1 on dark. At reduced contrast the brightest thing on screen is where the eye lands first, and in a writing app that has to be the writing.
+
+What this gives up is real: body type sits within a hair of WCAG's 4.5:1 floor for small text, where the first palette had it at 18:1. **If legibility ever bites, the lever is the page, not the type** — darkening it lifts every ratio at once and keeps the look. Light is reduced in the same character but held higher (title 6.53:1), because a light page in sunlight is unforgiving in a way a dark page indoors is not.
 
 ## Phases
 
@@ -83,7 +89,13 @@ Each phase ends somewhere verifiable. The app reads the entire archive correctly
 
 **2 — `vault/`, read-only.** SAF listing, note reading, the in-memory index, change detection by content hash rather than mtime (Nextcloud rewrites mtimes), and NFC/NFD-tolerant name matching for the macOS-origin filenames. Done when items 1, 2, 3, 6, 7 and — the one that matters — 8 all verify against a copy of the real archive.
 
-**3 — Library screen.** Title, excerpt or placeholder, date and tag chips per row; the tag drawer; full-text search. One design constraint from the data: `lyrics/snippet` covers 131 of 168 notes, so the tree needs counts and the useful filters are all in the long tail. Do not build a UI that assumes an even spread.
+**3 — Library screen. Done.** Title, excerpt or placeholder, date and tags per row; the tag drawer; full-text search.
+
+The drawer is **alphabetical with counts**, not frequency-ordered. Frequency was the obvious answer to `lyrics/snippet` covering 131 of 168 notes and is the wrong one: it puts the least useful filter in the most prominent slot. What makes alphabetical safe is that the whole tree fits on one screen — 14 top-level entries and 11 children — so nothing is buried and predictability is worth more than ranking. It is 300dp wide, not Material's 360dp, so the list stays visible behind it and it reads as a panel rather than a page.
+
+Rows sort by **`updated`**, not `created`. The two differ on 48 of the 168 notes; `created` is what the archive is worth, `updated` is what you reach for.
+
+Tags sit on **one line, right-aligned, with a `+N` chip** for what does not fit. Wrapping was tried and made rows of uneven height, which reads as broken. The count is decided by measuring, in a `SubcomposeLayout`: how many chips fit depends on how wide `+N` is and `N` depends on how many fit, so it walks the count down until the row fits rather than guessing at character widths.
 
 **4 — Editor.** The `BasicTextField(state:)` plus `OutputTransformation` spike, promoted to the real screen. Always editable, no chrome, format bar on selection only. The first writes happen here, so item 8 is re-verified afterwards: open every note, edit none, `md5sum` unchanged.
 

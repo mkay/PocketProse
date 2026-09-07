@@ -49,6 +49,43 @@
     <!-- Opens the folder picker again, to point at a different folder. -->
     <string name="action_change_folder">Change folder</string>
 
+    <!-- ===== Tag drawer ===== -->
+
+    <!-- Opens the tag drawer. Spoken by a screen reader; never seen. -->
+    <string name="drawer_open">Show tags</string>
+    <!-- The entry above the tag tree that clears any filter. -->
+    <string name="drawer_all_notes">All notes</string>
+    <!-- Title over the tag tree. Says "topics" rather than "tags" nowhere on purpose: "tags" is the
+         one piece of jargon the audience already knows from every other app, and inventing a
+         synonym would be less clear, not more. What is hidden is the `#`, not the word. -->
+    <string name="drawer_tags">Tags</string>
+    <!-- Expands or collapses a tag that has sub-tags. -->
+    <string name="drawer_expand">Show sub-tags</string>
+    <string name="drawer_collapse">Hide sub-tags</string>
+
+    <!-- ===== Search ===== -->
+
+    <string name="search_open">Search</string>
+    <string name="search_close">Close search</string>
+    <!-- Placeholder inside the search field. -->
+    <string name="search_hint">Search your notes</string>
+    <!-- Shown when a search or a tag filter matches nothing. %1$s is what was typed. -->
+    <string name="search_no_results">Nothing matches “%1$s”</string>
+    <!-- Shown when a tag filter matches nothing, which should not happen but is cheap to survive. -->
+    <string name="filter_no_results">No notes with this tag</string>
+    <!-- The current filter, shown under the title in place of the folder name. %1$s is the tag. -->
+    <string name="filter_showing">Filtered by %1$s</string>
+
+    <!-- How many tags a list row could not fit. Shown as a chip after the last one that did:
+         "+2". Kept as a resource rather than built in code so a translation can change the sign
+         or its placement; %1$d is the number hidden. -->
+    <string name="tag_overflow">+%1$d</string>
+    <!-- Spoken by a screen reader in place of the "+2" chip. -->
+    <plurals name="tag_overflow_description">
+        <item quantity="one">%1$d more tag</item>
+        <item quantity="other">%1$d more tags</item>
+    </plurals>
+
     <!-- Number of notes in the chosen folder, shown under the title. -->
     <plurals name="note_count">
         <item quantity="one">%1$d note</item>

@@ -124,10 +124,17 @@ object Tags {
      * four notes carry it, but its five children would need it regardless. A tree built by looking
      * for parent tags would lose every nested tag in the archive.
      *
-     * Sorted by size and then by name. The distribution is extremely skewed — `lyrics/snippet`
-     * alone covers 131 of 168 notes, and 8 of the 24 tags are on a single note each — so the
-     * drawer's job is to put the long tail within reach rather than to present an even list. Do not
-     * replace this with a plain alphabetical sort without solving that first.
+     * **Sorted alphabetically**, at every level, and the counts carry the weight instead.
+     *
+     * The distribution is extremely skewed: `lyrics/snippet` alone covers 131 of 168 notes and 8 of
+     * the 24 tags are on a single note each. Frequency order was the obvious answer to that and is
+     * the wrong one, because it puts the least useful filter in the most prominent slot — selecting
+     * a tag that matches 78% of the archive reads as no filter at all.
+     *
+     * What makes alphabetical safe here is that the whole tree fits on one screen: 14 top-level
+     * entries and 11 children. Nothing is buried, so ranking buys nothing and predictability — a tag
+     * always being where you last saw it — buys a great deal. Revisit this only if the tree grows
+     * past a screen, which for a 24-tag archive it will not.
      */
     fun tree(tagsPerNote: List<List<String>>): List<Node> {
         val perNote = tagsPerNote.map { it.distinct().toSet() }
@@ -151,6 +158,6 @@ object Tags {
                 total = perNote.count { tags -> tags.any { it == path || it.startsWith("$path/") } },
                 children = build(counts, perNote, path),
             )
-        }.sortedWith(compareByDescending<Node> { it.total }.thenBy { it.segment })
+        }.sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.segment })
     }
 }

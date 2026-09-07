@@ -79,15 +79,20 @@ data class IndexedNote(
 class NoteIndex(notes: List<IndexedNote>) {
 
     /**
-     * Newest first, by the note's own `created`.
+     * Most recently changed first, by the note's own `updated`.
      *
-     * Notes without a parseable date sort last rather than first — an unknown date is not
-     * "just now", and putting one at the top of the list would push the actual newest note off
-     * the first screen.
+     * Not `created`, though that is the field `CLAUDE.md` calls the archive's main value. The two
+     * are genuinely different — they fall on different days for 48 of the 168 notes — and what a
+     * writing app owes the top of its list is the thing you were last working on. `created` is what
+     * the archive is *worth*; `updated` is what you want to reach for. Both are read, and the row
+     * shows `updated` because that is what the brief asked for.
+     *
+     * Notes without a parseable date sort last rather than first — an unknown date is not "just
+     * now", and putting one at the top would push the actual newest note off the first screen.
      */
     val notes: List<IndexedNote> = notes.sortedWith(
-        compareByDescending<IndexedNote> { it.created != null }
-            .thenByDescending { it.created }
+        compareByDescending<IndexedNote> { it.updated != null }
+            .thenByDescending { it.updated }
             .thenBy(String.CASE_INSENSITIVE_ORDER) { it.title },
     )
 

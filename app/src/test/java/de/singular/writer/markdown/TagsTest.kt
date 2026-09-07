@@ -95,14 +95,18 @@ class TagsTest {
     }
 
     @Test
-    fun `the tree leads with the biggest tags, since the distribution is skewed`() {
+    fun `the tree is alphabetical, so a tag stays where it was last seen`() {
+        // Frequency order would put lyrics first here. It is deliberately not used: a tag matching
+        // most of the archive is the least useful filter in the app, and the whole tree fits on one
+        // screen anyway. See Tags.tree.
         val tree = Tags.tree(
             List(131) { listOf("lyrics/snippet") } +
                 List(32) { listOf("lyrics/titel") } +
                 List(1) { listOf("english") },
         )
-        assertEquals(listOf("lyrics", "english"), tree.map { it.segment })
-        assertEquals(163, tree.first().total)
-        assertEquals(0, tree.first().count)
+        assertEquals(listOf("english", "lyrics"), tree.map { it.segment })
+        assertEquals(163, tree.first { it.path == "lyrics" }.total)
+        assertEquals(0, tree.first { it.path == "lyrics" }.count)
+        assertEquals(listOf("snippet", "titel"), tree.first { it.path == "lyrics" }.children.map { it.segment })
     }
 }
