@@ -101,7 +101,7 @@ object Blocks {
                     out += Block.Rule
                 }
 
-                isTagLine(line) -> {
+                Tags.isTagLine(line) -> {
                     flush()
                     out += Block.TagLine(Tags.inBody(line))
                 }
@@ -128,22 +128,5 @@ object Blocks {
         }
         flush()
         return out
-    }
-
-    /**
-     * Whether a line consists only of tags and whitespace.
-     *
-     * Percent tags count here even though they are not ordinary hashtags. `Müde.md` reads
-     * `#album/debut #100% #busch`, and requiring every word to be a writable hashtag made that whole
-     * line prose — so the library row for Müde led with its own tags instead of with the song. 32 of
-     * the 33 percent tags in the archive sit on a line like that.
-     *
-     * The line must still be *entirely* tags. A hashtag inside a sentence leaves the sentence
-     * visible, because hiding words the user wrote would be unforgivable — and measurement says no
-     * percent tag is ever embedded in prose, so nothing is lost by counting them.
-     */
-    private fun isTagLine(line: String): Boolean {
-        val words = line.trim().split(Regex("""\s+""")).filter { it.isNotEmpty() }
-        return words.isNotEmpty() && words.all(Tags::isTagWord)
     }
 }

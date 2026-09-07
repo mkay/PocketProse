@@ -45,6 +45,25 @@ sealed interface Segment {
         val images: List<ImageRef>,
         val trailing: String,
     ) : Segment
+
+    /**
+     * A run of lines that are nothing but hashtags, taken out of the editable text.
+     *
+     * The editor draws these as chips at the foot of the note rather than as `#` text, so the
+     * characters must leave the text buffer — and *leaving* is the point. Hiding them in place, the
+     * way `**` is hidden, would put a stretch of invisible characters inside a field somebody is
+     * typing in, where a backspace at the edge silently eats a tag. A segment cannot be reached by
+     * the cursor at all.
+     *
+     * [raw] carries the run's own bytes plus the blank lines absorbed with it (see `Segments.split`),
+     * so the file is unchanged by being displayed. [tags] is every tag on the run, in order, the two
+     * spellings folded together: ordinary hashtags without their `#`, and percent tags — which
+     * cannot be written as hashtags at all — as the bare `100%`.
+     */
+    data class Tags(
+        override val raw: String,
+        val tags: List<String>,
+    ) : Segment
 }
 
 /**
@@ -73,34 +92,153 @@ object Segments {
     /** An ordinary link: the same shape, without the leading `!` that makes it an image. */
     private val LINK = Regex("""(?<!!)\[([^\]]*)]\(([^)]*)\)""")
 
-    /** Split [body] at image lines. Never loses a byte: `join(split(x)) == x`. */
+    /**
+     * Split [body] at image lines and at tag lines. Never loses a byte: `join(split(x)) == x`.
+     *
+     * Lines are classified one at a time; consecutive tag lines join into a single run, because
+     * `Helen weiss das auch.md` ends with three of them and three chip rows would be three ways of
+     * saying the same thing.
+     *
+     * The result always contains at least one [Segment.Prose], even when the note has nothing but
+     * tags in it — 40 notes in the archive are exactly that, and each still needs somewhere to type.
+     */
     fun split(body: String): List<Segment> {
         if (body.isEmpty()) return listOf(Segment.Prose(""))
         val out = ArrayList<Segment>()
         val text = StringBuilder()
+
+        fun flush() {
+            if (text.isNotEmpty()) {
+                out += Segment.Prose(text.toString())
+                text.setLength(0)
+            }
+        }
 
         var i = 0
         while (i < body.length) {
             val nl = body.indexOf('\n', i)
             val end = if (nl < 0) body.length else nl + 1
             val raw = body.substring(i, end)
+            val line = raw.removeSuffix("\n")
             val images = IMAGE.findAll(raw).map { ImageRef(it.groupValues[1], it.groupValues[2]) }.toList()
-            if (images.isEmpty()) {
-                text.append(raw)
-            } else {
-                if (text.isNotEmpty()) {
-                    out += Segment.Prose(text.toString())
-                    text.setLength(0)
+            when {
+                images.isNotEmpty() -> {
+                    flush()
+                    out += Segment.Images(
+                        raw = raw,
+                        images = images,
+                        trailing = Inline.strip(IMAGE.replace(raw, "")).trim(),
+                    )
                 }
-                out += Segment.Images(
-                    raw = raw,
-                    images = images,
-                    trailing = Inline.strip(IMAGE.replace(raw, "")).trim(),
-                )
+
+                Tags.isTagLine(line) -> {
+                    val previous = out.lastOrNull()
+                    if (text.isEmpty() && previous is Segment.Tags) {
+                        // A run: fold this line into the run already open rather than starting a
+                        // second chip row for the same group of tags.
+                        out[out.size - 1] = previous.copy(
+                            raw = previous.raw + raw,
+                            tags = previous.tags + tagsOn(line),
+                        )
+                    } else {
+                        flush()
+                        out += Segment.Tags(raw = raw, tags = tagsOn(line))
+                    }
+                }
+
+                else -> text.append(raw)
             }
             i = end
         }
         if (text.isNotEmpty() || out.isEmpty()) out += Segment.Prose(text.toString())
+        return absorbBlankLines(out)
+    }
+
+    /**
+     * Every tag on one tag line, in order, in both spellings.
+     *
+     * Percent tags come back bare — `100%` from `#100%` and from the wrapped `#100%#` alike — so
+     * that a chip can show what the author wrote. They are display only: see `Note.tags`, which does
+     * not index them, and `TagEdit`, which will not write them.
+     */
+    private fun tagsOn(line: String): List<String> =
+        line.trim().split(Regex("""\s+""")).filter { it.isNotEmpty() }.mapNotNull { word ->
+            when {
+                Tags.isInlineWritable(word.removePrefix("#")) -> word.removePrefix("#")
+                else -> Tags.percentInBody(word).firstOrNull()
+            }
+        }
+
+    /**
+     * Move the blank lines that belong to a tag run out of the prose around it.
+     *
+     * Without this a note whose tags sit at the head — 66 of the runs in the archive — opens with an
+     * empty first line where the hashtags used to be, and one whose tags sit at the foot ends with a
+     * stray blank. The blank line is scaffolding around a thing that is no longer drawn, so it goes
+     * with it.
+     *
+     * **Bytes only ever move between adjacent segments**, never disappear, which is what keeps
+     * `join(split(x)) == x` true — and that property is asserted over all 168 notes, because losing
+     * a byte here rewrites every note in the archive the moment it is opened.
+     *
+     * Blank lines *before* a run are always absorbed; blank lines *after* it only when the run
+     * begins the body. A run sitting between two paragraphs therefore keeps the paragraph break that
+     * follows it, rather than welding the two paragraphs together on screen.
+     *
+     * Blank means [String.isBlank], not empty: `Selbst Schuld an deinem Glück.md` separates its
+     * tags from its song with a line holding a single space, and to a reader that is a blank line.
+     */
+    private fun absorbBlankLines(segments: List<Segment>): List<Segment> {
+        val out = segments.toMutableList()
+        for (i in out.indices) {
+            val run = out[i] as? Segment.Tags ?: continue
+
+            val before = out.getOrNull(i - 1) as? Segment.Prose
+            if (before != null) {
+                val lines = physicalLines(before.raw)
+                val moved = lines.takeLastWhile { it.isBlank() }.joinToString("")
+                if (moved.isNotEmpty()) {
+                    out[i - 1] = before.copy(raw = before.raw.dropLast(moved.length))
+                    out[i] = run.copy(raw = moved + run.raw)
+                }
+            }
+
+            val startsBody = out.take(i).all { it is Segment.Prose && it.raw.isBlank() }
+            val after = out.getOrNull(i + 1) as? Segment.Prose
+            if (startsBody && after != null) {
+                val moved = physicalLines(after.raw).takeWhile { it.isBlank() }.joinToString("")
+                if (moved.isNotEmpty()) {
+                    out[i] = (out[i] as Segment.Tags).let { it.copy(raw = it.raw + moved) }
+                    out[i + 1] = after.copy(raw = after.raw.drop(moved.length))
+                }
+            }
+        }
+        // A prose segment emptied by the move is not a place to type, it is a gap in the layout.
+        val kept = out.filterNot { it is Segment.Prose && it.raw.isEmpty() }
+        // A note whose whole body is its tags — 40 of them — still needs a field. A note that is
+        // nothing but an image does not gain one it never had.
+        return when {
+            kept.any { it is Segment.Prose } -> kept
+            kept.any { it is Segment.Tags } -> kept + Segment.Prose("")
+            else -> kept
+        }
+    }
+
+    /**
+     * [raw] as its lines, each keeping its own newline, so that joining them back is concatenation.
+     *
+     * `split('\n')` would drop the terminators and invent a trailing empty line, and both of those
+     * lose bytes when the pieces are reassembled.
+     */
+    internal fun physicalLines(raw: String): List<String> {
+        val out = ArrayList<String>()
+        var i = 0
+        while (i < raw.length) {
+            val nl = raw.indexOf('\n', i)
+            val end = if (nl < 0) raw.length else nl + 1
+            out += raw.substring(i, end)
+            i = end
+        }
         return out
     }
 

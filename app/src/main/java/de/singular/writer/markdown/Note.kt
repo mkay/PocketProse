@@ -39,10 +39,10 @@ data class Note(
      * over indexing both, because the alternative either leaves the drawer disagreeing with the
      * files or tempts a later version into writing frontmatter into 21 notes nobody edited.
      *
-     * The visible consequence, which is real: a body-only `#100%` sits on a line the app hides as a
-     * tag line, and is not shown as a chip either, so it disappears from the screen. The text is
-     * untouched on disk and reappears the moment the note is opened in anything else. If that proves
-     * annoying, the fix is to chip percent tags without indexing them — not to start writing files.
+     * Indexing is not display. A body-only `#100%` sits on a line the editor hides, so phase 6 chips
+     * it from the run itself — see `Segment.Tags` — and marks it not-removable. It is shown because
+     * the author can plainly see it in their own text; it is still not counted here, and it is not a
+     * member of [editableTags], so no save can either delete it or promote it into the frontmatter.
      */
     val tags: List<String>
         get() = (frontmatter.tags + Tags.inBody(body)).map(Tags::normalize).distinct()
@@ -72,6 +72,48 @@ data class Note(
         val kept = keepTrailingNewline(newBody)
         if (kept == body) return null
         return copy(frontmatter = frontmatter.withKey("updated", stamp(now)), body = kept)
+    }
+
+    /**
+     * The tags the user may edit, and the only ones a save is allowed to write.
+     *
+     * **The frontmatter's list, not [tags].** [tags] unions the frontmatter with the body so the
+     * index sees everything; handing that union to `Frontmatter.withTags` would promote a body-only
+     * tag into the YAML the moment the user changed some unrelated chip — writing to lines nobody
+     * touched. For ordinary tags it would never fire, the two agreeing in all 168 notes. For the 21
+     * percent tags the Standard Notes export failed to carry across it fires immediately.
+     *
+     * So a tag that lives only in a body is shown as a chip and is not a member of this set: the app
+     * can neither delete it nor promote it, and the file keeps what the author wrote.
+     */
+    val editableTags: List<String> get() = frontmatter.tags.map(Tags::normalize).distinct()
+
+    /**
+     * This note with a different tag set, written to both places at once.
+     *
+     * The two representations move together or not at all — that is the whole of the two-way sync,
+     * and it is why this exists rather than the caller writing frontmatter and body separately and
+     * hoping. `updated` is stamped once, for both.
+     *
+     * Only the difference is written. A tag the user did not touch is not rewritten, reordered or
+     * requoted, and the surviving tags keep the order the file already had, new ones going on the
+     * end — sorting them would rewrite every line of a list the user only added to.
+     *
+     * Returns `null` when neither the body nor the tags actually changed, so an open-and-close still
+     * writes nothing. See [withBody] for why that rule is worth this much care.
+     */
+    fun withTags(newBody: String, newTags: List<String>, now: Instant): Note? {
+        val wanted = newTags.map(Tags::normalize).distinct()
+        val current = editableTags
+        val added = wanted - current.toSet()
+        val removed = current - wanted.toSet()
+
+        val kept = keepTrailingNewline(TagEdit.apply(keepTrailingNewline(newBody), added, removed))
+        if (kept == body && added.isEmpty() && removed.isEmpty()) return null
+
+        val ordered = current.filterNot { it in removed } + added
+        val block = if (added.isEmpty() && removed.isEmpty()) frontmatter else frontmatter.withTags(ordered)
+        return copy(frontmatter = block.withKey("updated", stamp(now)), body = kept)
     }
 
     /**

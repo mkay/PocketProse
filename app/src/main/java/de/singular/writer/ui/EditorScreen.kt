@@ -179,6 +179,11 @@ fun EditorScreen(
                     )
 
                     is Segment.Images -> NoteImages(segment, attachments)
+
+                    // Drawn nowhere here: the note's tags are gathered into one chip row at the
+                    // foot, so a run in the middle of a note does not interrupt the writing with a
+                    // second copy of what the foot already shows.
+                    is Segment.Tags -> Unit
                 }
             }
         }

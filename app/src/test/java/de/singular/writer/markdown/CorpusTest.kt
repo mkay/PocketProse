@@ -283,6 +283,136 @@ class CorpusTest {
     }
 
     @Test
+    fun `no hashtag line is left in the editable text of any note`() {
+        // The editor's half of "the user never sees a #". Every tag line in the archive has to leave
+        // the text buffer, or the promise holds for the list and the drawer and breaks on the one
+        // screen where the writing happens.
+        val corpus = corpus()
+        val leaked = corpus.filter { (_, text) ->
+            Segments.split(Note.parse(text).body)
+                .filterIsInstance<Segment.Prose>()
+                .any { prose -> prose.raw.lines().any(Tags::isTagLine) }
+        }.keys
+        assertEquals(emptySet<String>(), leaked)
+    }
+
+    @Test
+    fun `the notes with no tag line are the three with no tags`() {
+        val corpus = corpus()
+        val untagged = corpus.filterValues { text ->
+            Segments.split(Note.parse(text).body).none { it is Segment.Tags }
+        }
+        assertEquals(3, untagged.size)
+        assertTrue(untagged.values.all { Note.parse(it).tags.isEmpty() })
+    }
+
+    @Test
+    fun `every tag the frontmatter declares reaches a chip`() {
+        // The chip row is built from the runs, so a tag that ended up in no run would be a tag the
+        // author cannot see or remove. Percent tags go the other way and are allowed to appear in a
+        // run without a frontmatter entry — 21 of them do, the export having lost them.
+        val corpus = corpus()
+        for ((name, text) in corpus) {
+            val note = Note.parse(text)
+            val chipped = Segments.split(note.body).filterIsInstance<Segment.Tags>().flatMap { it.tags }
+            val declared = note.frontmatter.tags.filter(Tags::isInlineWritable)
+            assertEquals(name, emptyList<String>(), declared - chipped.toSet())
+        }
+    }
+
+    @Test
+    fun `adding a tag to every note and taking it away again changes not one byte`() {
+        // The strictest thing a tag edit can be asked to promise, over the whole archive rather than
+        // over fixtures chosen to be kind. If this fails, some note is being reflowed by a round trip
+        // the user would think of as doing nothing at all.
+        val corpus = corpus()
+        val changed = corpus.filter { (_, text) ->
+            val body = Note.parse(text).body
+            val added = TagEdit.apply(body, listOf("probe"), emptyList())
+            TagEdit.apply(added, emptyList(), listOf("probe")) != body
+        }.keys
+        assertEquals(emptySet<String>(), changed)
+    }
+
+    @Test
+    fun `an added tag lands where the note already keeps its tags`() {
+        val corpus = corpus()
+        for ((name, text) in corpus) {
+            val note = Note.parse(text)
+            val added = TagEdit.apply(note.body, listOf("probe"), emptyList())
+            // Written once, onto a line that is a tag line — never into the middle of a lyric.
+            assertEquals(name, 1, Regex("""(?<=^|\s)#probe(?=\s|$)""", RegexOption.MULTILINE).findAll(added).count())
+            val on = Segments.physicalLines(added).single { "#probe" in it }.removeSuffix("\n")
+            assertTrue(name, Tags.isTagLine(on))
+            // And every other line of the note is untouched.
+            assertEquals(name, note.body, TagEdit.apply(added, emptyList(), listOf("probe")))
+        }
+    }
+
+    @Test
+    fun `removing every tag from a note leaves the words alone`() {
+        // The most destructive edit the chip sheet can ask for. What must survive is the writing:
+        // hashtag lines go, and nothing else does.
+        val corpus = corpus()
+        for ((name, text) in corpus) {
+            val note = Note.parse(text)
+            val stripped = TagEdit.apply(note.body, emptyList(), note.editableTags)
+            val words = { body: String ->
+                Segments.physicalLines(body).filterNot { Tags.isTagLine(it.removeSuffix("\n")) }
+            }
+            assertEquals(name, words(note.body).filterNot { it.isBlank() }, words(stripped).filterNot { it.isBlank() })
+        }
+    }
+
+    @Test
+    fun `a tag edit writes the frontmatter and the body together, and stamps updated once`() {
+        val corpus = corpus()
+        val now = java.time.Instant.parse("2026-09-07T12:00:00Z")
+        for ((name, text) in corpus) {
+            val note = Note.parse(text)
+            val edited = note.withTags(note.body, note.editableTags + "probe", now)!!
+            assertTrue(name, "probe" in edited.frontmatter.tags)
+            assertTrue(name, "#probe" in edited.body)
+            assertEquals(name, Note.stamp(now), edited.frontmatter.updated)
+            // created is the archive's value and is never the app's to move.
+            assertEquals(name, note.frontmatter.created, edited.frontmatter.created)
+            // And the tags the user did not touch keep the order and the quoting the file had.
+            assertEquals(name, note.editableTags, edited.frontmatter.tags.dropLast(1).map(Tags::normalize))
+        }
+    }
+
+    @Test
+    fun `an unchanged tag set writes nothing at all`() {
+        val corpus = corpus()
+        val now = java.time.Instant.parse("2026-09-07T12:00:00Z")
+        for ((name, text) in corpus) {
+            val note = Note.parse(text)
+            assertEquals(name, null, note.withTags(note.body, note.editableTags, now))
+        }
+    }
+
+    @Test
+    fun `a body-only percent tag is never promoted into the frontmatter`() {
+        // 21 of these exist, the export having failed to carry `%` across. Editing some unrelated
+        // chip must not write them into a `tags:` list the author never had.
+        val corpus = corpus()
+        val now = java.time.Instant.parse("2026-09-07T12:00:00Z")
+        val affected = corpus.filterValues { text ->
+            val note = Note.parse(text)
+            (Tags.percentInBody(note.body).toSet() - note.frontmatter.tags.toSet()).isNotEmpty()
+        }
+        assertTrue(affected.isNotEmpty())
+        for ((name, text) in affected) {
+            val note = Note.parse(text)
+            val edited = note.withTags(note.body, note.editableTags + "probe", now)!!
+            val promoted = edited.frontmatter.tags.filter { "%" in it } - note.frontmatter.tags.toSet()
+            assertEquals(name, emptyList<String>(), promoted)
+            // Nor is the text of it disturbed.
+            assertEquals(name, Tags.percentInBody(note.body), Tags.percentInBody(edited.body))
+        }
+    }
+
+    @Test
     fun `images sit on their own lines, which is what makes the editor possible`() {
         // 38 images across 3 chord sheets, and the most any line carries beside them is a bare 3x.
         // If an image ever appeared mid-sentence the segment approach would cut a paragraph in two.
