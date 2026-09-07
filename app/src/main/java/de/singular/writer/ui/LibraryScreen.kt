@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -14,6 +15,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -67,17 +69,30 @@ fun LibraryScreen(
         )
 
         null -> Column(modifier.fillMaxSize()) {
-            Column(Modifier.padding(horizontal = 20.dp, vertical = 16.dp)) {
-                Text(
-                    text = folderName ?: stringResource(R.string.library_title),
-                    style = MaterialTheme.typography.headlineSmall,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-                Text(
-                    text = pluralStringResource(R.plurals.note_count, index.size, index.size),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+            // The folder can be changed from here as well as from the empty states. Leaving it out
+            // of the populated screen stranded anyone who picked the wrong folder: the only way back
+            // was to clear the app's data. Phase 3 gives this a proper top bar; until then it is a
+            // plain row, and the action stays reachable at every point rather than only when
+            // something has gone wrong.
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth().padding(start = 20.dp, end = 8.dp, top = 16.dp, bottom = 16.dp),
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        text = folderName ?: stringResource(R.string.library_title),
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                    Text(
+                        text = pluralStringResource(R.plurals.note_count, index.size, index.size),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                TextButton(onClick = onChooseFolder, shape = ControlShape) {
+                    Text(text = stringResource(R.string.action_change_folder))
+                }
             }
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             LazyColumn(Modifier.fillMaxSize()) {

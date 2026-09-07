@@ -103,11 +103,18 @@ object Tags {
         val segment: String,
         val path: String,
         val count: Int,
+        /**
+         * Distinct notes at this tag or anywhere below it — what the drawer puts beside the name.
+         *
+         * **Counted, not summed.** Adding up the children double-counts every note that carries two
+         * tags under one parent, and the archive is full of them: summing gave `lyrics` a total of
+         * 185 against 168 notes in existence, because a note tagged `lyrics/snippet` *and*
+         * `lyrics/titel` was counted once for each. A drawer that claims more notes under a tag than
+         * the folder contains is not a rounding error, it is a number nobody can trust.
+         */
+        val total: Int,
         val children: List<Node>,
-    ) {
-        /** Notes at this tag or anywhere below it — what the drawer puts beside the name. */
-        val total: Int get() = count + children.sumOf { it.total }
-    }
+    )
 
     /**
      * Build the tree from the tags actually in use.
@@ -123,12 +130,13 @@ object Tags {
      * replace this with a plain alphabetical sort without solving that first.
      */
     fun tree(tagsPerNote: List<List<String>>): List<Node> {
+        val perNote = tagsPerNote.map { it.distinct().toSet() }
         val counts = HashMap<String, Int>()
-        for (tags in tagsPerNote) for (tag in tags.distinct()) counts.merge(tag, 1, Int::plus)
-        return build(counts, prefix = "")
+        for (tags in perNote) for (tag in tags) counts.merge(tag, 1, Int::plus)
+        return build(counts, perNote, prefix = "")
     }
 
-    private fun build(counts: Map<String, Int>, prefix: String): List<Node> {
+    private fun build(counts: Map<String, Int>, perNote: List<Set<String>>, prefix: String): List<Node> {
         val depth = if (prefix.isEmpty()) 0 else prefix.count { it == '/' } + 1
         val segments = counts.keys
             .filter { prefix.isEmpty() || it.startsWith("$prefix/") }
@@ -140,7 +148,8 @@ object Tags {
                 segment = segment,
                 path = path,
                 count = counts[path] ?: 0,
-                children = build(counts, path),
+                total = perNote.count { tags -> tags.any { it == path || it.startsWith("$path/") } },
+                children = build(counts, perNote, path),
             )
         }.sortedWith(compareByDescending<Node> { it.total }.thenBy { it.segment })
     }

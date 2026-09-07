@@ -104,6 +104,16 @@ class CorpusTest {
         assertEquals(14, tree.size)
         assertEquals(setOf("album", "lyrics", "radio"), tree.filter { it.children.isNotEmpty() }.map { it.path }.toSet())
         assertEquals(11, tree.sumOf { node -> node.children.size })
+        // No parent may claim more notes than exist. `lyrics` summed to 185 before totals were
+        // counted rather than added — see Tags.Node.total.
+        assertTrue(tree.all { it.total <= all.size })
+        // Exact totals, because "not more than 168" would still pass a subtler double count.
+        // Summing the children instead gives 185, 26 and 26 — the first of which is more notes than
+        // the archive has.
+        assertEquals(154, tree.first { it.path == "lyrics" }.total)
+        assertEquals(25, tree.first { it.path == "album" }.total)
+        assertEquals(20, tree.first { it.path == "radio" }.total)
+        assertEquals(131, tree.first { it.path == "lyrics" }.children.first { it.segment == "snippet" }.total)
     }
 
     @Test

@@ -80,6 +80,21 @@ class TagsTest {
     }
 
     @Test
+    fun `a parent counts notes, not tags, so two children on one note count once`() {
+        // Summing the children gave `lyrics` 185 against an archive of 168 notes.
+        val tree = Tags.tree(
+            listOf(
+                listOf("lyrics/snippet", "lyrics/titel"),
+                listOf("lyrics/snippet"),
+            ),
+        )
+        val lyrics = tree.first { it.path == "lyrics" }
+        assertEquals(2, lyrics.total)
+        assertEquals(0, lyrics.count)
+        assertEquals(2, lyrics.children.first { it.segment == "snippet" }.total)
+    }
+
+    @Test
     fun `the tree leads with the biggest tags, since the distribution is skewed`() {
         val tree = Tags.tree(
             List(131) { listOf("lyrics/snippet") } +
