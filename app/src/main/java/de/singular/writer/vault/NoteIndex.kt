@@ -96,6 +96,32 @@ class NoteIndex(notes: List<IndexedNote>) {
             .thenBy(String.CASE_INSENSITIVE_ORDER) { it.title },
     )
 
+    /**
+     * This index with one note replaced by what was just written to it.
+     *
+     * **So that leaving a note does not wait on the folder.** A save used to be followed by a full
+     * re-read — 168 documents fetched through SAF and hashed — and once the editor had to wait for
+     * it, tapping back took three or four seconds. Nothing in that read was news: the app has the
+     * bytes it just wrote and the hash it verified them by, which is the whole of what an index
+     * entry holds.
+     *
+     * The folder is still re-read on returning to the foreground, which is where a re-read belongs —
+     * it is for changes the app did not make.
+     *
+     * [roundTrips] is recomputed rather than carried over, because the note being written is a new
+     * one: the same gate that read it must pass on what is going back.
+     */
+    fun replacing(old: IndexedNote, uri: android.net.Uri, text: String, hash: String): NoteIndex {
+        val note = Note.parse(text)
+        val replaced = IndexedNote(
+            file = old.file.copy(uri = uri),
+            note = note,
+            contentHash = hash,
+            roundTrips = note.render() == text,
+        )
+        return NoteIndex(notes.map { if (it.file.name == old.file.name) replaced else it })
+    }
+
     /** The tag tree the drawer draws. See [Tags.tree] for why it is built from path segments. */
     val tagTree: List<Tags.Node> by lazy { Tags.tree(this.notes.map { it.tags }) }
 

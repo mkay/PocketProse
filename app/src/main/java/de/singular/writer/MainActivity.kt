@@ -237,11 +237,13 @@ private fun PocketProseApp(settings: Settings) {
                 // document that no longer exists — the editor would close by itself on return, and
                 // anything typed after that would have nowhere to go.
                 //
-                // **The index is reloaded first, and waited for.** Pointing at the new uri while the
-                // old index is still in place leaves it resolving to no note at all, which closed
-                // the editor on its own and — before the document was keyed on the file name —
-                // silently emptied it.
-                refresh().join()
+                // **The index is updated in place, not re-read.** Pointing at the new uri while the
+                // old index was still in place left it resolving to no note at all, which closed the
+                // editor on its own and — before the document was keyed on the file name — silently
+                // emptied it. Waiting for a full re-read fixed that and cost three or four seconds
+                // on every back tap, which is the wrong price for news the app already has: it
+                // wrote the bytes and verified the hash itself.
+                index = index.replacing(note, result.uri, result.text, result.hash)
                 openNoteUri = result.uri.toString()
                 true
             }
