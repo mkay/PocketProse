@@ -72,24 +72,35 @@ private val InkLight = Color(0xFF64585A) // 6.53:1 on PageLight
 private val InkLightMuted = Color(0xFF786A6C) // 4.94:1
 
 /**
- * The accent: a clay, and the quietest of the four apps' accents by a wide margin.
+ * The accent — and it is **barely a colour**, which is the decision, not a failure of nerve.
  *
- * Dark is `#C99681` at **5.03:1**, chosen to sit just *under* the title's 5.35:1. That ordering is
- * the point — at reduced contrast the brightest thing on the screen is whatever the eye goes to
- * first, and in a writing app that must be the writing. Its hue is pulled to 18 rather than left at the page's 350: a clay that shared the
- * page's exact hue would read as the page lit up rather than as a different thing.
+ * Chosen on 2026-09-07 from four candidates rendered at identical luminance, so this cost nothing in
+ * contrast: only the chroma moved. It is hue 18 at 12% saturation, far enough down that nobody would
+ * name it as clay — it reads as a warm grey — but far enough up that a filled button is visibly
+ * warmer than plain ink rather than looking like a mistake.
  *
- * Light is `#90563E` at **5.62:1**, just below the light title's 6.53:1 — the same ordering.
+ * The louder candidates were rejected on the same ground each time: the screen is 90% the user's own
+ * words, and every degree of chroma the app spends is spent competing with them. The one *quieter*
+ * candidate — no accent at all, the page's own taupe one step up — remains the purest reading of
+ * "elegantly neutral", and is where to go if this ever starts to feel like a colour.
+ *
+ * Dark is `#AE9E98` at **5.01:1**, deliberately just *under* the title's 5.35:1. That ordering is
+ * the point: at reduced contrast the brightest thing on the screen is where the eye lands first, and
+ * here that has to be the writing. Light is `#73625A` at **5.56:1**, under its title's 6.53:1 — the
+ * same ordering.
+ *
+ * The hue stays at 18 rather than the page's 350 so a filled control does not read as merely the
+ * page lit up; at this saturation that is a lean, not a colour.
  *
  * Where it appears is a very short list: the format bar over a selection, a chosen tag, a text
  * cursor. If it starts showing up elsewhere, that is the drift worth catching in review.
  */
-private val ClayDark = Color(0xFFC99681)
-private val ClayLight = Color(0xFF90563E)
+private val AccentDark = Color(0xFFAE9E98) // 5.01:1 on PageDark
+private val AccentLight = Color(0xFF73625A) // 5.56:1 on PageLight
 
-/** Content on the accent: 5.21:1 on the dark clay, 5.86:1 on the light one. */
-private val OnClayDark = Color(0xFF3F2A22)
-private val OnClayLight = Color(0xFFFFFFFF)
+/** Content on the accent: 5.87:1 on the dark one, 5.80:1 on the light one. */
+private val OnAccentDark = Color(0xFF2A2523)
+private val OnAccentLight = Color(0xFFFFFFFF)
 
 /**
  * A selected surface — the drawer's current tag, and Material's `secondaryContainer` generally.
@@ -98,10 +109,10 @@ private val OnClayLight = Color(0xFFFFFFFF)
  * wash that announces itself would be the loudest thing on a screen whose whole point is to be
  * quiet; the label going to full weight is what actually says "this one".
  */
-private val SelectedDark = Color(0xFF4B3939)
-private val OnSelectedDark = Color(0xFFDEC8BE) // 6.75:1 on SelectedDark
-private val SelectedLight = Color(0xFFF1E2E3)
-private val OnSelectedLight = Color(0xFF6F4432) // 6.56:1 on SelectedLight
+private val SelectedDark = Color(0xFF423C3A) // 1.19:1 off the page
+private val OnSelectedDark = Color(0xFFDCD1CC) // 7.24:1 on SelectedDark
+private val SelectedLight = Color(0xFFE8E5E4) // 1.20:1 off the page
+private val OnSelectedLight = Color(0xFF584A45) // 6.76:1 on SelectedLight
 
 /**
  * The light theme. Reduced in the same character as dark, held a little higher — see the file note.
@@ -110,8 +121,8 @@ private val OnSelectedLight = Color(0xFF6F4432) // 6.56:1 on SelectedLight
  * all a tinted surface should do here: a tag chip needs to be findable, not framed.
  */
 private val PocketLightColors = lightColorScheme(
-    primary = ClayLight,
-    onPrimary = OnClayLight,
+    primary = AccentLight,
+    onPrimary = OnAccentLight,
     primaryContainer = SelectedLight,
     onPrimaryContainer = OnSelectedLight,
     secondaryContainer = SelectedLight,
@@ -139,8 +150,8 @@ private val PocketLightColors = lightColorScheme(
  * defaults in place would put the one cool thing in the app underneath everything else.
  */
 private val PocketDarkColors = darkColorScheme(
-    primary = ClayDark,
-    onPrimary = OnClayDark,
+    primary = AccentDark,
+    onPrimary = OnAccentDark,
     primaryContainer = SelectedDark,
     onPrimaryContainer = OnSelectedDark,
     secondaryContainer = SelectedDark,
