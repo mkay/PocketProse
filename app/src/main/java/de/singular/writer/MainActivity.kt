@@ -65,6 +65,8 @@ import de.singular.writer.markdown.Segments
 import de.singular.writer.ui.EditorScreen
 import de.singular.writer.ui.NoteDocument
 import de.singular.writer.ui.ConflictDialog
+import de.singular.writer.ui.DeleteDialog
+import de.singular.writer.ui.NewNoteDialog
 import de.singular.writer.ui.LibraryScreen
 import de.singular.writer.ui.PocketProseTheme
 import de.singular.writer.ui.SettingsScreen
@@ -75,6 +77,7 @@ import de.singular.writer.vault.Attachments
 import de.singular.writer.vault.IndexedNote
 import de.singular.writer.vault.IndexDump
 import de.singular.writer.vault.NoteIndex
+import de.singular.writer.vault.CreateResult
 import de.singular.writer.vault.SaveResult
 import de.singular.writer.vault.Vault
 import de.singular.writer.vault.VaultFailure
@@ -196,6 +199,9 @@ private fun PocketProseApp(settings: Settings) {
     // A conflict holds the editor open with the user's text intact until they choose. Never
     // overwrite, never merge — see SaveResult.Conflict.
     var conflict by remember { mutableStateOf(false) }
+    // The two things that need a yes before they happen: making a file and removing one.
+    var naming by remember { mutableStateOf(false) }
+    var deleting by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf<String?>(null) }
 
     // The folder is read once at a time, however many things ask for it.
@@ -267,6 +273,24 @@ private fun PocketProseApp(settings: Settings) {
 
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val noOpener = stringResource(R.string.attachment_no_app)
+    val deleteFailed = stringResource(R.string.delete_failed)
+
+    /**
+     * Make a note and open it.
+     *
+     * The index is refreshed before the editor is pointed at the new file, so the note it resolves
+     * to is the one that was just written rather than nothing at all — the same ordering the save
+     * path needs, and for the same reason.
+     */
+    fun createNote(title: String) = scope.launch {
+        when (val result = vault.create(title)) {
+            is CreateResult.Failed -> message = result.reason
+            is CreateResult.Made -> {
+                refresh().join()
+                openNoteUri = result.uri.toString()
+            }
+        }
+    }
 
 
     /**
@@ -322,6 +346,16 @@ private fun PocketProseApp(settings: Settings) {
     // Settings is a full screen over the library rather than a destination beside it: it is not a
     // place you navigate *to* while reading, it is a detour. Checked before the editor so that a
     // note left open underneath is still open on the way back.
+    if (naming) {
+        NewNoteDialog(
+            onCreate = { title ->
+                naming = false
+                createNote(title)
+            },
+            onDismiss = { naming = false },
+        )
+    }
+
     if (showSettings) {
         SettingsScreen(
             themeMode = settings.themeMode,
@@ -360,10 +394,31 @@ private fun PocketProseApp(settings: Settings) {
             knownTags = index.allTags,
             editable = openNote.roundTrips,
             onBack = { leave() },
+            onDelete = { deleting = true },
             message = message,
             onMessageShown = { message = null },
         )
         BackHandler { leave() }
+
+        if (deleting) {
+            DeleteDialog(
+                title = openNote.title,
+                onConfirm = {
+                    deleting = false
+                    scope.launch {
+                        if (vault.delete(openNote)) {
+                            // Out of the note first, then out of the index. Leaving it the other way
+                            // round shows an editor whose file is already gone.
+                            openNoteUri = null
+                            refresh()
+                        } else {
+                            message = deleteFailed
+                        }
+                    }
+                },
+                onDismiss = { deleting = false },
+            )
+        }
 
         if (conflict) {
             ConflictDialog(
@@ -448,6 +503,7 @@ private fun PocketProseApp(settings: Settings) {
             onOpenDrawer = { scope.launch { drawerState.open() } },
             onChooseFolder = { pickFolder.launch(null) },
             onOpenNote = { openNoteUri = it.file.uri.toString() },
+            onNewNote = { naming = true },
         )
     }
 

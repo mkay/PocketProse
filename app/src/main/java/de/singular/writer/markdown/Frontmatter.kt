@@ -198,10 +198,23 @@ class Frontmatter private constructor(
             return Frontmatter("") to text
         }
 
-        /** Strip one layer of matching quotes, if the value has them. */
+        /**
+         * Strip one layer of matching quotes, and undo the escaping that layer implies.
+         *
+         * **The exact inverse of [escape], which [requote] applies on the way out.** The two were
+         * asymmetric until 2026-09-07: a value went out escaped and came back with the backslashes
+         * still in it, so a title containing a quote would gain a pair of them every time it was
+         * written. No note in the archive holds one, which is why it stayed hidden — but new notes
+         * are typed by hand, and the title is the one field somebody writes freely.
+         *
+         * Single quotes escape differently in YAML: `''` is a literal quote and a backslash means
+         * nothing at all, so that branch undoes its own thing.
+         */
         private fun unquote(value: String): String = when {
-            value.length >= 2 && value.startsWith('"') && value.endsWith('"') -> value.substring(1, value.length - 1)
-            value.length >= 2 && value.startsWith('\'') && value.endsWith('\'') -> value.substring(1, value.length - 1)
+            value.length >= 2 && value.startsWith('"') && value.endsWith('"') ->
+                unescape(value.substring(1, value.length - 1))
+            value.length >= 2 && value.startsWith('\'') && value.endsWith('\'') ->
+                value.substring(1, value.length - 1).replace("''", "'")
             else -> value
         }
 
@@ -218,5 +231,29 @@ class Frontmatter private constructor(
 
         private fun escape(value: String): String =
             value.replace("\\", "\\\\").replace("\"", "\\\"")
+
+        /**
+         * [escape] undone, in one pass.
+         *
+         * Left to right rather than by two `replace` calls, because the naive inverse is wrong: a
+         * value holding a literal backslash followed by a quote arrives as `\\\"`, and replacing
+         * `\\` first and then `\"` turns it into one backslash and an unescaped quote.
+         */
+        private fun unescape(value: String): String = buildString {
+            var i = 0
+            while (i < value.length) {
+                val c = value[i]
+                if (c == '\\' && i + 1 < value.length) {
+                    append(value[i + 1])
+                    i += 2
+                } else {
+                    append(c)
+                    i++
+                }
+            }
+        }
+
+        /** [value] as a double-quoted frontmatter value, escaped so [unquote] gives it back. */
+        fun quoted(value: String): String = "\"" + escape(value) + "\""
     }
 }

@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.provider.DocumentsContract
+import de.singular.writer.markdown.Frontmatter
 import de.singular.writer.markdown.Note
 import java.security.MessageDigest
 import kotlinx.coroutines.Dispatchers
@@ -337,6 +338,85 @@ class Vault(context: Context) {
         }
 
     /**
+     * Make a new, empty note titled [title], and hand back the file it landed in.
+     *
+     * The one place the app chooses a filename, and it does so **once, at creation**. `CLAUDE.md`
+     * forbids renaming a file to match its title — that rule is about a file the user already has,
+     * whose name is theirs; a file that does not exist yet has to be called something, and calling
+     * it after its title is what the other 168 notes do.
+     *
+     * The name is the title with the characters a filename cannot hold taken out, NFC-normalised,
+     * and numbered if it is taken — `Atlantik 2.md` beside `Atlantik.md`, which is how the archive
+     * already handles a repeat. **The title keeps everything the filename dropped**: 11 notes end in
+     * a `?` that their filenames cannot carry, and a new one may too.
+     *
+     * The frontmatter is the archive's own shape and nothing more: `title`, `created`, `updated`,
+     * and an empty `tags: []` exactly as the three untagged notes carry it. No app-owned key, no id,
+     * no marker — the prime directive's second prohibition.
+     *
+     * The body is a single blank line, which is what every note in the archive has between its
+     * frontmatter and its first word.
+     */
+    suspend fun create(title: String, now: Instant = Instant.now()): CreateResult =
+        withContext(Dispatchers.IO) {
+            val clean = title.trim()
+            if (clean.isEmpty()) return@withContext CreateResult.Failed("a note needs a title")
+            val parent = rootFolder()
+                ?: return@withContext CreateResult.Failed("the folder is no longer reachable")
+
+            val taken = list().files.map { normalizedName(it.name) }.toSet()
+            val stem = fileStem(clean)
+            val name = generateSequence(0) { it + 1 }
+                .map { if (it == 0) "$stem.md" else "$stem $it.md" }
+                .first { normalizedName(it) !in taken }
+
+            val text = newNoteText(clean, now)
+
+            val created = runCatching {
+                DocumentsContract.createDocument(resolver, parent, MIME_TEXT, name)
+            }.getOrNull() ?: return@withContext CreateResult.Failed("the note could not be made")
+
+            val written = runCatching {
+                resolver.openOutputStream(created, "wt")?.use {
+                    it.write(text.toByteArray(Charsets.UTF_8)); it.flush()
+                } ?: error("no stream")
+                read(created) == text
+            }.getOrDefault(false)
+            if (!written) {
+                runCatching { DocumentsContract.deleteDocument(resolver, created) }
+                return@withContext CreateResult.Failed("the note could not be written")
+            }
+            CreateResult.Made(created, text)
+        }
+
+    /**
+     * Delete [note]'s file.
+     *
+     * The only place the app removes anything the user wrote, and it is never reached without an
+     * explicit confirmation in front of it — `CLAUDE.md` is unambiguous that nothing goes without
+     * being asked for. There is no trash and no undo here: the file is gone from the folder, and
+     * whether it comes back is the sync client's business rather than this app's.
+     */
+    suspend fun delete(note: IndexedNote): Boolean = withContext(Dispatchers.IO) {
+        runCatching { DocumentsContract.deleteDocument(resolver, note.file.uri) }.getOrDefault(false)
+    }
+
+    /**
+     * A title reduced to something a filesystem will accept, without being reduced any further.
+     *
+     * Only the characters that genuinely cannot appear in a name are removed — `/` above all, which
+     * would make the note a path — plus the reserved set Android's providers and FAT-formatted cards
+     * object to. Everything else the archive already proves is fine stays: commas, parentheses,
+     * umlauts, accents, a trailing full stop, and spaces.
+     */
+    private fun fileStem(title: String): String {
+        val stripped = title.filterNot { it in "/\\:*?\"<>|" || it.code < 0x20 }.trim()
+        val stem = normalizedName(stripped).take(120).trim()
+        return stem.ifEmpty { UNTITLED }
+    }
+
+
+    /**
      * Write [newBody] into a **new note beside** [note], leaving both.
      *
      * The answer to a conflict. `CLAUDE.md` forbids overwriting silently and forbids auto-merging,
@@ -451,6 +531,37 @@ class Vault(context: Context) {
          */
         /** How many notes are fetched from the provider at once. See the note in [readAll]. */
         private const val PARALLEL_READS = 8
+
+        /**
+         * The bytes a brand-new note is made of.
+         *
+         * The archive's own shape and nothing more: `title`, `created`, `updated`, `tags: []` — the
+         * four keys every one of the 168 notes carries, in the order they carry them, quoted the way
+         * they quote them. **No app-owned key, no id, no marker**, which is the prime directive's
+         * second prohibition and the thing every editor the author tried got wrong.
+         *
+         * The body is one blank line, which is what sits between frontmatter and first word
+         * everywhere in the archive.
+         *
+         * Pure and separate so it can be tested, because it has to satisfy something easy to get
+         * wrong: a note whose bytes the parser cannot reproduce is refused by `Vault.save`. Emit
+         * this slightly off and every new note is born read-only, which would look like a mystery
+         * rather than like a bug.
+         */
+        fun newNoteText(title: String, now: Instant): String {
+            val stamp = Note.stamp(now)
+            return buildString {
+                append("---\n")
+                append("title: ").append(Frontmatter.quoted(title)).append('\n')
+                append("created: ").append(stamp).append('\n')
+                append("updated: ").append(stamp).append('\n')
+                append("tags: []\n")
+                append("---\n\n")
+            }
+        }
+
+        /** What a note is called when its title survives none of the filename rules. */
+        private const val UNTITLED = "Note"
 
         const val TEMP_SUFFIX = ".pocketprose-tmp"
 

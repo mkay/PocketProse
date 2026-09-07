@@ -21,16 +21,22 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -42,8 +48,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
@@ -51,6 +60,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import de.singular.writer.R
 import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.ImeAction
 import de.singular.writer.markdown.FormatActions
 import de.singular.writer.markdown.LinkRef
 import de.singular.writer.markdown.Segment
@@ -118,6 +128,12 @@ class NoteDocument(val name: String, body: String, tags: List<String>) {
         if (segment is Segment.Prose) buffers.getValue(i).text.toString() else segment.raw
     }
 
+    /** The index of the note's first editable stretch, which is where a placeholder belongs. */
+    val firstProseIndex: Int = segments.indexOfFirst { it is Segment.Prose }
+
+    /** Whether the note has no words in it at all — not whether it has no tags or no pictures. */
+    val isEmpty: Boolean get() = buffers.values.all { it.text.isBlank() }
+
     /** Where the cursor is, for the format bar — the first buffer that has a selection. */
     fun anySelection(): TextFieldState? = buffers.values.firstOrNull { !it.selection.collapsed }
 
@@ -157,6 +173,7 @@ fun EditorScreen(
     onOpenLink: (LinkRef) -> Unit,
     editable: Boolean,
     onBack: () -> Unit,
+    onDelete: () -> Unit,
     message: String?,
     onMessageShown: () -> Unit,
     modifier: Modifier = Modifier,
@@ -199,6 +216,27 @@ fun EditorScreen(
                     )
                 }
             },
+            actions = {
+                // One entry, and it is behind a menu on purpose. Deleting is the only thing this app
+                // does that cannot be undone, so it does not get a button of its own next to the
+                // back arrow where a thumb already goes.
+                var open by remember { mutableStateOf(false) }
+                IconButton(onClick = { open = true }) {
+                    Icon(
+                        imageVector = Icons.Filled.MoreVert,
+                        contentDescription = stringResource(R.string.editor_menu),
+                    )
+                }
+                DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+                    DropdownMenuItem(
+                        text = { Text(text = stringResource(R.string.delete_note)) },
+                        onClick = {
+                            open = false
+                            onDelete()
+                        },
+                    )
+                }
+            },
             colors = TopAppBarDefaults.topAppBarColors(containerColor = scheme.surface),
             // The editor's bar is the page's own colour, so it needs no ground of its own — but it
             // still takes the top inset, MainActivity having left it alone.
@@ -225,6 +263,22 @@ fun EditorScreen(
                         textStyle = MaterialTheme.typography.bodyLarge.copy(color = scheme.onSurface),
                         cursorBrush = SolidColor(scheme.primary),
                         outputTransformation = transformation,
+                        // An empty note is a normal kind of note here — 40 of the archive's 168 are
+                        // a title and a tag and nothing else — so the blank page says what it is for
+                        // rather than looking like a screen that failed to load. Only the note's
+                        // first field offers it; a gap between two images is not an invitation.
+                        decorator = { field ->
+                            Box {
+                                if (document.isEmpty && i == document.firstProseIndex) {
+                                    Text(
+                                        text = stringResource(R.string.editor_empty),
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        color = scheme.onSurfaceVariant.copy(alpha = 0.6f),
+                                    )
+                                }
+                                field()
+                            }
+                        },
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 20.dp, vertical = 4.dp),
@@ -350,6 +404,76 @@ private fun TextFieldState.prefixLine(prefix: String) {
         replace(0, length, result.text)
         selection = TextRange(result.selectionStart, result.selectionEnd)
     }
+}
+
+/**
+ * The dialog that starts a note: a title, and nothing else.
+ *
+ * A title rather than a blank page, because a title is what a note *is* in this archive. 40 of the
+ * 168 notes have no body at all — they are ideas filed under a tag — so for a good share of what
+ * gets written here, this dialog is the whole note. It is also the only moment the app chooses a
+ * filename, and it needs something to choose from.
+ *
+ * The field takes the focus on opening and the keyboard's action key creates, so capturing a line
+ * that just occurred to somebody is: tap, type, done.
+ */
+@Composable
+fun NewNoteDialog(onCreate: (String) -> Unit, onDismiss: () -> Unit) {
+    var typed by rememberSaveable { mutableStateOf("") }
+    val focus = remember { FocusRequester() }
+    val ready = typed.isNotBlank()
+    val submit = { if (ready) onCreate(typed.trim()) else Unit }
+
+    LaunchedEffect(Unit) { focus.requestFocus() }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(text = stringResource(R.string.new_note_title)) },
+        text = {
+            OutlinedTextField(
+                value = typed,
+                onValueChange = { typed = it },
+                label = { Text(text = stringResource(R.string.new_note_label)) },
+                singleLine = true,
+                shape = ControlShape,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                keyboardActions = KeyboardActions(onDone = { submit() }),
+                modifier = Modifier.fillMaxWidth().focusRequester(focus),
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = submit, enabled = ready) {
+                Text(text = stringResource(R.string.new_note_create))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(text = stringResource(R.string.action_cancel)) }
+        },
+    )
+}
+
+/**
+ * The one confirmation in the app that guards something irreversible.
+ *
+ * `CLAUDE.md` forbids deleting anything without an explicit yes, and this is where that yes is
+ * asked for. It names the note, because "delete note" on a screen full of somebody's writing is not
+ * specific enough to agree to, and it says what actually happens rather than reassuring: the file
+ * leaves the folder, and this app cannot bring it back. Whether the sync client kept a copy is not
+ * something the app knows, so it does not imply that it did.
+ */
+@Composable
+fun DeleteDialog(title: String, onConfirm: () -> Unit, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(text = stringResource(R.string.delete_note_confirm, title)) },
+        text = { Text(text = stringResource(R.string.delete_note_body)) },
+        confirmButton = {
+            TextButton(onClick = onConfirm) { Text(text = stringResource(R.string.delete_note)) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(text = stringResource(R.string.action_cancel)) }
+        },
+    )
 }
 
 /**

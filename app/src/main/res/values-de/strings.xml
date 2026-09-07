@@ -10,7 +10,6 @@
     <string name="folder_gone_body">Pocket Prose erreicht den gewählten Ordner nicht. Vielleicht wurde er verschoben, umbenannt oder mit einer SD-Karte entfernt. Deine Texte sind davon nicht betroffen.</string>
     <string name="folder_gone_choose">Anderen Ordner wählen</string>
 
-    <string name="library_title">Texte</string>
     <string name="note_empty">-</string>
     <string name="library_empty">Noch keine Texte in diesem Ordner</string>
     <string name="action_change_folder">Ordner wechseln</string>
@@ -24,6 +23,17 @@
 
     <string name="editor_readonly_title">Dieser Text ist nur zum Lesen geöffnet</string>
     <string name="editor_readonly_body">Pocket Prose kann nicht sicher sein, diesen Text unverändert zu speichern, und ändert ihn deshalb gar nicht. Du kannst ihn hier lesen und anderswo bearbeiten.</string>
+
+    <string name="new_note">Neuer Text</string>
+    <string name="new_note_title">Wie heißt er?</string>
+    <string name="new_note_label">Titel</string>
+    <string name="new_note_create">Anlegen</string>
+    <string name="action_cancel">Abbrechen</string>
+    <string name="editor_menu">Mehr</string>
+    <string name="delete_note">Text löschen</string>
+    <string name="delete_note_confirm">„%1$s“ löschen?</string>
+    <string name="delete_note_body">Der Text wird aus deinem Ordner entfernt. Pocket Prose kann ihn nicht zurückholen.</string>
+    <string name="delete_failed">Der Text konnte nicht gelöscht werden</string>
 
     <string name="note_tags_edit">Schlagwörter bearbeiten</string>
     <string name="note_tags_none">Schlagwort hinzufügen</string>

@@ -38,8 +38,6 @@
 
     <!-- ===== Library ===== -->
 
-    <!-- Title of the list of all notes. -->
-    <string name="library_title">Notes</string>
     <!-- Shown in a row instead of the first line of the note, when the note has no text in it
          yet. 36 of the author's own notes are a title and a tag and nothing else, so this is a
          normal state, not an error — keep it plain and unalarmed. -->
@@ -67,6 +65,32 @@
          Deliberately blames the app, because it is the app's shortcoming. -->
     <string name="editor_readonly_title">This note is open for reading only</string>
     <string name="editor_readonly_body">Pocket Prose can\'t be certain it would save this note exactly as it found it, so it won\'t change it at all. You can still read it here, and edit it anywhere else.</string>
+
+    <!-- ===== Making and removing notes ===== -->
+
+    <!-- The button that starts a new note. -->
+    <string name="new_note">New note</string>
+    <!-- Title of the dialog that asks what the new note is called. -->
+    <string name="new_note_title">What is it called?</string>
+    <!-- Label of the field in that dialog. A note is filed under its title here, and 40 of the
+         author's notes are a title and nothing else, so this is often the whole note. -->
+    <string name="new_note_label">Title</string>
+    <!-- Confirms the dialog and opens the new note. -->
+    <string name="new_note_create">Create</string>
+    <!-- Dismisses a dialog without doing anything. Shared by the new-note and delete dialogs. -->
+    <string name="action_cancel">Cancel</string>
+
+    <!-- Opens the menu in the editor's bar. -->
+    <string name="editor_menu">More</string>
+    <!-- The menu entry, and the confirming button in the dialog it opens. -->
+    <string name="delete_note">Delete note</string>
+    <!-- Title of the confirmation. Names the note so there is no doubt which one; %1$s is its title. -->
+    <string name="delete_note_confirm">Delete “%1$s”?</string>
+    <!-- Body of the confirmation. Says plainly what happens and that this app cannot undo it. Does
+         not promise anything about the sync client, which may or may not keep a copy. -->
+    <string name="delete_note_body">The note is removed from your folder. Pocket Prose cannot bring it back.</string>
+    <!-- Shown when the file could not be removed. -->
+    <string name="delete_failed">The note could not be deleted</string>
 
     <!-- ===== Tags, at the foot of a note ===== -->
 

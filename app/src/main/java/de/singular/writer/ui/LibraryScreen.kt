@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -21,6 +22,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Search
@@ -30,6 +32,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -78,6 +81,7 @@ fun LibraryScreen(
     onOpenDrawer: () -> Unit,
     onChooseFolder: () -> Unit,
     onOpenNote: (IndexedNote) -> Unit,
+    onNewNote: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     when (error) {
@@ -105,7 +109,8 @@ fun LibraryScreen(
             modifier = modifier,
         )
 
-        null -> Column(modifier.fillMaxSize()) {
+        null -> Box(modifier.fillMaxSize()) {
+            Column(Modifier.fillMaxSize()) {
             // The header is one block — bar, strip, and the status bar above them — and it is the
             // **page's own colour**, with no tint at all. It takes the top inset itself so the page
             // runs to the very top of the screen; see the note in MainActivity.
@@ -183,7 +188,42 @@ fun LibraryScreen(
                     }
                 }
             }
+            }
+
+            // Over the list rather than in the bar. Starting a note is the one thing you come to
+            // this screen to *do* — everything else here is looking — and it belongs under the
+            // thumb rather than up in the corner beside the search.
+            NewNoteButton(
+                onClick = onNewNote,
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .windowInsetsPadding(WindowInsets.navigationBars)
+                    .padding(20.dp),
+            )
         }
+    }
+}
+
+/**
+ * The button that starts a note.
+ *
+ * Quiet, like everything else here: the accent is barely a colour by design, so a filled button
+ * reads as a warm grey rather than as a splash. Small rather than the full 56dp — the screen is
+ * somebody's writing and this is a tool on top of it.
+ */
+@Composable
+private fun NewNoteButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
+    SmallFloatingActionButton(
+        onClick = onClick,
+        containerColor = MaterialTheme.colorScheme.primary,
+        contentColor = MaterialTheme.colorScheme.onPrimary,
+        shape = ControlShape,
+        modifier = modifier,
+    ) {
+        Icon(
+            imageVector = Icons.Filled.Add,
+            contentDescription = stringResource(R.string.new_note),
+        )
     }
 }
 
