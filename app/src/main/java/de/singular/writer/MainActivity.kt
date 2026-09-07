@@ -20,31 +20,46 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.core.view.WindowCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import de.singular.writer.ui.DrawerWidth
 import de.singular.writer.markdown.Segments
 import de.singular.writer.ui.EditorScreen
@@ -52,7 +67,10 @@ import de.singular.writer.ui.NoteDocument
 import de.singular.writer.ui.ConflictDialog
 import de.singular.writer.ui.LibraryScreen
 import de.singular.writer.ui.PocketProseTheme
+import de.singular.writer.ui.SettingsScreen
+import de.singular.writer.ui.SupportDialog
 import de.singular.writer.ui.TagDrawer
+import de.singular.writer.ui.isDark
 import de.singular.writer.vault.Attachments
 import de.singular.writer.vault.IndexedNote
 import de.singular.writer.vault.IndexDump
@@ -76,8 +94,22 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        // Created here rather than inside the composition: it outlives a recreation, and choosing
+        // a theme causes one.
+        val settings = Settings(this)
         setContent {
-            PocketProseTheme {
+            val dark = isDark(settings.themeMode)
+            // Keep the system bar icons legible against whichever theme is in effect. The
+            // enableEdgeToEdge default only tracks the OS setting, so without this, forcing the
+            // light theme on a dark phone leaves white icons on a white page.
+            val view = LocalView.current
+            SideEffect {
+                WindowCompat.getInsetsController(window, view).apply {
+                    isAppearanceLightStatusBars = !dark
+                    isAppearanceLightNavigationBars = !dark
+                }
+            }
+            PocketProseTheme(settings.themeMode) {
                 // The Surface is full-bleed and the *content* takes the insets, not the other
                 // way round. Padding the Surface itself stops the page colour below the status
                 // bar and lets the bare activity window show through — which on a light theme is
@@ -93,7 +125,7 @@ class MainActivity : AppCompatActivity() {
                 )
                 Surface(color = MaterialTheme.colorScheme.background) {
                     Box(Modifier.windowInsetsPadding(sides).consumeWindowInsets(sides)) {
-                        PocketProseApp()
+                        PocketProseApp(settings)
                     }
                 }
             }
@@ -102,7 +134,7 @@ class MainActivity : AppCompatActivity() {
 }
 
 @Composable
-private fun PocketProseApp() {
+private fun PocketProseApp(settings: Settings) {
     val context = LocalContext.current
     val vault = remember { Vault(context) }
     val scope = rememberCoroutineScope()
@@ -119,6 +151,8 @@ private fun PocketProseApp() {
     var query by remember { mutableStateOf("") }
     var searching by remember { mutableStateOf(false) }
     var selectedTag by remember { mutableStateOf<String?>(null) }
+    var showSettings by remember { mutableStateOf(false) }
+    var showSupport by remember { mutableStateOf(false) }
 
     // The note being written in, if any. Held as the uri rather than the IndexedNote so a refresh
     // underneath us re-resolves it rather than pinning a stale copy.
@@ -246,6 +280,20 @@ private fun PocketProseApp() {
     }
     BackHandler(enabled = !drawerState.isOpen && !searching && selectedTag != null) { selectedTag = null }
 
+    // Settings is a full screen over the library rather than a destination beside it: it is not a
+    // place you navigate *to* while reading, it is a detour. Checked before the editor so that a
+    // note left open underneath is still open on the way back.
+    if (showSettings) {
+        SettingsScreen(
+            themeMode = settings.themeMode,
+            onThemeModeChange = { settings.themeMode = it },
+            folderName = folderName,
+            onChooseFolder = { pickFolder.launch(null) },
+            onClose = { showSettings = false },
+        )
+        return
+    }
+
     if (openNote != null) {
         fun leave() = scope.launch { if (saveOpenNote()) openNoteUri = null }
 
@@ -318,18 +366,28 @@ private fun PocketProseApp() {
                         modifier = Modifier.weight(1f, fill = false),
                     )
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                    // The folder lives at the bottom of the drawer rather than in the top bar: it is
-                    // a thing you do once and then never again, and it was cluttering the one screen
-                    // that should be about the writing.
-                    TextButton(
+                    // Settings lives at the bottom of the drawer, where the folder button used to
+                    // be. Same reasoning as before — the top bar belongs to the writing — with the
+                    // folder now one of the things *inside* here rather than the only thing in the
+                    // drawer that was neither a tag nor a note. Support sits under it, in the
+                    // ascending order of "about the app" the other three use.
+                    DrawerActionRow(
+                        icon = Icons.Filled.Settings,
+                        label = stringResource(R.string.settings_title),
                         onClick = {
                             scope.launch { drawerState.close() }
-                            pickFolder.launch(null)
+                            showSettings = true
                         },
-                        modifier = Modifier.fillMaxWidth().padding(8.dp),
-                    ) {
-                        Text(text = stringResource(R.string.action_change_folder))
-                    }
+                    )
+                    DrawerActionRow(
+                        icon = Icons.Filled.Favorite,
+                        label = stringResource(R.string.drawer_support),
+                        onClick = {
+                            scope.launch { drawerState.close() }
+                            showSupport = true
+                        },
+                    )
+                    Spacer(Modifier.height(8.dp))
                 }
             }
         },
@@ -350,6 +408,47 @@ private fun PocketProseApp() {
             onOpenDrawer = { scope.launch { drawerState.open() } },
             onChooseFolder = { pickFolder.launch(null) },
             onOpenNote = { openNoteUri = it.file.uri.toString() },
+        )
+    }
+
+    // Outside the drawer, so it survives the drawer closing under it on the way here.
+    if (showSupport) SupportDialog(onDismiss = { showSupport = false })
+}
+
+/**
+ * A row at the foot of the tag drawer: icon, then label, left-aligned like every tag above it.
+ *
+ * A `TextButton` was the first shape and centred its content, which put the one row that is not a
+ * tag on a different axis from the twenty-four that are — the eye reads that as a footer belonging
+ * to some other screen. Geometry deliberately matches `TagDrawer`'s own rows: the same 8dp inset,
+ * the same 12dp inner padding, the same `bodyLarge`.
+ */
+@Composable
+private fun DrawerActionRow(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    onClick: () -> Unit,
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 8.dp)
+            .clip(RoundedCornerShape(6.dp))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 12.dp),
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(20.dp),
+        )
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurface,
         )
     }
 }

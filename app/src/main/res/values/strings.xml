@@ -138,4 +138,83 @@
         <item quantity="other">%1$d notes</item>
     </plurals>
 
+    <!-- ===== Settings ===== -->
+
+    <!-- Title of the settings screen, and the row in the tag drawer that opens it. -->
+    <string name="settings_title">Settings</string>
+    <!-- Leaves the settings and goes back to the list. -->
+    <string name="action_back">Back</string>
+
+    <!-- The three tabs. "Editor" holds what happens while you are writing, "System" the app's own
+         set-up; About is not a setting at all and is a tab because the tab row is the only strip
+         that stays visible. -->
+    <string name="settings_tab_editor">Editor</string>
+    <string name="settings_tab_system">System</string>
+    <string name="settings_tab_about">About</string>
+
+    <!-- Section headings. Shown uppercased by the screen, so write them in sentence case. -->
+    <string name="settings_section_writing">Writing</string>
+    <string name="settings_section_appearance">Appearance</string>
+    <string name="settings_section_folder">Folder</string>
+
+    <!-- Shown in the Editor tab, which has nothing in it yet. Says so plainly: a tab that opens on
+         a blank page reads as a screen that failed to load. -->
+    <string name="settings_editor_empty">Settings for writing will appear here.</string>
+
+    <!-- The three theme choices. "System" means whatever the phone is doing. -->
+    <string name="theme_system">System</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_dark">Dark</string>
+
+    <!-- Under the folder row, before any folder has been chosen. -->
+    <string name="settings_folder_none">No folder chosen yet</string>
+    <!-- Under the folder row. Repeats the promise the welcome screen makes, because this is the
+         one button in the app that sounds like it might move something. -->
+    <string name="settings_folder_caption">Your notes stay where they are. Pocket Prose only reads the folder you point it at.</string>
+
+    <!-- ===== About ===== -->
+
+    <!-- The version line. %1$s is a version like "0.1 (1)". -->
+    <string name="about_version">v%1$s</string>
+    <!-- What a long-press on the version line puts on the clipboard, for pasting into a bug
+         report. Not translated: it is an identifier. -->
+    <string name="about_version_clipboard" translatable="false">Pocket Prose %1$s</string>
+    <!-- Confirmation after that long-press, shown only below Android 13; newer versions show
+         their own. -->
+    <string name="about_version_copied">Version copied</string>
+
+    <string name="about_section_about">About</string>
+    <string name="about_body_about">I built Pocket Prose for my own lyrics, which live in a folder and are going to stay there. Maybe your writing does too.</string>
+    <string name="about_section_website">Website</string>
+    <string name="about_body_website">The app lives here:</string>
+    <string name="about_section_bugs">Bugs</string>
+    <string name="about_body_bugs">Found a hiccup? Let me know:</string>
+    <string name="about_section_support">Support</string>
+    <string name="about_body_support">If you can, support its development:</string>
+    <string name="about_section_license">License</string>
+    <!-- A legal notice, and never translated. -->
+    <string name="about_copyright" translatable="false">Copyright © 2026 Kreuder</string>
+    <string name="about_license" translatable="false">Pocket Prose is free software under the GPL-3.0-only. The wordmark and the icon are CC BY 4.0; the name is not licensed, so a fork needs its own. Built with AndroidX and Jetpack Compose, licensed under Apache 2.0.</string>
+
+    <!-- ===== Support ===== -->
+
+    <!-- Opens the support dialog, from the foot of the tag drawer. -->
+    <string name="drawer_support">Support Pocket Prose</string>
+    <!-- Closes a dialog. -->
+    <string name="action_close">Close</string>
+
+    <string name="support_title">Keep this app alive</string>
+    <string name="support_no_tracking">This app doesn\'t track. Anything.\nThe downside is I have no idea if or how often it\'s used or downloaded.\nCould be zero, could be a secret cult following. I genuinely don\'t know.</string>
+    <string name="support_question">Am I wasting my time publishing it? You tell me.</string>
+    <string name="support_three_ways">There are three (maybe more) ways to keep me motivated:</string>
+    <string name="support_easy_title">The easy way</string>
+    <string name="support_easy_action">Give it a like</string>
+    <string name="support_easy_note">Opens a page on my website with a like button. Nothing is counted until you press it — just the press and an anonymised IP.</string>
+    <string name="support_nerdy_title">The nerdy way</string>
+    <string name="support_nerdy_action">Star it on GitHub</string>
+    <string name="support_nerdy_note">A star is a number I can actually see, and it helps others find it.</string>
+    <string name="support_generous_title">The generous way</string>
+    <string name="support_generous_action">Support it on Ko-fi</string>
+    <string name="support_generous_note">Entirely optional. The app is and stays free either way.</string>
+
 </resources>

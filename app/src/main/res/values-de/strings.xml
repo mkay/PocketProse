@@ -63,4 +63,54 @@
         <item quantity="other">%1$d Texte</item>
     </plurals>
 
+    <string name="settings_title">Einstellungen</string>
+    <string name="action_back">Zurück</string>
+
+    <string name="settings_tab_editor">Editor</string>
+    <string name="settings_tab_system">System</string>
+    <string name="settings_tab_about">Über</string>
+
+    <string name="settings_section_writing">Schreiben</string>
+    <string name="settings_section_appearance">Darstellung</string>
+    <string name="settings_section_folder">Ordner</string>
+
+    <string name="settings_editor_empty">Einstellungen fürs Schreiben kommen hierher.</string>
+
+    <string name="theme_system">System</string>
+    <string name="theme_light">Hell</string>
+    <string name="theme_dark">Dunkel</string>
+
+    <string name="settings_folder_none">Noch kein Ordner gewählt</string>
+    <string name="settings_folder_caption">Deine Texte bleiben, wo sie sind. Pocket Prose liest nur den Ordner, auf den du es zeigst.</string>
+
+    <string name="about_version">v%1$s</string>
+    <string name="about_version_copied">Version kopiert</string>
+
+    <string name="about_section_about">Über</string>
+    <string name="about_body_about">Ich habe Pocket Prose für meine eigenen Texte gebaut, die in einem Ordner liegen und da auch bleiben sollen. Vielleicht geht es deinem Schreiben genauso.</string>
+    <string name="about_section_website">Website</string>
+    <string name="about_body_website">Die App wohnt hier:</string>
+    <string name="about_section_bugs">Fehler</string>
+    <string name="about_body_bugs">Etwas hakt? Sag Bescheid:</string>
+    <string name="about_section_support">Unterstützen</string>
+    <string name="about_body_support">Wenn du magst, unterstütze die Entwicklung:</string>
+    <string name="about_section_license">Lizenz</string>
+
+    <string name="drawer_support">Pocket Prose unterstützen</string>
+    <string name="action_close">Schließen</string>
+
+    <string name="support_title">Halte diese App am Leben</string>
+    <string name="support_no_tracking">Diese App trackt nicht. Gar nicht.\nDer Nachteil: Ich habe keine Ahnung, ob und wie oft sie benutzt oder heruntergeladen wird.\nKönnte null sein, es könnten bereits Tattoos davon existieren. Ich weiß es nicht.</string>
+    <string name="support_question">Lohnt sich der Aufwand, sie zu veröffentlichen? Sag es mir.</string>
+    <string name="support_three_ways">Es gibt (mindestens) drei Wege, mich zu motivieren:</string>
+    <string name="support_easy_title">Der einfache Weg</string>
+    <string name="support_easy_action">App bewerten</string>
+    <string name="support_easy_note">Öffnet eine Seite auf meiner Website mit einem Like-Button. Gezählt wird erst, wenn du ihn drückst — nur der Klick und eine anonymisierte IP.</string>
+    <string name="support_nerdy_title">Der nerdige Weg</string>
+    <string name="support_nerdy_action">GitHub Stern</string>
+    <string name="support_nerdy_note">Ein Stern ist eine Zahl, die ich sehen kann, und er hilft anderen, die App zu finden.</string>
+    <string name="support_generous_title">Der großzügige Weg</string>
+    <string name="support_generous_action">Auf Ko-fi unterstützen</string>
+    <string name="support_generous_note">Völlig freiwillig. Die App ist und bleibt kostenlos.</string>
+
 </resources>
