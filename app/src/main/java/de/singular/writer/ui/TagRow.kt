@@ -7,9 +7,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.navigationBars
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -127,13 +124,12 @@ fun NoteTagBar(tags: List<String>, enabled: Boolean, onEdit: () -> Unit, modifie
         verticalArrangement = Arrangement.spacedBy(6.dp),
         modifier = modifier
             .fillMaxWidth()
-            // Clear of the navigation bar, and of the screen's own bottom edge beyond it. A row of
-            // small chips sitting in the last few millimetres of the display is a row you have to
-            // aim at — and this one is the only way into the tag sheet. The touch target is the
-            // whole row, so the padding is the target rather than space around it.
-            .windowInsetsPadding(WindowInsets.navigationBars)
             .clickable(enabled = enabled, onClickLabel = description, onClick = onEdit)
-            .padding(start = 20.dp, end = 20.dp, top = 14.dp, bottom = 22.dp),
+            // Generous above and below: the whole row is the touch target, so the padding *is* the
+            // target rather than space around it, and a row of small chips is otherwise something
+            // you have to aim at. No window inset here — it scrolls with the note now and is not at
+            // the screen's edge.
+            .padding(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 24.dp),
     ) {
         if (tags.isEmpty()) {
             AddTagChip()

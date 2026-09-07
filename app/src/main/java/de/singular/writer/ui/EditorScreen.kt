@@ -288,6 +288,8 @@ fun EditorScreen(
             ReadOnlyNotice()
         }
 
+        var editingTags by remember(document) { mutableStateOf(false) }
+
         // One scroller for the whole note, with the text fields inside it rather than each
         // scrolling on its own — a note is one page, and images have to move with the words around
         // them.
@@ -345,16 +347,21 @@ fun EditorScreen(
                     is Segment.Tags -> Unit
                 }
             }
+
+            // The note's tags, **inside the scroller**, after the last word.
+            //
+            // They were pinned above the format bar, which made them a permanent strip across the
+            // bottom of the page: on a short note the writing had a band of chips under it that
+            // never moved, and with the keyboard up they took a line of what was left. Tags are part
+            // of the note rather than a control over it, so they scroll with it and are reached by
+            // reaching the end — which is also where they sit in the file.
+            NoteTagBar(
+                tags = document.tags,
+                enabled = editable,
+                onEdit = { editingTags = true },
+            )
         }
 
-        // The note's tags, under the writing and above its files. Both are about the note rather
-        // than in it, and both belong after the last word rather than before the first.
-        var editingTags by remember(document) { mutableStateOf(false) }
-        NoteTagBar(
-            tags = document.tags,
-            enabled = editable,
-            onEdit = { editingTags = true },
-        )
         if (editingTags) {
             TagSheet(
                 selected = document.tags,
