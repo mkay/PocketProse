@@ -47,9 +47,15 @@ object TagEdit {
         val toRemove = remove.filter(Tags::isInlineWritable).toSet()
         if (toAdd.isEmpty() && toRemove.isEmpty()) return body
 
+        // **Adding happens first, and the order is the point.** Swapping a note's only tag is two
+        // operations, and removing first empties the note's tag run, drops it, and leaves the
+        // addition to start a fresh one at the foot — so a note whose tags sat at the head came back
+        // with them at the bottom. Nobody asked for that, and it is a line moved in a file the app
+        // was told to touch as little as possible. Adding first writes into the run that is still
+        // there, and the removal then takes only what it was asked for.
         val segments = Segments.split(body).toMutableList()
-        if (toRemove.isNotEmpty()) removeFrom(segments, toRemove)
         if (toAdd.isNotEmpty()) addTo(segments, toAdd)
+        if (toRemove.isNotEmpty()) removeFrom(segments, toRemove)
         return Segments.join(segments)
     }
 

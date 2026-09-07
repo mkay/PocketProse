@@ -171,6 +171,28 @@ class TagEditTest {
     }
 
     @Test
+    fun `swapping a note's only tag leaves the tag line where the author put it`() {
+        // Seen on the phone: replacing `lyrics/snippet` with `75` on a note whose tags sat at the
+        // head moved them to the foot. The removal emptied the run and dropped it, and the addition
+        // then started a fresh one at the bottom. Two correct operations, one line moved in a file
+        // nobody asked to have rearranged.
+        val body = "\n#lyrics/snippet\n\nDu erreichst mich nicht\n"
+        assertEquals(
+            "\n#75\n\nDu erreichst mich nicht\n",
+            TagEdit.apply(body, listOf("75"), listOf("lyrics/snippet")),
+        )
+    }
+
+    @Test
+    fun `swapping keeps a foot tag line at the foot too`() {
+        val body = "Du erreichst mich nicht\n\n#lyrics/snippet\n"
+        assertEquals(
+            "Du erreichst mich nicht\n\n#75\n",
+            TagEdit.apply(body, listOf("75"), listOf("lyrics/snippet")),
+        )
+    }
+
+    @Test
     fun `adding then removing a tag gives the body back unchanged`() {
         for (body in listOf(
             "\n#lyrics/snippet\n\nDu erreichst mich nicht\n",
