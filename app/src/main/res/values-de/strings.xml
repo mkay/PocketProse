@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: GPL-3.0-only -->
+<resources>
+
+    <string name="welcome_title">Deine Texte liegen in einem Ordner</string>
+    <string name="welcome_body">Zeig Pocket Prose den Ordner, in dem deine Texte schon liegen. Es wird nichts kopiert und nichts verschoben — alles bleibt genau dort, wo es ist.</string>
+    <string name="welcome_choose">Ordner wählen</string>
+
+    <string name="folder_gone_title">Diesen Ordner gibt es nicht mehr</string>
+    <string name="folder_gone_body">Pocket Prose erreicht den gewählten Ordner nicht. Vielleicht wurde er verschoben, umbenannt oder mit einer SD-Karte entfernt. Deine Texte sind davon nicht betroffen.</string>
+    <string name="folder_gone_choose">Anderen Ordner wählen</string>
+
+    <string name="library_title">Texte</string>
+    <string name="note_empty">Noch nichts geschrieben</string>
+    <string name="library_empty">Noch keine Texte in diesem Ordner</string>
+    <string name="action_change_folder">Ordner wechseln</string>
+
+    <plurals name="note_count">
+        <item quantity="one">%1$d Text</item>
+        <item quantity="other">%1$d Texte</item>
+    </plurals>
+
+</resources>

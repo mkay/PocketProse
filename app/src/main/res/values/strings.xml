@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  SPDX-License-Identifier: GPL-3.0-only
+
+  Translators: see the notes on individual strings below. Anything marked
+  translatable="false" is a brand name, a legal notice, or a unit symbol —
+  please leave those alone.
+
+  Format arguments are positional (%1$s, %2$d) so a translation can reorder
+  them. Dates are formatted in code and arrive as text.
+
+  A note on vocabulary: this app never says "Markdown", "frontmatter", "tag
+  syntax" or "file". Its users write; they do not edit documents in a markup
+  language. Say "note", "folder", "text".
+-->
+<resources>
+
+    <!-- ===== Brand ===== -->
+
+    <!-- The app's name. Not licensed for use by forks, and never translated. -->
+    <string name="app_name" translatable="false">Pocket Prose</string>
+
+    <!-- ===== Choosing the folder ===== -->
+
+    <!-- Shown once, before any folder has been picked. -->
+    <string name="welcome_title">Your notes live in a folder</string>
+    <!-- The explanation under it. Deliberately says nothing about formats or syncing. -->
+    <string name="welcome_body">Point Pocket Prose at the folder your writing is already in. Nothing is copied or moved — your notes stay exactly where they are.</string>
+    <!-- Button that opens the system folder picker. -->
+    <string name="welcome_choose">Choose folder</string>
+
+    <!-- Shown when a folder was chosen before but is no longer reachable — an SD card that was
+         removed, or a folder that was deleted from a computer. Distinct from never having
+         chosen one, which is not an error. -->
+    <string name="folder_gone_title">That folder isn\'t there any more</string>
+    <string name="folder_gone_body">Pocket Prose can\'t reach the folder you chose. It may have been moved, renamed, or removed with an SD card. Your notes are not affected.</string>
+    <string name="folder_gone_choose">Choose another folder</string>
+
+    <!-- ===== Library ===== -->
+
+    <!-- Title of the list of all notes. -->
+    <string name="library_title">Notes</string>
+    <!-- Shown in a row instead of the first line of the note, when the note has no text in it
+         yet. 36 of the author's own notes are a title and a tag and nothing else, so this is a
+         normal state, not an error — keep it plain and unalarmed. -->
+    <string name="note_empty">Nothing written yet</string>
+    <!-- Shown when the chosen folder holds no notes at all. -->
+    <string name="library_empty">No notes in this folder yet</string>
+    <!-- Opens the folder picker again, to point at a different folder. -->
+    <string name="action_change_folder">Change folder</string>
+
+    <!-- Number of notes in the chosen folder, shown under the title. -->
+    <plurals name="note_count">
+        <item quantity="one">%1$d note</item>
+        <item quantity="other">%1$d notes</item>
+    </plurals>
+
+</resources>

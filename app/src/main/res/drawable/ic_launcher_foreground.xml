@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  PLACEHOLDER. A sheet of paper with a turned corner and three lines of writing, drawn by hand so
+  that phase 0 has something to install. The other three apps' icons are Figma artwork converted by
+  tools/svg2vector.py, and this one should be replaced the same way before any release.
+
+  Kept inside the adaptive icon's safe zone (the centre 66 of 108dp) so no launcher mask clips it.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- The page. Stone-100, the lightest thing in the palette. -->
+    <path
+        android:pathData="M40,26 L62,26 L76,40 L76,78 A4,4 0 0 1 72,82 L40,82 A4,4 0 0 1 36,78 L36,30 A4,4 0 0 1 40,26 Z"
+        android:fillColor="#FFF5F5F4" />
+    <!-- The turned corner, a step darker so the fold reads at 48dp. -->
+    <path
+        android:pathData="M62,26 L76,40 L66,40 A4,4 0 0 1 62,36 Z"
+        android:fillColor="#FFD6D3D1" />
+    <!-- Three lines of writing, in the clay accent. The third is short, as a last line is. -->
+    <path
+        android:pathData="M45,52 L67,52 A2,2 0 0 1 67,56 L45,56 A2,2 0 0 1 45,52 Z"
+        android:fillColor="#FF9A6A4F" />
+    <path
+        android:pathData="M45,62 L67,62 A2,2 0 0 1 67,66 L45,66 A2,2 0 0 1 45,62 Z"
+        android:fillColor="#FF9A6A4F" />
+    <path
+        android:pathData="M45,72 L57,72 A2,2 0 0 1 57,76 L45,76 A2,2 0 0 1 45,72 Z"
+        android:fillColor="#FF9A6A4F" />
+</vector>

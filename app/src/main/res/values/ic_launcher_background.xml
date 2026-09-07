@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      The tile the page sits on. Deep stone rather than black, so the icon reads as warm at the
+      size a launcher actually draws it. Placeholder along with the foreground — see
+      drawable/ic_launcher_foreground.xml.
+    -->
+    <color name="ic_launcher_background">#1C1917</color>
+</resources>

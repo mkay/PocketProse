@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!--
+        No permissions at all, deliberately.
+
+        The notes are reached through the Storage Access Framework, which grants access by the user
+        picking a folder rather than by a permission — so there is no READ_EXTERNAL_STORAGE here and
+        no MANAGE_EXTERNAL_STORAGE either. Nextcloud does the syncing; this app never opens a socket,
+        so there is no INTERNET permission for it to abuse. If a permission ever appears in this
+        file, that is a change worth arguing about.
+    -->
+
+    <application
+        android:allowBackup="true"
+        android:fullBackupContent="@xml/backup_rules"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.PocketProse">
+
+        <!--
+            Not a service that ever runs — it is disabled, and exists only to carry the meta-data
+            below. That flag is how AppCompat is told to persist the language chosen in Settings.
+
+            Without it the choice survives only until the process dies. Android 13 and up hides
+            that: there the framework stores the per-app language itself, so the bug is invisible
+            on a modern device and shows up only on 8 to 12 — which is the entire span AppCompat
+            was added for.
+        -->
+        <service
+            android:name="androidx.appcompat.app.AppLocalesMetadataHolderService"
+            android:enabled="false"
+            android:exported="false">
+            <meta-data
+                android:name="autoStoreLocales"
+                android:value="true" />
+        </service>
+
+        <activity
+            android:name=".MainActivity"
+            android:screenOrientation="portrait"
+            android:exported="true"
+            tools:ignore="LockedOrientationActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+
+</manifest>
