@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Material Symbols, exported from assets/icons/editor/remove_selection_24dp_E3E3E3_FILL0_wght400_GRAD0_opsz24.svg.
+
+  Drawn in white and tinted at the call site, the same way the wordmark is. Do not hand-edit the
+  path data — re-export.
+
+  The source viewBox starts at y=-960, which a vector drawable cannot express, so the path sits in
+  a group translated back down by 960.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="960"
+    android:viewportHeight="960">
+    <group android:translateX="-0" android:translateY="960">
+        <path
+            android:pathData="m500-120-56-56 142-142-142-142 56-56 142 142 142-142 56 56-142 142 142 142-56 56-142-142-142 142Zm-220 0v-80h80v80h-80Zm-80-640h-80q0-33 23.5-56.5T200-840v80Zm80 0v-80h80v80h-80Zm160 0v-80h80v80h-80Zm160 0v-80h80v80h-80Zm160 0v-80q33 0 56.5 23.5T840-760h-80ZM200-200v80q-33 0-56.5-23.5T120-200h80Zm-80-80v-80h80v80h-80Zm0-160v-80h80v80h-80Zm0-160v-80h80v80h-80Zm640 0v-80h80v80h-80Z"
+            android:fillColor="#FFFFFFFF" />
+    </group>
+</vector>

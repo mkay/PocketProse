@@ -81,4 +81,105 @@ object FormatActions {
             )
         }
     }
+
+    /**
+     * Put a horizontal rule on a line of its own after the line the cursor is in.
+     *
+     * Spelled `- - -`, which is what the archive uses: 20 notes carry that form against 2 with a
+     * bare `---`. Both parse identically here, so the choice is only about which one the folder
+     * already looks like — and the app has no business introducing a second spelling of something
+     * the author has already settled.
+     *
+     * A blank line is kept on each side, which is what every rule in the archive has and what stops
+     * the line above from becoming a setext heading in any stricter reader.
+     *
+     * The caret lands on the blank line **after** the rule, because a rule is something you put
+     * between two things and the second one is usually next.
+     */
+    fun rule(text: String, at: Int): Formatted {
+        val cursor = at.coerceIn(0, text.length)
+        val lineEnd = text.indexOf('\n', cursor).let { if (it < 0) text.length else it }
+
+        // The newline that ends the current line is still in the tail, so what goes in front of the
+        // rule is one newline plus a blank line, and what goes behind it is a blank line only when
+        // the next line is not already one. At the end of the note it is the newline every note in
+        // the archive ends with.
+        val before = if (endsBlank(text, lineEnd)) "\n" else "\n\n"
+        val atEnd = lineEnd >= text.length
+        val after = if (!atEnd && startsBlank(text, lineEnd)) "" else "\n"
+        val inserted = before + RULE + after
+
+        val result = text.substring(0, lineEnd) + inserted + text.substring(lineEnd)
+        val caret = lineEnd + inserted.length
+        return Formatted(result, caret, caret)
+    }
+
+    /**
+     * Take the app's own marks off the selection, and leave everything else exactly as it is.
+     *
+     * Two kinds come off. **Line prefixes** — `## ` and `- ` — go from every line the selection
+     * touches, because they belong to the line rather than to the characters. **Emphasis and code
+     * markers** go from inside the selection only.
+     *
+     * The marker list is [Live]'s own, longest first, so `***` is taken as one mark rather than as a
+     * bold plus a stray asterisk.
+     *
+     * **It removes the marker characters, not the marks it can prove are marks.** An asterisk inside
+     * the selection goes whether or not [Live] would have styled it — `zwei * drei` selected and
+     * cleared becomes `zwei  drei`. Working out which asterisks are load-bearing is what [Live] does
+     * with a whole note in hand, and applying that to an arbitrary selection would make a button
+     * whose result nobody can predict. Blunt and obvious beats clever and surprising here, and the
+     * blast radius is exactly what the user selected.
+     *
+     * Deliberately not a toggle. There is nothing to toggle back to — clearing is the way back.
+     */
+    fun clear(text: String, start: Int, end: Int): Formatted {
+        val from = start.coerceIn(0, text.length)
+        val to = end.coerceIn(from, text.length)
+
+        val head = text.substring(0, from)
+        val body = text.substring(from, to)
+        val tail = text.substring(to)
+
+        val stripped = body.lineSequence().joinToString("\n") { line ->
+            val withoutPrefix = LINE_PREFIX.replace(line, "")
+            MARKERS.fold(withoutPrefix) { acc, marker -> acc.replace(marker, "") }
+        }
+
+        // The line the selection starts on may have begun before it, so its prefix is off the end of
+        // the selection and has to be reached for separately.
+        val lineStart = head.lastIndexOf('\n') + 1
+        val prefix = LINE_PREFIX.find(head.substring(lineStart) + stripped.substringBefore('\n'))
+        val trimmedHead = if (prefix != null && prefix.range.first == 0) {
+            head.substring(0, lineStart) + head.substring(lineStart).removeRange(
+                0,
+                minOf(prefix.value.length, head.length - lineStart),
+            )
+        } else {
+            head
+        }
+
+        val caret = trimmedHead.length
+        return Formatted(trimmedHead + stripped + tail, caret, caret + stripped.length)
+    }
+
+    /** `## ` or `- ` at the start of a line: the marks that belong to the line, not to its words. */
+    private val LINE_PREFIX = Regex("""^(?:#{1,6}[ \t]+|[-*+][ \t]+)""")
+
+    /** [Live]'s emphasis markers, longest first so `***` is one mark and not three. */
+    private val MARKERS = listOf("***", "___", "**", "__", "*", "_", "`")
+
+    /** The archive's spelling of a rule. 20 notes use it; 2 use a bare `---`. */
+    private const val RULE = "- - -"
+
+    private fun endsBlank(text: String, lineEnd: Int): Boolean {
+        val lineStart = text.lastIndexOf('\n', (lineEnd - 1).coerceAtLeast(0)).let { if (it < 0) 0 else it + 1 }
+        return lineEnd <= lineStart || text.substring(lineStart, lineEnd).isBlank()
+    }
+
+    private fun startsBlank(text: String, lineEnd: Int): Boolean {
+        if (lineEnd >= text.length) return true
+        val next = text.indexOf('\n', lineEnd + 1).let { if (it < 0) text.length else it }
+        return text.substring((lineEnd + 1).coerceAtMost(text.length), next).isBlank()
+    }
 }

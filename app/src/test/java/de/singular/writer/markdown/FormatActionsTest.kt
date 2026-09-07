@@ -3,6 +3,7 @@
 package de.singular.writer.markdown
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
@@ -89,5 +90,82 @@ class FormatActionsTest {
     @Test
     fun `a prefix at the very start of the text works`() {
         assertEquals("## erste\nzweite", FormatActions.prefixLine("erste\nzweite", 0, "## ").text)
+    }
+
+    // ===== the rule =====
+
+    @Test
+    fun `a rule goes on its own line, in the spelling the archive uses`() {
+        val result = FormatActions.rule("Erste Zeile\nZweite Zeile\n", at = 3)
+        assertEquals("Erste Zeile\n\n- - -\n\nZweite Zeile\n", result.text)
+        // The caret lands on the blank line the rule left behind it, not at the start of the line
+        // that was already there: a rule separates two things and the second one is usually typed
+        // next, and typing at the head of an existing line prepends to somebody else's sentence.
+        assertEquals("Erste Zeile\n\n- - -\n".length, result.selectionStart)
+        assertTrue(result.selectionStart == result.selectionEnd)
+    }
+
+    @Test
+    fun `a rule does not stack blank lines that are already there`() {
+        assertEquals(
+            "Erste Zeile\n\n- - -\n\nZweite\n",
+            FormatActions.rule("Erste Zeile\n\nZweite\n", at = 3).text,
+        )
+    }
+
+    @Test
+    fun `a rule at the end of a note needs nothing after it`() {
+        assertEquals("Letzte Zeile\n\n- - -\n", FormatActions.rule("Letzte Zeile", at = 4).text)
+    }
+
+    @Test
+    fun `a rule the parser reads back as a rule`() {
+        val text = FormatActions.rule("Erste Zeile\nZweite\n", at = 3).text
+        assertTrue(Blocks.parse(text).any { it is Block.Rule })
+        // And the line above it is still a line of the song, not a heading.
+        assertTrue(Blocks.parse(text).any { it is Block.Paragraph && it.text == "Erste Zeile" })
+    }
+
+    // ===== clearing =====
+
+    @Test
+    fun `clearing takes the emphasis off and leaves the words`() {
+        val text = "Du **erreichst** mich *nicht*\n"
+        val result = FormatActions.clear(text, 0, text.length - 1)
+        assertEquals("Du erreichst mich nicht\n", result.text)
+    }
+
+    @Test
+    fun `clearing takes a heading and a bullet off their lines`() {
+        assertEquals("Strophe\n", FormatActions.clear("## Strophe\n", 0, 10).text)
+        assertEquals("eine Zeile\n", FormatActions.clear("- eine Zeile\n", 0, 12).text)
+    }
+
+    @Test
+    fun `clearing reaches a prefix that starts before the selection`() {
+        // Selecting the words of a heading without dragging over the hashes is the normal way to
+        // select a heading, and the mark still has to come off.
+        val result = FormatActions.clear("## Strophe\n", 3, 10)
+        assertEquals("Strophe\n", result.text)
+    }
+
+    @Test
+    fun `clearing removes marker characters, load-bearing or not`() {
+        // `zwei * drei` is arithmetic and Live will not style it — but clearing takes the asterisk
+        // anyway, and deliberately. Deciding which asterisks are marks needs the whole note, and a
+        // button whose result depends on that is a button nobody can predict. What it touches is
+        // exactly what was selected.
+        assertEquals("zwei  drei\n", FormatActions.clear("zwei * drei\n", 0, 12).text)
+    }
+
+    @Test
+    fun `clearing takes the longest marker first`() {
+        assertEquals("beides\n", FormatActions.clear("***beides***\n", 0, 13).text)
+    }
+
+    @Test
+    fun `clearing touches nothing outside the selection`() {
+        val result = FormatActions.clear("**vorher** und **nachher**\n", 11, 15)
+        assertEquals("**vorher** und **nachher**\n", result.text)
     }
 }

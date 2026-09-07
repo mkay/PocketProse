@@ -392,18 +392,18 @@ fun EditorScreen(
  * rule anyway: the bar is for the field you are writing in, and it sits above the keyboard rather
  * than over the page, so it costs the writing nothing.
  *
- * **Icons for what changes the text, words for the clipboard.** The four marks are things this app
- * has an opinion about and draws differently from plain text, and a symbol says that faster than a
- * label. Cut, copy and paste are the phone's own vocabulary and are read, not recognised — and the
- * icon set has no symbol for them, which is the same fact from the other side.
+ * Two groups with a rule between them: what changes the words, then what moves them. Everything
+ * needing a selection is disabled without one rather than hidden — buttons that come and go under a
+ * thumb are worse than buttons visibly not yet available.
  *
- * Everything needing a selection is disabled without one rather than hidden. Buttons that come and
- * go under a thumb are worse than buttons visibly not yet available.
+ * **Every button writes something the parser reads back.** Bold, italic, three heading levels, a
+ * bullet and a divider are all in `markdown/Blocks.kt` and `Inline.kt`; clearing takes those same
+ * marks off. A button writing anything else would put characters into a lyric that come back as
+ * literal text, which is the failure this app exists to avoid. Quote, numbered lists, indentation
+ * and the two tag symbols have icons waiting in `res/drawable` and no parser behind them yet.
  *
- * **The list is short because the parser is.** Bold, italic, heading and a bullet are what
- * `markdown/Blocks.kt` and `Inline.kt` actually render; a button writing anything else would put
- * characters in a lyric that come back as literal text. Quote, numbered lists and indentation have
- * icons waiting in `res/drawable` and no parser behind them yet.
+ * The row scrolls rather than wrapping: eleven buttons do not fit any phone, and a bar that is
+ * sometimes two storeys tall moves the writing up and down as you work.
  */
 @Composable
 private fun FormatBar(body: TextFieldState, modifier: Modifier = Modifier) {
@@ -426,33 +426,50 @@ private fun FormatBar(body: TextFieldState, modifier: Modifier = Modifier) {
             FormatIcon(R.drawable.ic_format_italic, R.string.format_italic, selected) {
                 body.wrapSelection("*")
             }
-            // The button writes `## `, so it is the second-level symbol that stands over it. The
-            // archive uses `##` and nothing else — no note in it carries a first-level heading.
+            // Two, three and four hashes. The parser understands six levels and the archive uses one,
+            // so three is already more than a lyric needs — and each button wears the symbol for the
+            // level it actually writes rather than a generic "heading".
             FormatIcon(R.drawable.ic_format_h2, R.string.format_heading, true) {
                 body.prefixLine("## ")
+            }
+            FormatIcon(R.drawable.ic_format_h3, R.string.format_heading_3, true) {
+                body.prefixLine("### ")
+            }
+            FormatIcon(R.drawable.ic_format_h4, R.string.format_heading_4, true) {
+                body.prefixLine("#### ")
             }
             FormatIcon(R.drawable.ic_format_list_bulleted, R.string.format_bullet, true) {
                 body.prefixLine("- ")
             }
+            FormatIcon(R.drawable.ic_horizontal_rule, R.string.format_rule, true) {
+                body.insertRule()
+            }
+            FormatIcon(R.drawable.ic_remove_selection, R.string.format_clear, selected) {
+                body.clearFormatting()
+            }
 
-            VerticalDivider(
-                color = MaterialTheme.colorScheme.outlineVariant,
-                modifier = Modifier.height(24.dp).padding(horizontal = 6.dp),
-            )
+            BarDivider()
 
-            FormatButton(stringResource(R.string.format_cut), selected) {
+            FormatIcon(R.drawable.ic_content_cut, R.string.format_cut, selected) {
                 clipboard.setText(AnnotatedString(body.selectedText()))
                 body.replaceSelection("")
             }
-            FormatButton(stringResource(R.string.format_copy), selected) {
+            FormatIcon(R.drawable.ic_content_copy, R.string.format_copy, selected) {
                 clipboard.setText(AnnotatedString(body.selectedText()))
             }
-            FormatButton(stringResource(R.string.format_paste), true) {
+            FormatIcon(R.drawable.ic_content_paste, R.string.format_paste, true) {
                 clipboard.getText()?.text?.let(body::replaceSelection)
             }
         }
     }
 }
+
+/** Separates what changes the words from what moves them. */
+@Composable
+private fun BarDivider() = VerticalDivider(
+    color = MaterialTheme.colorScheme.outlineVariant,
+    modifier = Modifier.height(24.dp).padding(horizontal = 6.dp),
+)
 
 @Composable
 private fun FormatIcon(icon: Int, label: Int, enabled: Boolean, onClick: () -> Unit) {
@@ -463,13 +480,6 @@ private fun FormatIcon(icon: Int, label: Int, enabled: Boolean, onClick: () -> U
             // file name.
             contentDescription = stringResource(label),
         )
-    }
-}
-
-@Composable
-private fun FormatButton(label: String, enabled: Boolean, onClick: () -> Unit) {
-    TextButton(onClick = onClick, enabled = enabled, shape = ControlShape) {
-        Text(text = label, style = MaterialTheme.typography.labelLarge)
     }
 }
 
@@ -514,6 +524,26 @@ private fun TextFieldState.wrapSelection(marker: String) {
     val range = selection
     if (range.collapsed) return
     val result = FormatActions.wrap(text.toString(), range.min, range.max, marker)
+    edit {
+        replace(0, length, result.text)
+        selection = TextRange(result.selectionStart, result.selectionEnd)
+    }
+}
+
+/** Applies [FormatActions.rule], which puts a divider on a line of its own after this one. */
+private fun TextFieldState.insertRule() {
+    val result = FormatActions.rule(text.toString(), selection.min)
+    edit {
+        replace(0, length, result.text)
+        selection = TextRange(result.selectionStart, result.selectionEnd)
+    }
+}
+
+/** Applies [FormatActions.clear] to the selection, keeping the words it leaves behind selected. */
+private fun TextFieldState.clearFormatting() {
+    val range = selection
+    if (range.collapsed) return
+    val result = FormatActions.clear(text.toString(), range.min, range.max)
     edit {
         replace(0, length, result.text)
         selection = TextRange(result.selectionStart, result.selectionEnd)

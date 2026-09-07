@@ -60,6 +60,15 @@
     <string name="format_italic">Italic</string>
     <string name="format_heading">Heading</string>
     <string name="format_bullet">Bullet list</string>
+    <!-- Two more heading sizes. The bar offers three of the six the parser understands: the archive
+         uses one level and three is already more than a lyric needs. -->
+    <string name="format_heading_3">Smaller heading</string>
+    <string name="format_heading_4">Smallest heading</string>
+    <!-- Puts a dividing line across the page. Called what it looks like, not what it is called in
+         Markdown — "horizontal rule" is a typesetter's word. -->
+    <string name="format_rule">Divider</string>
+    <!-- Takes the app's own marks back off the selected text. -->
+    <string name="format_clear">Remove formatting</string>
     <!-- The clipboard, in the same bar. Android's own floating popup is suppressed in the editor —
          it lands on top of the line being selected — so these are the only way to reach it. -->
     <string name="format_cut">Cut</string>
