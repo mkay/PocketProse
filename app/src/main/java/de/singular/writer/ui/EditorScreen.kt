@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.statusBars
@@ -43,6 +44,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -62,6 +64,7 @@ import androidx.compose.ui.platform.LocalTextToolbar
 import androidx.compose.foundation.text.contextmenu.provider.LocalTextContextMenuDropdownProvider
 import androidx.compose.foundation.text.contextmenu.provider.LocalTextContextMenuToolbarProvider
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -383,18 +386,24 @@ fun EditorScreen(
 /**
  * The bar over the keyboard: what to do to the words, and the clipboard.
  *
- * **It appears on focus, not on selection**, and that is a change forced by suppressing Android's
- * floating popup — see [NoTextToolbar]. The popup was where pasting lived when nothing was selected,
- * so a bar that only showed for a selection would have removed pasting from the app altogether.
- * Focus is also the more honest rule: the bar is for the field you are writing in, and it sits above
- * the keyboard rather than over the page, so it costs the writing nothing.
+ * **It appears on focus, not on selection**, and that is forced by suppressing Android's floating
+ * popup — see [NoTextToolbar]. The popup was where pasting lived when nothing was selected, so a bar
+ * that only showed for a selection would have removed pasting from the app. Focus is the more honest
+ * rule anyway: the bar is for the field you are writing in, and it sits above the keyboard rather
+ * than over the page, so it costs the writing nothing.
  *
- * Everything that needs a selection is disabled without one, rather than hidden. Buttons that come
- * and go under a thumb are a worse thing than buttons that are visibly not available yet.
+ * **Icons for what changes the text, words for the clipboard.** The four marks are things this app
+ * has an opinion about and draws differently from plain text, and a symbol says that faster than a
+ * label. Cut, copy and paste are the phone's own vocabulary and are read, not recognised — and the
+ * icon set has no symbol for them, which is the same fact from the other side.
  *
- * Verbs the audience already owns — Bold, Italic, Heading, Cut, Copy, Paste — and no others. The row
- * scrolls rather than wrapping, because six labels at a readable size do not fit every phone and a
- * bar that is sometimes two storeys tall moves the writing up and down as you work.
+ * Everything needing a selection is disabled without one rather than hidden. Buttons that come and
+ * go under a thumb are worse than buttons visibly not yet available.
+ *
+ * **The list is short because the parser is.** Bold, italic, heading and a bullet are what
+ * `markdown/Blocks.kt` and `Inline.kt` actually render; a button writing anything else would put
+ * characters in a lyric that come back as literal text. Quote, numbered lists and indentation have
+ * icons waiting in `res/drawable` and no parser behind them yet.
  */
 @Composable
 private fun FormatBar(body: TextFieldState, modifier: Modifier = Modifier) {
@@ -405,15 +414,32 @@ private fun FormatBar(body: TextFieldState, modifier: Modifier = Modifier) {
         modifier = modifier.fillMaxWidth().imePadding(),
     ) {
         Row(
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            horizontalArrangement = Arrangement.spacedBy(2.dp),
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
                 .horizontalScroll(rememberScrollState())
                 .padding(horizontal = 8.dp, vertical = 4.dp),
         ) {
-            FormatButton(stringResource(R.string.format_bold), selected) { body.wrapSelection("**") }
-            FormatButton(stringResource(R.string.format_italic), selected) { body.wrapSelection("*") }
-            FormatButton(stringResource(R.string.format_heading), true) { body.prefixLine("## ") }
+            FormatIcon(R.drawable.ic_format_bold, R.string.format_bold, selected) {
+                body.wrapSelection("**")
+            }
+            FormatIcon(R.drawable.ic_format_italic, R.string.format_italic, selected) {
+                body.wrapSelection("*")
+            }
+            // The button writes `## `, so it is the second-level symbol that stands over it. The
+            // archive uses `##` and nothing else — no note in it carries a first-level heading.
+            FormatIcon(R.drawable.ic_format_h2, R.string.format_heading, true) {
+                body.prefixLine("## ")
+            }
+            FormatIcon(R.drawable.ic_format_list_bulleted, R.string.format_bullet, true) {
+                body.prefixLine("- ")
+            }
+
+            VerticalDivider(
+                color = MaterialTheme.colorScheme.outlineVariant,
+                modifier = Modifier.height(24.dp).padding(horizontal = 6.dp),
+            )
+
             FormatButton(stringResource(R.string.format_cut), selected) {
                 clipboard.setText(AnnotatedString(body.selectedText()))
                 body.replaceSelection("")
@@ -425,6 +451,18 @@ private fun FormatBar(body: TextFieldState, modifier: Modifier = Modifier) {
                 clipboard.getText()?.text?.let(body::replaceSelection)
             }
         }
+    }
+}
+
+@Composable
+private fun FormatIcon(icon: Int, label: Int, enabled: Boolean, onClick: () -> Unit) {
+    IconButton(onClick = onClick, enabled = enabled) {
+        Icon(
+            painter = painterResource(icon),
+            // The label a word would have carried, so a screen reader hears the verb rather than a
+            // file name.
+            contentDescription = stringResource(label),
+        )
     }
 }
 

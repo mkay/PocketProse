@@ -59,6 +59,7 @@
     <string name="format_bold">Bold</string>
     <string name="format_italic">Italic</string>
     <string name="format_heading">Heading</string>
+    <string name="format_bullet">Bullet list</string>
     <!-- The clipboard, in the same bar. Android's own floating popup is suppressed in the editor —
          it lands on top of the line being selected — so these are the only way to reach it. -->
     <string name="format_cut">Cut</string>
