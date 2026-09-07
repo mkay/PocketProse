@@ -14,3 +14,9 @@
 
 # Local Claude Code settings (machine paths, not shared)
 .claude/settings.local.json
+
+# The author's own archive, used by the corpus tests. 168 unreleased song lyrics —
+# personal writing, not sample data, and no part of a GPL source release. Populate it
+# locally with:  adb pull /sdcard/Recordings/Lyrics app/src/test/corpus/
+# The tests skip themselves when it is absent, so a clone without it still builds green.
+/app/src/test/corpus/

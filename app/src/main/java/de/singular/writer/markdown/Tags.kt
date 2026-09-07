@@ -1,0 +1,115 @@
+// SPDX-License-Identifier: GPL-3.0-only
+
+package de.singular.writer.markdown
+
+/**
+ * Tags, in the two forms the archive keeps them in: a list in the frontmatter, and `#hashtags`
+ * written inline in the body.
+ *
+ * Both exist on purpose and the app keeps them in agreement. Measured on 2026-09-07, all 168 notes
+ * already agree — every inline hashtag has a frontmatter entry and vice versa, once the two tags
+ * that cannot be written inline are set aside. So the job here is to *preserve* an invariant that
+ * currently holds, not to reconcile drift. Do not build merge logic for a conflict the data does
+ * not have.
+ *
+ * The user never sees a `#`. Tags reach the screen as chips and the drawer shows them as
+ * `tag/subtag`; the hash is storage, and storage is not this app's subject.
+ */
+object Tags {
+
+    /**
+     * What counts as an inline hashtag.
+     *
+     * `#`, then a **letter**, then word characters, `/` or `-`, and the `#` must be at the start of
+     * a line or preceded by whitespace. Every clause is carrying a real note in the archive:
+     *
+     * - *preceded by whitespace* keeps `F#` out. `Radio (Song Notes).md` reads "Tarantino für zwei
+     *   in F# Moll", and that is the only sharp in 168 notes — one note away from a tag called
+     *   `#` appearing in the drawer. It is also what would keep `F#m` and `C#` out if the author
+     *   ever writes a chord sheet in text rather than in chord diagrams.
+     * - *then a letter* keeps `## Strophe` out, five notes using `##` as a heading, and keeps
+     *   `#100%#` out — 11 notes carry Bear's wrapped form of the `100%` tag in their bodies, and
+     *   it must stay in the text exactly as it is rather than being recognised and rewritten.
+     * - *word characters, `/` or `-`* is the whole vocabulary: 24 tags, 11 of them nested one level.
+     *
+     * Test every clause when you touch this. The failure mode is silent — a tag that should not
+     * exist appears in the drawer, or one that should is missing from it, and neither shows up as
+     * an error anywhere.
+     */
+    private val HASHTAG = Regex("""(?<=^|\s)#([\p{L}][\w/-]*)""", RegexOption.MULTILINE)
+
+    /**
+     * The two tags that cannot be written as hashtags at all: `100%` (11 notes) and `50%` (1).
+     *
+     * `%` is not in the vocabulary above and the author decided deliberately to keep these names
+     * rather than rename them, so they live in the frontmatter only. In the bodies they survive as
+     * Bear's `#100%#`, which is *text* here — indexed from the frontmatter, rendered as a tag, and
+     * the body left alone. Never "fix" one of these by renaming it.
+     */
+    fun isInlineWritable(tag: String): Boolean = HASHTAG.matches("#$tag")
+
+    /** Every inline hashtag in [body], in the order it appears, without the `#`. */
+    fun inBody(body: String): List<String> =
+        HASHTAG.findAll(body).map { it.groupValues[1] }.toList()
+
+    /**
+     * Tags are lowercase, and new input is folded on entry.
+     *
+     * The archive was deliberately case-folded once already; letting a `Lyrics` in beside the
+     * existing `lyrics` would split a tag in the drawer and there is no UI that makes that look
+     * like anything but a bug.
+     */
+    fun normalize(tag: String): String = tag.trim().trimStart('#').lowercase()
+
+    /**
+     * A node in the tag tree the drawer shows.
+     *
+     * [count] is how many notes carry this exact tag, which is not the same as how many carry
+     * something under it — `album` has three children and no note of its own.
+     */
+    data class Node(
+        val segment: String,
+        val path: String,
+        val count: Int,
+        val children: List<Node>,
+    ) {
+        /** Notes at this tag or anywhere below it — what the drawer puts beside the name. */
+        val total: Int get() = count + children.sumOf { it.total }
+    }
+
+    /**
+     * Build the tree from the tags actually in use.
+     *
+     * **From path segments, never from the existence of a parent.** `album/debut` is a child of
+     * `album` even though no note is tagged with a bare `album`, and the same goes for `lyrics` —
+     * four notes carry it, but its five children would need it regardless. A tree built by looking
+     * for parent tags would lose every nested tag in the archive.
+     *
+     * Sorted by size and then by name. The distribution is extremely skewed — `lyrics/snippet`
+     * alone covers 131 of 168 notes, and 8 of the 24 tags are on a single note each — so the
+     * drawer's job is to put the long tail within reach rather than to present an even list. Do not
+     * replace this with a plain alphabetical sort without solving that first.
+     */
+    fun tree(tagsPerNote: List<List<String>>): List<Node> {
+        val counts = HashMap<String, Int>()
+        for (tags in tagsPerNote) for (tag in tags.distinct()) counts.merge(tag, 1, Int::plus)
+        return build(counts, prefix = "")
+    }
+
+    private fun build(counts: Map<String, Int>, prefix: String): List<Node> {
+        val depth = if (prefix.isEmpty()) 0 else prefix.count { it == '/' } + 1
+        val segments = counts.keys
+            .filter { prefix.isEmpty() || it.startsWith("$prefix/") }
+            .mapNotNull { it.split('/').getOrNull(depth) }
+            .distinct()
+        return segments.map { segment ->
+            val path = if (prefix.isEmpty()) segment else "$prefix/$segment"
+            Node(
+                segment = segment,
+                path = path,
+                count = counts[path] ?: 0,
+                children = build(counts, path),
+            )
+        }.sortedWith(compareByDescending<Node> { it.total }.thenBy { it.segment })
+    }
+}

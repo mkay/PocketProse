@@ -22,7 +22,9 @@ Verified on 2026-09-07 by pulling `/sdcard/Recordings/Lyrics` off the Fairphone 
 
 Four things the measurement added:
 
-**36 notes have no body at all beyond their hashtag line.** Three groups — 12 notes with a 15-byte body, 16 with 31 bytes, 8 with 17 bytes — whose entire content is the tag. `Die Eule.md` in full, after its frontmatter, is a blank line and `#lyrics/titel`. Once hashtags are hoisted into chips these render as empty pages, and 21% of the library has no excerpt to show. Hence the placeholder line. These are title ideas, and the app should treat them as a legitimate kind of note rather than as a defect.
+**40 notes have no body at all beyond their hashtag line.** `Die Eule.md` in full, after its frontmatter, is a blank line and `#lyrics/titel`. Once hashtags are hoisted into chips these render as empty pages, and **just under a quarter of the library** has no excerpt to show. Hence the placeholder line. These are title ideas, and the app should treat them as a legitimate kind of note rather than as a defect.
+
+This said 36 until phase 1 measured it properly. 36 was reached by grouping byte-identical bodies, which finds only the notes whose tag line is shared with another note and misses the four whose tag combination is unique. Counting the excerpts themselves — which is what the screen will actually show — gives 40, and `CorpusTest` now asserts it.
 
 **Hashtag lines are usually at the bottom, not the top.** 85 notes end with one, 60 begin with one, 1 has it in the middle, and 8 carry them in more than one place. `Casablanca (chords).md` has `#chords #radio` above the images and `#lyrics/snippet` alone below them. Hoisting tags out of the display therefore touches several places in a file, and putting them back byte-identically is the delicate part of the tag work — not the parsing.
 
@@ -30,7 +32,13 @@ Four things the measurement added:
 
 **The test fixture does not cover the tag hazard.** `Lyrics_Test` contains no `#` chord anywhere. In the whole archive there is exactly one sharp, in `Radio (Song Notes).md`: "Tarantino für zwei in F# Moll." — an `F#`, with no `F#m` and no `C#` despite what `CLAUDE.md` says. The rule survives it without a special case, `#` there being preceded by a letter rather than by whitespace, but the fixture cannot demonstrate that. Phase 1 covers it as a unit test and a sharp gets added to the fixture.
 
-Two smaller corrections to `CLAUDE.md`: the `Wer geht vor` trio has 959-byte bodies, not 957; and one note has `---` directly after a line of text (`Sieger sehen anders aus.md`), not two.
+**The setext hazard is latent, not live.** `CLAUDE.md` says five notes use `---` as a horizontal rule and that two of them put it directly after a line of text, where strict CommonMark would read it as a setext H2. Measured: **two** notes contain a bare `---` in the body (`Atlantik.md` and `Sieger sehen anders aus.md`) and **twenty** use `- - -`, one note using both, so 21 notes carry a rule. Every bare `---` in the archive follows a blank line or another rule — **none** directly follows prose, so the ambiguity does not occur in the data at all today.
+
+That does not make the decision optional. The moment the author types `---` under a line, a lyric would silently become a heading. `Blocks` therefore refuses setext unconditionally, and the case is pinned by a synthetic test rather than a corpus one, since the corpus cannot demonstrate it.
+
+One smaller correction: the `Wer geht vor` trio has 959-byte bodies, not 957.
+
+`CLAUDE.md` itself still carries the old figures. Its corpus section is written to be trusted without re-measuring, so it is worth bringing into line.
 
 ## Layout
 
