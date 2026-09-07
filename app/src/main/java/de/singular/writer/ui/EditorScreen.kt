@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
@@ -43,6 +44,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -53,13 +55,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalTextToolbar
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import de.singular.writer.R
 import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import de.singular.writer.markdown.FormatActions
@@ -197,6 +203,10 @@ fun EditorScreen(
         }
     }
     val scheme = MaterialTheme.colorScheme
+    // Which stretch of the note is being written in. The bar acts on this one — a note cut at its
+    // images has several fields, and "the first with a selection" was a guess at which one the
+    // writer meant.
+    var focused by remember(document) { mutableStateOf<Int?>(null) }
     val opening = remember { FocusRequester() }
     LaunchedEffect(document) {
         if (focusOnOpen && editable) runCatching { opening.requestFocus() }
@@ -210,6 +220,9 @@ fun EditorScreen(
         )
     }
 
+    // No floating selection popup anywhere in the editor: it lands on top of the line being
+    // selected, and this screen has a bar of its own for the same job. See NoTextToolbar.
+    CompositionLocalProvider(LocalTextToolbar provides NoTextToolbar) {
     Column(modifier.fillMaxSize()) {
         TopAppBar(
             title = {
@@ -303,6 +316,10 @@ fun EditorScreen(
                                 if (i == document.firstProseIndex) Modifier.focusRequester(opening)
                                 else Modifier,
                             )
+                            .onFocusChanged { state ->
+                                if (state.isFocused) focused = i
+                                else if (focused == i) focused = null
+                            }
                             .padding(horizontal = 20.dp, vertical = 4.dp),
                     )
 
@@ -339,29 +356,40 @@ fun EditorScreen(
 
         // Formatting exists only while something is selected. A collapsed cursor is someone
         // writing; a selection is someone looking at a piece of text and considering it.
-        val selected = document.anySelection()
         // Held across the exit animation: the bar is still composed while it slides away, by which
-        // time nothing is selected any more.
-        val target = selected ?: document.anyBuffer()
+        // time the field it belonged to may have lost focus.
+        val target = focused?.let(document::bufferAt) ?: document.anyBuffer()
         AnimatedVisibility(
-            visible = editable && selected != null,
+            visible = editable && focused != null,
             enter = fadeIn() + slideInVertically { it },
             exit = fadeOut() + slideOutVertically { it },
         ) {
             if (target != null) FormatBar(target)
         }
     }
+    }
 }
 
 /**
- * The bar over a selection.
+ * The bar over the keyboard: what to do to the words, and the clipboard.
  *
- * Verbs the audience already owns — Bold, Italic, Heading — and no others. Every additional control
- * here is a control on the one screen that is supposed to have none, so the bar earns its place only
- * by being the shortest possible list.
+ * **It appears on focus, not on selection**, and that is a change forced by suppressing Android's
+ * floating popup — see [NoTextToolbar]. The popup was where pasting lived when nothing was selected,
+ * so a bar that only showed for a selection would have removed pasting from the app altogether.
+ * Focus is also the more honest rule: the bar is for the field you are writing in, and it sits above
+ * the keyboard rather than over the page, so it costs the writing nothing.
+ *
+ * Everything that needs a selection is disabled without one, rather than hidden. Buttons that come
+ * and go under a thumb are a worse thing than buttons that are visibly not available yet.
+ *
+ * Verbs the audience already owns — Bold, Italic, Heading, Cut, Copy, Paste — and no others. The row
+ * scrolls rather than wrapping, because six labels at a readable size do not fit every phone and a
+ * bar that is sometimes two storeys tall moves the writing up and down as you work.
  */
 @Composable
 private fun FormatBar(body: TextFieldState, modifier: Modifier = Modifier) {
+    val clipboard = LocalClipboardManager.current
+    val selected = !body.selection.collapsed
     Surface(
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
         modifier = modifier.fillMaxWidth().imePadding(),
@@ -369,19 +397,44 @@ private fun FormatBar(body: TextFieldState, modifier: Modifier = Modifier) {
         Row(
             horizontalArrangement = Arrangement.spacedBy(4.dp),
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+            modifier = Modifier
+                .horizontalScroll(rememberScrollState())
+                .padding(horizontal = 8.dp, vertical = 4.dp),
         ) {
-            FormatButton(stringResource(R.string.format_bold)) { body.wrapSelection("**") }
-            FormatButton(stringResource(R.string.format_italic)) { body.wrapSelection("*") }
-            FormatButton(stringResource(R.string.format_heading)) { body.prefixLine("## ") }
+            FormatButton(stringResource(R.string.format_bold), selected) { body.wrapSelection("**") }
+            FormatButton(stringResource(R.string.format_italic), selected) { body.wrapSelection("*") }
+            FormatButton(stringResource(R.string.format_heading), true) { body.prefixLine("## ") }
+            FormatButton(stringResource(R.string.format_cut), selected) {
+                clipboard.setText(AnnotatedString(body.selectedText()))
+                body.replaceSelection("")
+            }
+            FormatButton(stringResource(R.string.format_copy), selected) {
+                clipboard.setText(AnnotatedString(body.selectedText()))
+            }
+            FormatButton(stringResource(R.string.format_paste), true) {
+                clipboard.getText()?.text?.let(body::replaceSelection)
+            }
         }
     }
 }
 
 @Composable
-private fun FormatButton(label: String, onClick: () -> Unit) {
-    TextButton(onClick = onClick, shape = ControlShape) {
+private fun FormatButton(label: String, enabled: Boolean, onClick: () -> Unit) {
+    TextButton(onClick = onClick, enabled = enabled, shape = ControlShape) {
         Text(text = label, style = MaterialTheme.typography.labelLarge)
+    }
+}
+
+/** The characters the selection covers. Empty when the cursor is collapsed. */
+private fun TextFieldState.selectedText(): String =
+    text.substring(selection.min, selection.max)
+
+/** Replace the selection — or insert at the cursor — and leave the caret after what was put in. */
+private fun TextFieldState.replaceSelection(with: String) {
+    val range = selection
+    edit {
+        replace(range.min, range.max, with)
+        selection = TextRange(range.min + with.length)
     }
 }
 

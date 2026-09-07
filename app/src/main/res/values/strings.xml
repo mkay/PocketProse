@@ -59,6 +59,11 @@
     <string name="format_bold">Bold</string>
     <string name="format_italic">Italic</string>
     <string name="format_heading">Heading</string>
+    <!-- The clipboard, in the same bar. Android's own floating popup is suppressed in the editor —
+         it lands on top of the line being selected — so these are the only way to reach it. -->
+    <string name="format_cut">Cut</string>
+    <string name="format_copy">Copy</string>
+    <string name="format_paste">Paste</string>
 
     <!-- Shown instead of the editor when the app cannot reproduce a note's bytes exactly. It is
          better to refuse to edit than to risk rewriting a note wrongly — see IndexedNote.roundTrips.
