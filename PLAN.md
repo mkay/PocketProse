@@ -105,9 +105,15 @@ Saving checks four things in order, each preventing one way of losing writing: r
 
 Verified on the device: opening several notes and editing one changed exactly that one file, and inside it exactly two lines — `updated`, and the text typed. `created` untouched, key order and quoting preserved, no temp files left behind.
 
-**5 — Images and attachments.** Relative-path resolution against the note's own folder, both the `attachments/` form and the flat sibling form, a small `BitmapFactory` loader with an LRU cache, and PDF links opening by intent. No Coil — 26 images at 151×164 do not justify a dependency. Done when items 4 and 5 pass.
+**5 — Images and attachments. Done.** Relative-path resolution against the note's own folder, both the `attachments/` form and the flat sibling form, a `BitmapFactory` loader with a 4 MB LRU cache, and links opening by intent. No Coil — 38 images at 151×164 do not justify a dependency.
 
-**6 — Tag chips, two-way sync.** The most dangerous write path in the app, deliberately last, and informed by the placement survey above. Adding a chip writes the frontmatter list and the inline hashtag; removing one removes both; `100%` and `50%` are frontmatter-only and their bodies are never touched.
+The apparent conflict between "one view, always editable" and "images render inline" dissolved on measurement: **every image in the archive sits on a line of its own**, in runs of three or four, and the most any line carries beside them is a bare `3x`. So the body is cut at image lines, text stays directly editable, and images are drawn in the gaps. 165 of 168 notes produce a single segment and are unchanged. `Segments.join(Segments.split(body))` is asserted byte-identical on every note in the archive.
+
+Images are mounted on paper — the light scheme's own `surfaceContainerHighest`, fixed rather than theme-following. The chord diagrams are 89% transparent PNGs whose ink is `#111111`, drawn against Bear's white page; on this app's dark page they read at 1.46:1 and effectively vanish. Inverting was the alternative and is wrong, because the app cannot know line art from a photograph.
+
+One deviation from `CLAUDE.md`, deliberately: attachments open from a strip at the foot of the note rather than by tapping the link text. The editor is always live, so a tap in it means "put the cursor here"; making a tap sometimes mean "leave the app and open a PDF" is a coin toss played while writing. The links are untouched — this adds an affordance, not a rewrite.
+
+**6 — Tag chips, two-way sync.** Still outstanding, and still the most dangerous write path in the app. Note that the editor currently shows hashtag lines as ordinary text, so the design's "no `#` anywhere" is true of the list and the drawer but not yet of the editor.
 
 **7 — Sync, conflicts, polish.** Foreground re-read, pull-to-refresh, keep-both on conflict with the difference surfaced, never auto-delete on a vanished file. Then settings, about, German strings, fastlane metadata and the F-Droid layout.
 

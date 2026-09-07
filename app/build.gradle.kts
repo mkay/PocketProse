@@ -63,7 +63,8 @@ android {
  *
  * Deliberately narrow: it looks at the two constructs that actually put words in front of someone,
  * and leaves alone the places a bare string is legitimate (Compose animation labels, log messages,
- * file extensions). Something that slips past this is still caught by reading the diff.
+ * file extensions) and every comment line. Something that slips past this is still caught by
+ * reading the diff.
  */
 val checkNoHardcodedUiStrings by tasks.registering {
     group = "verification"
@@ -78,8 +79,15 @@ val checkNoHardcodedUiStrings by tasks.registering {
             Regex("\\bText\\(\\s*\""),
             Regex("\\bcontentDescription\\s*=\\s*\""),
         )
+        // Comment lines are skipped. They cannot be an offence — a commented-out call is not
+        // compiled — and without this the check fires on any KDoc that *discusses* the rule it
+        // enforces, which it did the first time one was written.
         val offenders = sources.files.flatMap { file ->
             file.readLines().withIndex()
+                .filterNot { (_, line) ->
+                    val t = line.trimStart()
+                    t.startsWith("//") || t.startsWith("*") || t.startsWith("/*")
+                }
                 .filter { (_, line) -> patterns.any { it.containsMatchIn(line) } }
                 .map { (i, line) -> "${file.relativeTo(projectDir)}:${i + 1}: ${line.trim()}" }
         }

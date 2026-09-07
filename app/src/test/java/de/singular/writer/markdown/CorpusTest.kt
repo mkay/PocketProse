@@ -271,6 +271,35 @@ class CorpusTest {
     }
 
     @Test
+    fun `splitting a note for the editor and rejoining it changes not one byte`() {
+        // The editor cuts a body at its image lines so images can be drawn between text fields.
+        // If that round trip lost or added a character, every note with an image would be rewritten
+        // the moment it was opened. Checked on every note, not only the three with images.
+        val corpus = corpus()
+        for ((name, text) in corpus) {
+            val body = Note.parse(text).body
+            assertEquals(name, body, Segments.join(Segments.split(body)))
+        }
+    }
+
+    @Test
+    fun `images sit on their own lines, which is what makes the editor possible`() {
+        // 38 images across 3 chord sheets, and the most any line carries beside them is a bare 3x.
+        // If an image ever appeared mid-sentence the segment approach would cut a paragraph in two.
+        val corpus = corpus()
+        val withImages = corpus.filterValues { Segments.imagesIn(Note.parse(it).body).isNotEmpty() }
+        assertEquals(3, withImages.size)
+        assertEquals(38, corpus.values.sumOf { Segments.imagesIn(Note.parse(it).body).size })
+
+        val trailing = corpus.values
+            .flatMap { Segments.split(Note.parse(it).body) }
+            .filterIsInstance<Segment.Images>()
+            .map { it.trailing }
+            .filter { it.isNotEmpty() }
+        assertEquals(listOf("3x"), trailing)
+    }
+
+    @Test
     fun `rules in bodies are read as rules and never as headings`() {
         val corpus = corpus()
         val withRule = corpus.filterValues { text ->

@@ -45,13 +45,15 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.text.input.TextFieldState
 import de.singular.writer.ui.DrawerWidth
+import de.singular.writer.markdown.Segments
 import de.singular.writer.ui.EditorScreen
+import de.singular.writer.ui.NoteDocument
 import de.singular.writer.ui.ConflictDialog
 import de.singular.writer.ui.LibraryScreen
 import de.singular.writer.ui.PocketProseTheme
 import de.singular.writer.ui.TagDrawer
+import de.singular.writer.vault.Attachments
 import de.singular.writer.vault.IndexedNote
 import de.singular.writer.vault.IndexDump
 import de.singular.writer.vault.NoteIndex
@@ -106,8 +108,14 @@ private fun PocketProseApp() {
     val scope = rememberCoroutineScope()
 
     var index by remember { mutableStateOf(NoteIndex(emptyList())) }
-    var folderName by remember { mutableStateOf<String?>(null) }
-    var error by remember { mutableStateOf<VaultFailure?>(VaultFailure.NO_FOLDER_CHOSEN) }
+    // Seeded from what is already known, so the first frame is right rather than corrected a moment
+    // later. `rootWasSet` and `cachedRootName` are preference reads and cost nothing; only the note
+    // list needs a provider, and `loading` covers that gap.
+    var folderName by remember { mutableStateOf(vault.cachedRootName) }
+    var error by remember {
+        mutableStateOf(if (vault.rootWasSet) null else VaultFailure.NO_FOLDER_CHOSEN)
+    }
+    var loading by remember { mutableStateOf(vault.rootWasSet) }
     var query by remember { mutableStateOf("") }
     var searching by remember { mutableStateOf(false) }
     var selectedTag by remember { mutableStateOf<String?>(null) }
@@ -118,9 +126,22 @@ private fun PocketProseApp() {
     val openNote: IndexedNote? = remember(index, openNoteUri) {
         openNoteUri?.let { uri -> index.notes.firstOrNull { it.file.uri.toString() == uri } }
     }
-    // One buffer per note. Keyed on the uri so switching notes starts a fresh one, and not on the
+    // One document per note. Keyed on the uri so switching notes starts a fresh one, and not on the
     // content, so a background refresh does not throw away what is being typed.
-    val editorState = remember(openNoteUri) { TextFieldState(openNote?.note?.body.orEmpty()) }
+    val document = remember(openNoteUri) { NoteDocument(openNote?.note?.body.orEmpty()) }
+    val attachments = remember { Attachments(vault, context) }
+
+    // Which of a note's links point at nothing. Resolved once per note rather than per frame: the
+    // archive has 24 dead links and finding that out is a provider query each.
+    val links = remember(openNoteUri) { openNote?.let { Segments.linksIn(it.note.body) }.orEmpty() }
+    var missingLinks by remember(openNoteUri) { mutableStateOf(emptySet<String>()) }
+    LaunchedEffect(openNoteUri, links) {
+        missingLinks = links
+            .filterNot { Attachments.isAbsoluteUrl(it.target) }
+            .filter { attachments.resolve(it.target) == null }
+            .map { it.target }
+            .toSet()
+    }
 
     // A conflict holds the editor open with the user's text intact until they choose. Never
     // overwrite, never merge — see SaveResult.Conflict.
@@ -129,9 +150,12 @@ private fun PocketProseApp() {
 
     fun refresh() = scope.launch {
         val (loaded, failure) = vault.readAll()
+        loading = false
         index = loaded
         error = failure
         folderName = vault.rootName()
+        // A synced-in image would otherwise stay missing until the app was restarted.
+        attachments.forget()
         // A tag that no longer exists after a sync would otherwise filter the list down to nothing
         // with no way to tell why.
         if (selectedTag != null && index.allTags.none { it == selectedTag || it.startsWith("$selectedTag/") }) {
@@ -151,7 +175,7 @@ private fun PocketProseApp() {
      */
     suspend fun saveOpenNote(): Boolean {
         val note = openNote ?: return true
-        return when (val result = vault.save(note, editorState.text.toString())) {
+        return when (val result = vault.save(note, document.body())) {
             is SaveResult.Unchanged, is SaveResult.Refused -> true
             is SaveResult.Saved -> {
                 // The uri changes: the swap in Vault.save deletes the old document and renames the
@@ -169,6 +193,7 @@ private fun PocketProseApp() {
     }
 
     val drawerState = rememberDrawerState(DrawerValue.Closed)
+    val noOpener = stringResource(R.string.attachment_no_app)
 
 
     /**
@@ -226,7 +251,23 @@ private fun PocketProseApp() {
 
         EditorScreen(
             title = openNote.title,
-            body = editorState,
+            document = document,
+            attachments = attachments,
+            links = links,
+            missingLinks = missingLinks,
+            onOpenLink = { link ->
+                scope.launch {
+                    val intent = if (Attachments.isAbsoluteUrl(link.target)) {
+                        attachments.openUrl(link.target)
+                    } else {
+                        val uri = attachments.resolve(link.target) ?: return@launch
+                        attachments.openExternally(uri, attachments.mimeTypeOf(uri))
+                    }
+                    // No handler for a .band file is an ordinary outcome, not a crash.
+                    runCatching { context.startActivity(intent) }
+                        .onFailure { message = noOpener }
+                }
+            },
             // The gate from phase 2: a note whose bytes the parser cannot reproduce is never
             // written, because writing it would corrupt it. It is false for no note in the archive.
             editable = openNote.roundTrips,
@@ -240,7 +281,7 @@ private fun PocketProseApp() {
             ConflictDialog(
                 onKeepBoth = {
                     scope.launch {
-                        val result = vault.saveCopy(openNote, editorState.text.toString())
+                        val result = vault.saveCopy(openNote, document.body())
                         conflict = false
                         if (result is SaveResult.Failed) message = result.reason else {
                             refresh()
@@ -297,6 +338,7 @@ private fun PocketProseApp() {
             notes = shown,
             folderName = folderName,
             error = error,
+            loading = loading,
             query = query,
             onQueryChange = { query = it },
             searching = searching,

@@ -171,6 +171,31 @@ private val PocketDarkColors = darkColorScheme(
     outlineVariant = Color(0xFF463F40), // 1.26:1
 )
 
+/**
+ * The paper a picture in a note is mounted on — **the one colour in the app that ignores the theme.**
+ *
+ * The archive's chord diagrams are 89% transparent PNGs whose ink is `#111111`: they were drawn in
+ * Bear against a white page and carry no background of their own. Dropped straight onto this app's
+ * dark page they read at **1.46:1**, which is to say they vanish. Measured, after watching them do
+ * exactly that on the Fairphone.
+ *
+ * Inverting them was the other option and is wrong: the app cannot know whether an image is line art
+ * or a photograph, and inverting a photograph is a great deal worse than mounting one. So every
+ * picture sits on paper, and that ink reads **14.15:1** on it. An opaque image covers the mount and
+ * shows only a hairline of it, which is what a photograph in a frame looks like anyway.
+ *
+ * The value is the **light scheme's own `surfaceContainerHighest`**, not a white invented for the
+ * purpose — the deepest step of that ramp, so it is recognisably this app's paper rather than a
+ * bright rectangle punched through the page. Being the deepest step is also what makes it work on
+ * the light theme, where a whiter mount sat at 1.14:1 against the page and read as nothing at all;
+ * this reads 1.28:1 and looks like a mount.
+ *
+ * Deliberately not a theme token, because it must not follow the theme: a mount that darkened along
+ * with the page would be back to the problem it exists to solve. If the light ramp ever moves, move
+ * this with it by hand and re-check both numbers.
+ */
+val ImagePaper = Color(0xFFE5DDDF)
+
 /** Controls use a gentle corner rather than the fully-rounded Material default, as in the others. */
 val ControlShape = RoundedCornerShape(5.dp)
 

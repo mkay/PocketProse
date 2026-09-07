@@ -78,14 +78,29 @@ class Vault(context: Context) {
     fun setRoot(uri: Uri): Boolean {
         val flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
         val ok = runCatching { resolver.takePersistableUriPermission(uri, flags) }.isSuccess
-        if (ok) prefs.edit().putString(KEY_ROOT, uri.toString()).apply()
+        // The cached name belongs to the old folder; drop it in the same edit so the two can never
+        // disagree, and let the next listing fill it in again.
+        if (ok) prefs.edit().putString(KEY_ROOT, uri.toString()).remove(KEY_ROOT_NAME).apply()
         return ok
     }
 
-    /** Human-readable name of the chosen folder, for the "Notes in …" line. */
+    /**
+     * The chosen folder's name as it was last read, available **without touching a provider**.
+     *
+     * Read straight from preferences so the very first frame can show the right title. Without it
+     * the header says "Notes" for as long as the first listing takes and then changes under the
+     * reader's eyes, which is a small thing that makes an app feel like it is thinking rather than
+     * like it is open.
+     */
+    val cachedRootName: String?
+        get() = if (rootWasSet) prefs.getString(KEY_ROOT_NAME, null) else null
+
+    /** Human-readable name of the chosen folder, and caches it for [cachedRootName]. */
     suspend fun rootName(): String? = withContext(Dispatchers.IO) {
         val folder = rootFolder() ?: return@withContext null
-        queryOne(folder, DocumentsContract.Document.COLUMN_DISPLAY_NAME)
+        queryOne(folder, DocumentsContract.Document.COLUMN_DISPLAY_NAME)?.also {
+            prefs.edit().putString(KEY_ROOT_NAME, it).apply()
+        }
     }
 
     /** Whether we still hold a persisted grant on [uri] — the user can revoke it in Settings. */
@@ -383,6 +398,7 @@ class Vault(context: Context) {
     companion object {
         private const val PREFS = "vault"
         private const val KEY_ROOT = "root_tree_uri"
+        private const val KEY_ROOT_NAME = "root_display_name"
 
         /**
          * What an in-progress write is called while it is being written.

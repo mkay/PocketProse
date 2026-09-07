@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
@@ -43,6 +44,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -66,6 +68,7 @@ fun LibraryScreen(
     notes: List<IndexedNote>,
     folderName: String?,
     error: VaultFailure?,
+    loading: Boolean,
     query: String,
     onQueryChange: (String) -> Unit,
     searching: Boolean,
@@ -119,11 +122,17 @@ fun LibraryScreen(
                     if (searching) {
                         SearchField(query, onQueryChange)
                     } else {
-                        Text(
-                            text = folderName ?: stringResource(R.string.library_title),
-                            style = MaterialTheme.typography.titleLarge,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
+                        // The wordmark is the title of the list, filtered or not. It briefly changed
+                        // to the folder name under a filter, on the reasoning that the bar should
+                        // say *where* once the strip says *what* — but a title that changes when you
+                        // pick a tag reads as having navigated somewhere else, when all that has
+                        // happened is that the same list got shorter. The strip carries the filter;
+                        // the bar stays put.
+                        Icon(
+                            painter = painterResource(R.drawable.wordmark),
+                            contentDescription = stringResource(R.string.app_name),
+                            tint = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.height(20.dp),
                         )
                     }
                 },
@@ -154,7 +163,13 @@ fun LibraryScreen(
             }
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
-            if (notes.isEmpty()) {
+            if (loading) {
+                // Deliberately blank. The folder is on the phone, so the first read takes a moment
+                // rather than a while, and a spinner for that long is a flicker rather than
+                // feedback. What must not happen is the "nothing matches" line appearing before
+                // anything has been looked at.
+                Box(Modifier.fillMaxSize())
+            } else if (notes.isEmpty()) {
                 Empty(query, onChooseFolder)
             } else {
                 LazyColumn(Modifier.fillMaxSize()) {

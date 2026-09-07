@@ -1,14 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!--
-      The tile the stack of paper sits on.
+      The tile the stack of paper sits on. The source artwork is transparent, so this is the whole of
+      the icon's ground; change it together with assets/icon_mk1.svg rather than instead of it.
 
-      Deep taupe rather than black: it is the app's own hue (350) taken to icon strength, so the
-      icon and the app agree without the icon inheriting the palette's deliberately low contrast.
-      The foreground is open artwork on transparency, so this shows through and around it whatever
-      mask the launcher cuts.
+      Near-black, warmed onto the app's own hue (350) rather than left a true black, so the tile
+      belongs to this app and not to Android.
 
-      The page edges read 14:1 against it, which is what makes the stack legible at 48dp.
+      This deliberately gives up on the sheets reading against the ground — their dark end is
+      #0C0B0B and lands at 1.1:1 here, so the bottom of the stack merges into the tile and what the
+      eye gets is the near-white page edges floating, with the sheets implied above them by the
+      gradient's lighter top. That is a look rather than a mistake: it is the same one Bear's dark
+      theme has, and it is why this was chosen over the mid grey that made all three tones legible.
+
+      The cost is that on a black wallpaper the tile has almost no edge of its own — 1.1:1 against a
+      #141414 launcher — so the icon reads as a floating mark rather than as a tile. If that ever
+      looks broken rather than elegant, the mid grey #9B8C8F is the measured alternative: sheets
+      6.1:1 and 2.3:1, edges 2.4:1.
     -->
-    <color name="ic_launcher_background">#241C1D</color>
+    <color name="ic_launcher_background">#14100F</color>
 </resources>

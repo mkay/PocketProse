@@ -62,7 +62,7 @@ fun TagDrawer(
             item {
                 Text(
                     text = stringResource(R.string.drawer_tags),
-                    style = MaterialTheme.typography.titleSmall,
+                    style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 8.dp),
                 )
@@ -175,7 +175,7 @@ private fun DrawerRow(
             modifier = Modifier
                 .fillMaxWidth()
                 .clickable(onClick = onClick)
-                .padding(start = 12.dp + (depth * 16).dp, end = 12.dp, top = 10.dp, bottom = 10.dp),
+                .padding(start = 12.dp + (depth * 18).dp, end = 12.dp, top = 12.dp, bottom = 12.dp),
         ) {
             if (expandable) {
                 val turn by animateFloatAsState(if (expanded) 0f else -90f, label = "chevron")
@@ -186,7 +186,7 @@ private fun DrawerRow(
                     ),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier
-                        .size(18.dp)
+                        .size(20.dp)
                         .rotate(turn)
                         .clickable(onClick = onExpandToggle),
                 )
@@ -195,14 +195,20 @@ private fun DrawerRow(
             }
             Text(
                 text = label,
-                style = MaterialTheme.typography.bodyMedium,
+                // bodyLarge, the same size the note list sets a title in. The drawer was a step
+                // down at bodyMedium, which made the app's second-most-used screen its smallest
+                // type — and `CLAUDE.md` asks for large readable type throughout, not only where
+                // the writing is.
+                style = MaterialTheme.typography.bodyLarge,
                 fontWeight = if (selected) FontWeight.Medium else FontWeight.Normal,
                 color = content,
                 modifier = Modifier.weight(1f),
             )
             Text(
                 text = count.toString(),
-                style = MaterialTheme.typography.labelMedium,
+                // One step under the label rather than two: a count is secondary, but at 12sp it
+                // was small print beside a tag someone is meant to read at a glance.
+                style = MaterialTheme.typography.bodyMedium,
                 color = if (selected) content else MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
@@ -211,4 +217,4 @@ private fun DrawerRow(
 
 /** Keeps a childless row's label in line with an expandable one's. */
 @Composable
-private fun Spacer18() = androidx.compose.foundation.layout.Spacer(Modifier.size(18.dp))
+private fun Spacer18() = androidx.compose.foundation.layout.Spacer(Modifier.size(20.dp))

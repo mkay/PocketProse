@@ -81,6 +81,20 @@
     <!-- Shown briefly after something went wrong while saving. %1$s is a short reason. -->
     <string name="save_failed">Couldn\'t save: %1$s</string>
 
+    <!-- Spoken by a screen reader for a picture in a note that has no description of its own.
+         Every image in the author's archive is a chord diagram with an empty alt text. -->
+    <string name="image_untitled">Picture in this note</string>
+    <!-- Shown in place of a picture whose file is not in the folder. The archive has 24 links to a
+         folder the Bear export referred to and never created; the app says so and changes nothing. -->
+    <string name="image_missing">Picture not found: %1$s</string>
+
+    <!-- Heading of the row of attached files at the foot of a note. -->
+    <string name="attachments_title">Attached</string>
+    <!-- Shown when an attachment cannot be opened because nothing on the phone handles it. -->
+    <string name="attachment_no_app">Nothing on this phone can open that file</string>
+    <!-- Shown beside an attachment whose file is missing from the folder. -->
+    <string name="attachment_missing">missing</string>
+
     <!-- ===== Tag drawer ===== -->
 
     <!-- Opens the tag drawer. Spoken by a screen reader; never seen. -->

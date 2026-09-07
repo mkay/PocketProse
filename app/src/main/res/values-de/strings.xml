@@ -32,6 +32,13 @@
 
     <string name="save_failed">Nicht gespeichert: %1$s</string>
 
+    <string name="image_untitled">Bild in diesem Text</string>
+    <string name="image_missing">Bild nicht gefunden: %1$s</string>
+
+    <string name="attachments_title">Anhänge</string>
+    <string name="attachment_no_app">Auf diesem Telefon kann diese Datei nichts öffnen</string>
+    <string name="attachment_missing">fehlt</string>
+
     <string name="drawer_open">Schlagwörter anzeigen</string>
     <string name="drawer_all_notes">Alle Texte</string>
     <string name="drawer_tags">Schlagwörter</string>

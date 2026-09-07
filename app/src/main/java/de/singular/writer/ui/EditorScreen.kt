@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.material.icons.Icons
@@ -47,6 +48,40 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import de.singular.writer.R
+import androidx.compose.ui.text.TextRange
+import de.singular.writer.markdown.FormatActions
+import de.singular.writer.markdown.LinkRef
+import de.singular.writer.markdown.Segment
+import de.singular.writer.markdown.Segments
+import de.singular.writer.vault.Attachments
+
+/**
+ * A note as the editor holds it: its segments, and a live buffer for each editable one.
+ *
+ * The note is cut at its image lines (see [Segments]) so pictures can be drawn between text fields,
+ * a text field being unable to contain a composable. 165 of the archive's 168 notes have no images
+ * and therefore exactly one buffer, which is the same thing the editor had before this existed.
+ *
+ * [body] reassembles the note. Segments that are not text hand back their original bytes untouched,
+ * so an image line survives being scrolled past exactly as it was written.
+ */
+class NoteDocument(body: String) {
+    val segments: List<Segment> = Segments.split(body)
+
+    private val buffers: Map<Int, TextFieldState> = segments.withIndex()
+        .filter { it.value is Segment.Prose }
+        .associate { (i, segment) -> i to TextFieldState(segment.raw) }
+
+    fun bufferAt(index: Int): TextFieldState = buffers.getValue(index)
+
+    /** The whole note again, as bytes to be written. */
+    fun body(): String = segments.withIndex().joinToString("") { (i, segment) ->
+        if (segment is Segment.Prose) buffers.getValue(i).text.toString() else segment.raw
+    }
+
+    /** Where the cursor is, for the format bar — the first buffer that has a selection. */
+    fun anySelection(): TextFieldState? = buffers.values.firstOrNull { !it.selection.collapsed }
+}
 
 /**
  * A note, open for writing.
@@ -63,7 +98,11 @@ import de.singular.writer.R
 @Composable
 fun EditorScreen(
     title: String,
-    body: TextFieldState,
+    document: NoteDocument,
+    attachments: Attachments,
+    links: List<LinkRef>,
+    missingLinks: Set<String>,
+    onOpenLink: (LinkRef) -> Unit,
     editable: Boolean,
     onBack: () -> Unit,
     message: String?,
@@ -116,31 +155,45 @@ fun EditorScreen(
             ReadOnlyNotice()
         }
 
-        Box(Modifier.weight(1f)) {
-            BasicTextField(
-                state = body,
-                enabled = editable,
-                textStyle = MaterialTheme.typography.bodyLarge.copy(color = scheme.onSurface),
-                cursorBrush = SolidColor(scheme.primary),
-                outputTransformation = transformation,
-                scrollState = rememberScrollState(),
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 20.dp, vertical = 12.dp),
-            )
+        // One scroller for the whole note, with the text fields inside it rather than each
+        // scrolling on its own — a note is one page, and images have to move with the words around
+        // them.
+        Column(
+            Modifier
+                .weight(1f)
+                .verticalScroll(rememberScrollState()),
+        ) {
+            document.segments.forEachIndexed { i, segment ->
+                when (segment) {
+                    is Segment.Prose -> BasicTextField(
+                        state = document.bufferAt(i),
+                        enabled = editable,
+                        textStyle = MaterialTheme.typography.bodyLarge.copy(color = scheme.onSurface),
+                        cursorBrush = SolidColor(scheme.primary),
+                        outputTransformation = transformation,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp, vertical = 4.dp),
+                    )
+
+                    is Segment.Images -> NoteImages(segment, attachments)
+                }
+            }
         }
+
+        AttachmentStrip(links = links, missing = missingLinks, onOpen = onOpenLink)
 
         SnackbarHost(snackbar)
 
         // Formatting exists only while something is selected. A collapsed cursor is someone
         // writing; a selection is someone looking at a piece of text and considering it.
-        val selection = body.selection
+        val selected = document.anySelection()
         AnimatedVisibility(
-            visible = editable && !selection.collapsed,
+            visible = editable && selected != null,
             enter = fadeIn() + slideInVertically { it },
             exit = fadeOut() + slideOutVertically { it },
         ) {
-            FormatBar(body)
+            FormatBar(selected ?: document.bufferAt(0))
         }
     }
 }
@@ -200,44 +253,23 @@ private fun ReadOnlyNotice() {
     }
 }
 
-/**
- * Put [marker] on both sides of the selection, or take it off again if it is already there.
- *
- * Toggling matters more than it looks: without it the Bold button is a one-way door, and the only
- * way back is to find and delete asterisks that the editor is deliberately hiding.
- */
+/** Applies [FormatActions.wrap] to this buffer, keeping the selection on the words. */
 private fun TextFieldState.wrapSelection(marker: String) {
     val range = selection
     if (range.collapsed) return
-    val text = this.text
-    val start = range.min
-    val end = range.max
-    val already = start >= marker.length &&
-        end + marker.length <= text.length &&
-        text.substring(start - marker.length, start) == marker &&
-        text.substring(end, end + marker.length) == marker
+    val result = FormatActions.wrap(text.toString(), range.min, range.max, marker)
     edit {
-        if (already) {
-            replace(end, end + marker.length, "")
-            replace(start - marker.length, start, "")
-            selection = androidx.compose.ui.text.TextRange(start - marker.length, end - marker.length)
-        } else {
-            replace(end, end, marker)
-            replace(start, start, marker)
-            selection = androidx.compose.ui.text.TextRange(start + marker.length, end + marker.length)
-        }
+        replace(0, length, result.text)
+        selection = TextRange(result.selectionStart, result.selectionEnd)
     }
 }
 
-/** Put [prefix] at the start of the line the selection begins on, or take it off again. */
+/** Applies [FormatActions.prefixLine] to the line the selection starts on. */
 private fun TextFieldState.prefixLine(prefix: String) {
-    val text = this.text
-    val lineStart = text.lastIndexOf('\n', (selection.min - 1).coerceAtLeast(0))
-        .let { if (it < 0) 0 else it + 1 }
-    val already = text.startsWith(prefix, lineStart)
+    val result = FormatActions.prefixLine(text.toString(), selection.min, prefix)
     edit {
-        if (already) replace(lineStart, lineStart + prefix.length, "")
-        else replace(lineStart, lineStart, prefix)
+        replace(0, length, result.text)
+        selection = TextRange(result.selectionStart, result.selectionEnd)
     }
 }
 
