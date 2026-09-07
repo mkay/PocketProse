@@ -49,11 +49,11 @@ class FrontmatterTest {
 
     @Test
     fun `an unknown key is preserved byte for byte, including its quoting`() {
-        val text = "---\ntitle: \"x\"\nbear_id: 'ABC-123'\nweird:    spaced out\ntags: []\n---\nbody\n"
+        val text = "---\ntitle: \"x\"\nlegacy_id: 'ABC-123'\nweird:    spaced out\ntags: []\n---\nbody\n"
         val changed = Note.parse(text).let {
             it.copy(frontmatter = it.frontmatter.withKey("title", "y"))
         }
-        assertTrue(changed.render().contains("bear_id: 'ABC-123'"))
+        assertTrue(changed.render().contains("legacy_id: 'ABC-123'"))
         assertTrue(changed.render().contains("weird:    spaced out"))
     }
 

@@ -101,9 +101,9 @@ class SaveTest {
 
     @Test
     fun `a note with an unknown key keeps it through a save`() {
-        val odd = "---\ntitle: \"x\"\nbear_id: 'ABC-123'\nupdated: 2020-01-01T00:00:00.000Z\ntags: []\n---\nold\n"
+        val odd = "---\ntitle: \"x\"\nlegacy_id: 'ABC-123'\nupdated: 2020-01-01T00:00:00.000Z\ntags: []\n---\nold\n"
         val saved = Note.parse(odd).withBody("new\n", now)!!
-        assertTrue(saved.render().contains("bear_id: 'ABC-123'"))
+        assertTrue(saved.render().contains("legacy_id: 'ABC-123'"))
         assertEquals("new\n", saved.body)
         assertEquals("2026-09-07T14:30:00.123Z", saved.frontmatter.updated)
     }
