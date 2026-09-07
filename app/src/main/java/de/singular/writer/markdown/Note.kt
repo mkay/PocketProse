@@ -54,7 +54,10 @@ data class Note(
     fun render(): String = frontmatter.raw + body
 
     /**
-     * This note with a new body and a fresh `updated` stamp.
+     * This note with a new body and a fresh `updated` stamp, its tags left as they are.
+     *
+     * [withTags] with the tags it already has — one implementation, so the two cannot drift over
+     * what counts as a change worth writing.
      *
      * **Returns `null` when [newBody] is identical to the current one.** That is the whole point:
      * `CLAUDE.md` forbids touching a file the app did not need to write, and an editor that stamps
@@ -68,11 +71,7 @@ data class Note(
      * archive already carries — see the file format contract. It is passed in rather than read from
      * the clock so this stays a pure function and the test can pin it.
      */
-    fun withBody(newBody: String, now: Instant): Note? {
-        val kept = keepTrailingNewline(newBody)
-        if (kept == body) return null
-        return copy(frontmatter = frontmatter.withKey("updated", stamp(now)), body = kept)
-    }
+    fun withBody(newBody: String, now: Instant): Note? = withTags(newBody, editableTags, now)
 
     /**
      * The tags the user may edit, and the only ones a save is allowed to write.

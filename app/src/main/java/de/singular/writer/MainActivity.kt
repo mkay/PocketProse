@@ -162,7 +162,9 @@ private fun PocketProseApp(settings: Settings) {
     }
     // One document per note. Keyed on the uri so switching notes starts a fresh one, and not on the
     // content, so a background refresh does not throw away what is being typed.
-    val document = remember(openNoteUri) { NoteDocument(openNote?.note?.body.orEmpty()) }
+    val document = remember(openNoteUri) {
+        NoteDocument(openNote?.note?.body.orEmpty(), openNote?.note?.editableTags.orEmpty())
+    }
     val attachments = remember { Attachments(vault, context) }
 
     // Which of a note's links point at nothing. Resolved once per note rather than per frame: the
@@ -203,13 +205,13 @@ private fun PocketProseApp(settings: Settings) {
      * Save the open note, if it needs saving.
      *
      * Called on leaving the editor and on the app going to the background — not on a timer and not
-     * on every keystroke. `Note.withBody` makes an unchanged body a no-op on disk, so the common
-     * case of opening a note and closing it writes nothing at all, which is what keeps the
-     * archive's dates intact.
+     * on every keystroke. `Note.withTags` makes an unchanged note a no-op on disk — unchanged in
+     * its tags as well as in its words — so the common case of opening a note and closing it writes
+     * nothing at all, which is what keeps the archive's dates intact.
      */
     suspend fun saveOpenNote(): Boolean {
         val note = openNote ?: return true
-        return when (val result = vault.save(note, document.body())) {
+        return when (val result = vault.save(note, document.body(), document.tags)) {
             is SaveResult.Unchanged, is SaveResult.Refused -> true
             is SaveResult.Saved -> {
                 // The uri changes: the swap in Vault.save deletes the old document and renames the
@@ -329,7 +331,7 @@ private fun PocketProseApp(settings: Settings) {
             ConflictDialog(
                 onKeepBoth = {
                     scope.launch {
-                        val result = vault.saveCopy(openNote, document.body())
+                        val result = vault.saveCopy(openNote, document.body(), document.tags)
                         conflict = false
                         if (result is SaveResult.Failed) message = result.reason else {
                             refresh()

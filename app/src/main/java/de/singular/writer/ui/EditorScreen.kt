@@ -39,6 +39,8 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -53,6 +55,7 @@ import de.singular.writer.markdown.FormatActions
 import de.singular.writer.markdown.LinkRef
 import de.singular.writer.markdown.Segment
 import de.singular.writer.markdown.Segments
+import de.singular.writer.markdown.Tags
 import de.singular.writer.vault.Attachments
 
 /**
@@ -65,8 +68,35 @@ import de.singular.writer.vault.Attachments
  * [body] reassembles the note. Segments that are not text hand back their original bytes untouched,
  * so an image line survives being scrolled past exactly as it was written.
  */
-class NoteDocument(body: String) {
+class NoteDocument(body: String, tags: List<String>) {
     val segments: List<Segment> = Segments.split(body)
+
+    /**
+     * The tags the chip sheet edits, seeded from the frontmatter.
+     *
+     * Frontmatter and not the union of both representations — see `Note.editableTags`. A tag that
+     * lives only in a body is chipped from its own run and is deliberately not in here, so no save
+     * can delete it or promote it into a `tags:` list the author never wrote.
+     */
+    var tags: List<String> by mutableStateOf(tags)
+        private set
+
+    /** Replace the editable set, folding new input to lowercase as `Tags.normalize` requires. */
+    fun retag(newTags: List<String>) {
+        tags = newTags.map(Tags::normalize).distinct()
+    }
+
+    /**
+     * Every tag to draw at the foot, the editable ones first and then whatever the runs carry that
+     * the frontmatter does not — the percent tags the export could not spell. The second group is
+     * shown because the author can see it in their own text, and is not removable because removing
+     * it would mean editing prose.
+     */
+    fun chips(): List<Chip> {
+        val fromRuns = segments.filterIsInstance<Segment.Tags>().flatMap { it.tags }
+        val extra = fromRuns.distinct().filterNot { it in tags }
+        return tags.map { Chip(it, removable = true) } + extra.map { Chip(it, removable = false) }
+    }
 
     private val buffers: Map<Int, TextFieldState> = segments.withIndex()
         .filter { it.value is Segment.Prose }
@@ -78,6 +108,9 @@ class NoteDocument(body: String) {
     fun body(): String = segments.withIndex().joinToString("") { (i, segment) ->
         if (segment is Segment.Prose) buffers.getValue(i).text.toString() else segment.raw
     }
+
+    /** One tag as the foot of the note draws it. */
+    data class Chip(val tag: String, val removable: Boolean)
 
     /** Where the cursor is, for the format bar — the first buffer that has a selection. */
     fun anySelection(): TextFieldState? = buffers.values.firstOrNull { !it.selection.collapsed }

@@ -224,20 +224,25 @@ class Vault(context: Context) {
     }
 
     /**
-     * Write [newBody] into [note], if and only if that is safe and necessary.
+     * Write [newBody] and [newTags] into [note], if and only if that is safe and necessary.
      *
      * The order of the checks is the design, and each one exists to prevent a specific way of
      * losing the user's writing:
      *
      * 1. **Refuse a note we could not reproduce.** If the parser did not round-trip this note when
      *    it was read, it will not round-trip it now, and writing would corrupt it.
-     * 2. **Do nothing if nothing changed.** `Note.withBody` returns null for an identical body, and
-     *    that is the common case — opening a note and closing it must leave the file alone, mtime
-     *    included. Without this the archive's dates would be destroyed by ordinary reading.
+     * 2. **Do nothing if nothing changed.** `Note.withTags` returns null when neither the body nor
+     *    the tags moved, and that is the common case — opening a note and closing it must leave the
+     *    file alone, mtime included. Without this the archive's dates would be destroyed by
+     *    ordinary reading.
      * 3. **Re-read and compare before writing.** The folder is synced; the file may have changed
      *    since we loaded it. Compared by content hash rather than by timestamp, because a sync
      *    client rewrites mtimes and because two edits inside one second share theirs.
      * 4. **Write through a temp file**, then swap.
+     *
+     * A tag change and a body change are one write, not two. `Note.withTags` puts the new tag in
+     * the `tags:` list *and* on the note's hashtag line, and stamps `updated` once for the pair —
+     * so the two representations cannot be left disagreeing by a save that half succeeded.
      *
      * ## On atomicity, honestly
      *
@@ -256,11 +261,16 @@ class Vault(context: Context) {
      * as the moment of the write, which is within a second of the `updated` stamp — which is what
      * mirroring the two was asking for.
      */
-    suspend fun save(note: IndexedNote, newBody: String, now: Instant = Instant.now()): SaveResult =
+    suspend fun save(
+        note: IndexedNote,
+        newBody: String,
+        newTags: List<String> = note.note.editableTags,
+        now: Instant = Instant.now(),
+    ): SaveResult =
         withContext(Dispatchers.IO) {
             if (!note.roundTrips) return@withContext SaveResult.Refused
 
-            val updated = note.note.withBody(newBody, now) ?: return@withContext SaveResult.Unchanged
+            val updated = note.note.withTags(newBody, newTags, now) ?: return@withContext SaveResult.Unchanged
             val text = updated.render()
 
             val current = read(note.file.uri)
@@ -307,11 +317,16 @@ class Vault(context: Context) {
      * open here: keep both and let the user sort it out with the two of them in front of them.
      *
      * The copy takes the original's frontmatter — `created` included, because it is the same note's
-     * history — with a fresh `updated`. The filename gains a numbered suffix, and the numbering
+     * history — with a fresh `updated`, and with whatever tag change was pending. The filename gains a numbered suffix, and the numbering
      * matches what the archive already does by hand: `Wer geht vor 2.md` sits beside
      * `Wer geht vor.md`. No marker, no "(conflicted copy)" — the user names their own files.
      */
-    suspend fun saveCopy(note: IndexedNote, newBody: String, now: Instant = Instant.now()): SaveResult =
+    suspend fun saveCopy(
+        note: IndexedNote,
+        newBody: String,
+        newTags: List<String> = note.note.editableTags,
+        now: Instant = Instant.now(),
+    ): SaveResult =
         withContext(Dispatchers.IO) {
             if (!note.roundTrips) return@withContext SaveResult.Refused
             val parent = rootFolder()
@@ -323,10 +338,10 @@ class Vault(context: Context) {
                 .map { "$stem $it.md" }
                 .first { it !in taken }
 
-            val text = note.note.copy(
-                frontmatter = note.note.frontmatter.withKey("updated", Note.stamp(now)),
-                body = newBody,
-            ).render()
+            // The copy carries the tag change too. A conflict is not a reason to lose the chip the
+            // user just tapped — that would make "keep both" quietly mean "keep neither version of
+            // the tags", and the user would have no way of knowing.
+            val text = (note.note.withTags(newBody, newTags, now) ?: note.note).render()
 
             val created = runCatching {
                 DocumentsContract.createDocument(resolver, parent, MIME_TEXT, name)
