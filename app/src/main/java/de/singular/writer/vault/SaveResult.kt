@@ -21,7 +21,7 @@ sealed interface SaveResult {
     /**
      * The file changed underneath us since it was read, so nothing was written.
      *
-     * Nextcloud syncs this folder, so this is an ordinary event rather than an error: the same note
+     * A sync client owns this folder, so this is an ordinary event rather than an error: the same note
      * was edited on a laptop while it sat open on the phone. `CLAUDE.md` is explicit that the app
      * must never overwrite silently and never auto-merge — both versions are kept and the user
      * chooses. [onDisk] is what the file says now; the caller still holds what the user typed.

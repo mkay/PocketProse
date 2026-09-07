@@ -37,7 +37,7 @@ data class VaultListing(
 /**
  * The user's notes folder, reached through the Storage Access Framework.
  *
- * A tree grant, not a path. The user points at a folder once — a synced Nextcloud folder, a folder
+ * A tree grant, not a path. The user points at a folder once — a synced folder, a folder
  * on an SD card, anywhere; the app has no opinion and never proposes a location — and the grant is
  * persisted so it survives reboots. In return we work in document ids rather than file paths, which
  * is why folders are passed around as `content://` *document* uris built against the tree.
@@ -118,7 +118,7 @@ class Vault(context: Context) {
      * reaches into `attachments/` by name when a note asks for an image; nothing else needs to.
      *
      * Sorted by name only, and deliberately not by date. `modifiedAt` is the *file's* mtime, which
-     * Nextcloud rewrites on sync — ordering the library by it would reshuffle the list every time
+     * a sync client rewrites on sync — ordering the library by it would reshuffle the list every time
      * the phone came back online. The dates the user cares about live in the notes themselves and
      * arrive in phase 1; until then, alphabetical is the only order that is stable.
      */
@@ -196,7 +196,7 @@ class Vault(context: Context) {
      * in total, less than a single photo, and the alternative is trusting a timestamp.
      *
      * **Change is detected by content, never by mtime.** `CLAUDE.md` says so and the reason is
-     * Nextcloud: a sync client rewrites modification times whenever it feels like it, so a note can
+     * Syncthing: a sync client rewrites modification times whenever it feels like it, so a note can
      * have a new mtime and identical bytes, or — worse, and this is the one that loses work — the
      * same mtime after a genuine change made on another device within the same second. A SHA-256 of
      * the bytes answers the only question that matters, and hashing 107 KB costs less than the

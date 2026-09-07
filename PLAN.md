@@ -89,7 +89,7 @@ Each phase ends somewhere verifiable. The app reads the entire archive correctly
 
 **1 — `markdown/`, tests only, no UI.** Frontmatter round-trip on all 168 real notes. The tag rule with `F#`, `## Strophe`, `#100%#` and a multi-tag line as explicit cases. Block parsing where `---` at the top of a file is frontmatter and `---` anywhere else is a rule, with `- - -` identical. Excerpt extraction, including the 36 empty ones. Done when the tests encode every edge case above and pass.
 
-**2 — `vault/`, read-only.** SAF listing, note reading, the in-memory index, change detection by content hash rather than mtime (Nextcloud rewrites mtimes), and NFC/NFD-tolerant name matching for the macOS-origin filenames. Done when items 1, 2, 3, 6, 7 and — the one that matters — 8 all verify against a copy of the real archive.
+**2 — `vault/`, read-only.** SAF listing, note reading, the in-memory index, change detection by content hash rather than mtime (a sync client rewrites mtimes), and NFC/NFD-tolerant name matching for the macOS-origin filenames. Done when items 1, 2, 3, 6, 7 and — the one that matters — 8 all verify against a copy of the real archive.
 
 **3 — Library screen. Done.** Title, excerpt or placeholder, date and tags per row; the tag drawer; full-text search.
 
@@ -134,6 +134,14 @@ What it cost, honestly: three of the phase's original decisions were elaborate w
 Two things phase 6 found and did not fix. Returning to the foreground refreshes the index but **does not rebuild an open note's document**, so a file that changes underneath a note you are looking at is not picked up until you leave the note and come back — defensible while somebody is typing, but currently silent, and phase 7's business. And `NoteDocument` has no unit tests: its two pieces of logic, `chips()` and `toggleTag`, are three lines each and everything underneath them is covered, but they are the only tag logic in the app reached by no test.
 
 **7 — Sync, conflicts, polish.** Foreground re-read, pull-to-refresh, keep-both on conflict with the difference surfaced, never auto-delete on a vanished file. Then settings, about, German strings, fastlane metadata and the F-Droid layout.
+
+Three things phase 6 handed it, all found by running against the real archive rather than the fixture:
+
+**The sync client is Syncthing, not Nextcloud.** Established on 2026-09-07 from the `.stfolder` marker inside `/sdcard/Recordings/Lyrics` itself, which makes that note folder a sync root and its parent an ordinary directory. It changes what a conflict looks like: Syncthing writes `<name>.sync-conflict-<YYYYMMDD>-<HHMMSS>-<DEVICEID>.md` **into the same folder**, so a conflict arrives as an extra `.md` carrying the same `title` as the note it conflicts with. Since the archive already holds four notes titled `Wer geht vor?`, nothing distinguishes a sync conflict from a legitimate duplicate except the filename. Recognise the pattern, surface it, and never delete or auto-resolve one. The app's own keep-both writes a numbered sibling instead, and the two shapes should stay distinct.
+
+**An open note does not notice its file changing.** Returning to the foreground refreshes the index, but `NoteDocument` is remembered per note URI, so a note already open keeps the body it was opened with. It is right not to yank text from under someone mid-sentence; it is wrong to say nothing. This bit during phase 6 testing and looked like a parser bug for several minutes.
+
+**Item 8 now has a baseline to check against.** Verified on 2026-09-07 against a copy of the migrated archive at `/sdcard/Recordings/Lyrics_Check`: reading every note through the app left all 168 byte-identical and all 26 attachments untouched, with no temp files left behind. That is the first time the check has run on the real data rather than on the 12-note fixture — so it covered the four `Wer geht vor` duplicates, the 24 dead attachment links, the 8-image chord sheets and the notes carrying a bare `---`.
 
 ## The risk that was named, and how it resolved
 

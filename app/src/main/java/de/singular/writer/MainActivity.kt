@@ -247,7 +247,7 @@ private fun PocketProseApp(settings: Settings) {
         }
     }
 
-    // Re-read on every return to the foreground. The folder is synced by Nextcloud, so it changes
+    // Re-read on every return to the foreground. The folder is synced by Syncthing, so it changes
     // underneath us while the app is not looking; readAll compares content rather than timestamps,
     // so a refresh that finds nothing changed re-parses nothing.
     val lifecycleOwner = LocalLifecycleOwner.current
