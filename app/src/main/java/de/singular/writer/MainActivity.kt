@@ -332,7 +332,15 @@ private fun PocketProseApp(settings: Settings) {
     // a search inside a tag does not silently leave the tag.
     val shown = remember(index, selectedTag, query) {
         val byTag = selectedTag?.let(index::withTag) ?: index.notes
-        if (query.isBlank()) byTag else byTag.filter { it in index.search(query).toSet() }
+        // The search runs **once**, not once per note. It used to sit inside the filter, where
+        // `it in index.search(query).toSet()` scanned all 168 bodies and built a fresh set for every
+        // note it was checking — 168 full scans a keystroke, which is why typing was unusable.
+        if (query.isBlank()) {
+            byTag
+        } else {
+            val matches = index.search(query).toSet()
+            byTag.filter { it in matches }
+        }
     }
 
     // Closing the drawer or leaving search is what Back should do before it leaves the app.

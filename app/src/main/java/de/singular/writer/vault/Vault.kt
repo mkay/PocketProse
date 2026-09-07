@@ -311,7 +311,7 @@ class Vault(context: Context) {
                 ?: return@withContext SaveResult.Failed("the folder is no longer reachable")
             val tempName = note.file.name + TEMP_SUFFIX
             val temp = runCatching {
-                DocumentsContract.createDocument(resolver, parent, MIME_TEXT, tempName)
+                createNamed(parent, tempName)
             }.getOrNull() ?: return@withContext SaveResult.Failed("no temporary file could be made")
 
             val bytes = text.toByteArray(Charsets.UTF_8)
@@ -336,6 +336,47 @@ class Vault(context: Context) {
             parseCache[sha256(text)] = updated
             SaveResult.Saved(swapped, text, sha256(text))
         }
+
+    /**
+     * Create a document called exactly [name], whatever the provider would rather call it.
+     *
+     * `DocumentsContract.createDocument` treats the display name as a suggestion. Handed
+     * `text/plain` and `Foobar.md`, `ExternalStorageProvider` decides the extension disagrees with
+     * the type and writes `Foobar.md.txt` — which this app's own listing then ignores, since it
+     * looks for `.md`. The first new note ever made vanished exactly that way: created, written,
+     * verified, and invisible.
+     *
+     * So the mime type says markdown, and the name is checked afterwards and corrected if the
+     * provider changed it anyway. Both, because providers differ and this is not worth being clever
+     * about: the cost of guessing wrong is a file the user cannot see.
+     *
+     * It matters beyond new notes. A conflict copy would have landed as `Atlantik 2.md.txt` and been
+     * lost the same way, and a temp file mangled to `.pocketprose-tmp.txt` would no longer match
+     * what `recoverTemp` looks for — so an interrupted write would leave an orphan nothing collects.
+     */
+    private fun createNamed(parent: Uri, name: String): Uri? {
+        // Markdown first, so a provider that understands it keeps the name as given. Falling back to
+        // text/plain because a provider that does *not* understand a type can refuse outright, and
+        // text/plain is the one this app is known to be able to create with on this device.
+        val created = create(parent, MIME_MARKDOWN, name) ?: create(parent, MIME_TEXT, name) ?: return null
+        if (displayName(created) == name) return created
+        return runCatching { DocumentsContract.renameDocument(resolver, created, name) }
+            .getOrNull() ?: created
+    }
+
+    private fun create(parent: Uri, mime: String, name: String): Uri? = runCatching {
+        DocumentsContract.createDocument(resolver, parent, mime, name)
+    }.getOrNull()
+
+    /** What the provider actually calls [uri], or null if it will not say. */
+    private fun displayName(uri: Uri): String? {
+        val columns = arrayOf(DocumentsContract.Document.COLUMN_DISPLAY_NAME)
+        return runCatching {
+            resolver.query(uri, columns, null, null, null)?.use {
+                if (it.moveToFirst()) it.getString(0) else null
+            }
+        }.getOrNull()
+    }
 
     /**
      * Make a new, empty note titled [title], and hand back the file it landed in.
@@ -373,7 +414,7 @@ class Vault(context: Context) {
             val text = newNoteText(clean, now)
 
             val created = runCatching {
-                DocumentsContract.createDocument(resolver, parent, MIME_TEXT, name)
+                createNamed(parent, name)
             }.getOrNull() ?: return@withContext CreateResult.Failed("the note could not be made")
 
             val written = runCatching {
@@ -451,7 +492,7 @@ class Vault(context: Context) {
             val text = (note.note.withTags(newBody, newTags, now) ?: note.note).render()
 
             val created = runCatching {
-                DocumentsContract.createDocument(resolver, parent, MIME_TEXT, name)
+                createNamed(parent, name)
             }.getOrNull() ?: return@withContext SaveResult.Failed("the copy could not be made")
 
             val ok = runCatching {
@@ -566,6 +607,16 @@ class Vault(context: Context) {
         const val TEMP_SUFFIX = ".pocketprose-tmp"
 
         /** Providers disagree about Markdown's type; this is only what a new file is created as. */
+        /**
+         * What the app tells the provider a note is.
+         *
+         * `text/plain` was wrong in a way that hid files: a provider that thinks the extension
+         * disagrees with the type appends its own, so `Foobar.md` became `Foobar.md.txt`. See
+         * [createNamed], which also checks afterwards rather than trusting this to be enough.
+         */
+        private const val MIME_MARKDOWN = "text/markdown"
+
+        /** The fallback, and the type this app is known to be able to create with here. */
         private const val MIME_TEXT = "text/plain"
 
         /**
