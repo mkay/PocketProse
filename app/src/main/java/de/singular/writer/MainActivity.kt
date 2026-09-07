@@ -201,6 +201,9 @@ private fun PocketProseApp(settings: Settings) {
     var conflict by remember { mutableStateOf(false) }
     // The two things that need a yes before they happen: making a file and removing one.
     var naming by remember { mutableStateOf(false) }
+    // Set only by createNote, so the keyboard comes up for a note that was just made and for no
+    // other. Cleared on leaving, or reopening that same note later would raise it again.
+    var focusNewNote by remember { mutableStateOf(false) }
     var deleting by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf<String?>(null) }
 
@@ -287,6 +290,7 @@ private fun PocketProseApp(settings: Settings) {
             is CreateResult.Failed -> message = result.reason
             is CreateResult.Made -> {
                 refresh().join()
+                focusNewNote = true
                 openNoteUri = result.uri.toString()
             }
         }
@@ -376,7 +380,12 @@ private fun PocketProseApp(settings: Settings) {
     }
 
     if (openNote != null) {
-        fun leave() = scope.launch { if (saveOpenNote()) openNoteUri = null }
+        fun leave() = scope.launch {
+            if (saveOpenNote()) {
+                focusNewNote = false
+                openNoteUri = null
+            }
+        }
 
         EditorScreen(
             title = openNote.title,
@@ -401,6 +410,7 @@ private fun PocketProseApp(settings: Settings) {
             // written, because writing it would corrupt it. It is false for no note in the archive.
             knownTags = index.allTags,
             editable = openNote.roundTrips,
+            focusOnOpen = focusNewNote,
             onBack = { leave() },
             onDelete = { deleting = true },
             message = message,

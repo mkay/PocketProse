@@ -173,6 +173,15 @@ fun EditorScreen(
     knownTags: Set<String>,
     onOpenLink: (LinkRef) -> Unit,
     editable: Boolean,
+    /**
+     * Put the cursor in the note and raise the keyboard as it opens.
+     *
+     * True for a note that was just created and false for one being opened to read. A note is opened
+     * far more often to look at than to add to, and an app that throws the keyboard up over half the
+     * page every time you tap a lyric is an app you stop tapping lyrics in. A note you have this
+     * second named and made is the one case where writing is certainly what comes next.
+     */
+    focusOnOpen: Boolean,
     onBack: () -> Unit,
     onDelete: () -> Unit,
     message: String?,
@@ -188,6 +197,10 @@ fun EditorScreen(
         }
     }
     val scheme = MaterialTheme.colorScheme
+    val opening = remember { FocusRequester() }
+    LaunchedEffect(document) {
+        if (focusOnOpen && editable) runCatching { opening.requestFocus() }
+    }
     val transformation = remember(scheme) {
         MarkdownTransformation(
             // A revealed marker is dimmer than the words around it, so `**` reads as scaffolding
@@ -282,6 +295,14 @@ fun EditorScreen(
                         },
                         modifier = Modifier
                             .fillMaxWidth()
+                            // Only the first stretch of text can be focused on opening; the cursor
+                            // stays where the buffer puts it, which for a new note is its one empty
+                            // line, under the blank line every note in the archive keeps below its
+                            // frontmatter.
+                            .then(
+                                if (i == document.firstProseIndex) Modifier.focusRequester(opening)
+                                else Modifier,
+                            )
                             .padding(horizontal = 20.dp, vertical = 4.dp),
                     )
 
