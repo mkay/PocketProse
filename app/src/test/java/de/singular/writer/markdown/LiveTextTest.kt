@@ -108,8 +108,8 @@ class LiveTextTest {
 
     @Test
     fun `the archive's awkward strings are left alone`() {
-        // The percent tags, and the one sharp in 168 notes.
-        assertEquals("#100%#", shown("#100%#"))
+        // A tag, and the one sharp in 168 notes: neither is markup, so neither loses a character.
+        assertEquals("#100", shown("#100"))
         assertEquals("Tarantino für zwei in F# Moll.", shown("Tarantino für zwei in F# Moll."))
         assertEquals("#lyrics/snippet", shown("#lyrics/snippet"))
     }

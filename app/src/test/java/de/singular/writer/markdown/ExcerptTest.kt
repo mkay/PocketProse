@@ -44,9 +44,9 @@ class ExcerptTest {
     }
 
     @Test
-    fun `a note whose first line is tags plus a percent tag excerpts to its song`() {
+    fun `a note whose first line is tags plus a numeric tag excerpts to its song`() {
         val note = Note.parse(
-            "---\ntitle: \"Müde\"\ntags:\n  - \"busch\"\n---\n\n#album/debut #100% #busch\n\nDu wirst nicht zurück kommen\n",
+            "---\ntitle: \"Müde\"\ntags:\n  - \"busch\"\n---\n\n#album/debut #100 #busch\n\nDu wirst nicht zurück kommen\n",
         )
         assertEquals("Du wirst nicht zurück kommen", Excerpt.of(note))
     }

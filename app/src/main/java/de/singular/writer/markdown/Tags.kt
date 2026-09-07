@@ -6,11 +6,16 @@ package de.singular.writer.markdown
  * Tags, in the two forms the archive keeps them in: a list in the frontmatter, and `#hashtags`
  * written inline in the body.
  *
- * Both exist on purpose and the app keeps them in agreement. Measured on 2026-09-07, all 168 notes
- * already agree — every inline hashtag has a frontmatter entry and vice versa, once the two tags
- * that cannot be written inline are set aside. So the job here is to *preserve* an invariant that
- * currently holds, not to reconcile drift. Do not build merge logic for a conflict the data does
- * not have.
+ * Both exist on purpose and the app keeps them in agreement. All 168 notes already agree — every
+ * inline hashtag has a frontmatter entry and vice versa — so the job here is to *preserve* an
+ * invariant that holds, not to reconcile drift. Do not build merge logic for a conflict the data
+ * does not have.
+ *
+ * That was true only of the tags that *could* be written inline until 2026-09-07, when `100%`, `50%`
+ * and `75%` were renamed to `100`, `50` and `75` across the archive — see
+ * `tools/rename-percent-tags.py`. `%` is not a character a hashtag can hold, which is why those
+ * three were frontmatter-only and why the export lost 21 of them; without the `%` they are ordinary
+ * tags and the exception is gone from this file and from every screen.
  *
  * The user never sees a `#`. Tags reach the screen as chips and the drawer shows them as
  * `tag/subtag`; the hash is storage, and storage is not this app's subject.
@@ -20,50 +25,30 @@ object Tags {
     /**
      * What counts as an inline hashtag.
      *
-     * `#`, then a **letter**, then word characters, `/` or `-`, and the `#` must be at the start of
-     * a line or preceded by whitespace. Every clause is carrying a real note in the archive:
+     * `#`, then a **letter or a digit**, then word characters, `/` or `-`, and the `#` must be at the
+     * start of a line or preceded by whitespace. Every clause is carrying a real note in the archive:
      *
      * - *preceded by whitespace* keeps `F#` out. `Radio (Song Notes).md` reads "Tarantino für zwei
      *   in F# Moll", and that is the only sharp in 168 notes — one note away from a tag called
      *   `#` appearing in the drawer. It is also what would keep `F#m` and `C#` out if the author
      *   ever writes a chord sheet in text rather than in chord diagrams.
-     * - *then a letter* keeps `## Strophe` out, five notes using `##` as a heading, and keeps
-     *   `#100%#` out — 11 notes carry Bear's wrapped form of the `100%` tag in their bodies, and
-     *   it must stay in the text exactly as it is rather than being recognised and rewritten.
+     * - *then a letter or digit* keeps `## Strophe` out, five notes using `##` as a heading. The
+     *   digit is what lets `#100`, `#50` and `#75` be ordinary tags. It was a letter only until the
+     *   `%` was dropped from those three names, and it is safe because those 33 hashtags are the
+     *   only `#digit` sequences anywhere in the archive — nothing else is caught by widening it.
      * - *word characters, `/` or `-`* is the whole vocabulary: 24 tags, 11 of them nested one level.
      *
      * Test every clause when you touch this. The failure mode is silent — a tag that should not
      * exist appears in the drawer, or one that should is missing from it, and neither shows up as
      * an error anywhere.
      */
-    private val HASHTAG = Regex("""(?<=^|\s)#([\p{L}][\w/-]*)""", RegexOption.MULTILINE)
+    private val HASHTAG = Regex("""(?<=^|\s)#([\p{L}\d][\w/-]*)""", RegexOption.MULTILINE)
 
-    /**
-     * A percent tag as it is actually written in a body: `#100%`, or Bear's wrapped `#100%#`.
-     *
-     * Measured across the archive: `#100%` appears 19 times unwrapped and 11 times wrapped, `#50%`
-     * once each way, and `#75%` once — a third percent tag that `CLAUDE.md` does not mention. Both
-     * spellings occur, so both are recognised.
-     *
-     * Recognised is **not** the same as parsed into a tag. This exists so that a line reading
-     * `#album/debut #100% #busch` is understood to be a line of tags and is not shown to the user as
-     * though it were the first line of their song. What the app does with the tag itself is
-     * [percentInBody]'s business.
-     */
-    private val PERCENT_WORD = Regex("""#(\d+%)#?""")
+    /** One word, tested on its own — the same rule as [HASHTAG] without the neighbours. */
+    private val HASHTAG_WORD = Regex("""#[\p{L}\d][\w/-]*""")
 
-    /** One word, tested as an ordinary writable hashtag. */
-    private val HASHTAG_WORD = Regex("""#[\p{L}][\w/-]*""")
-
-    /**
-     * Whether a single whitespace-delimited word is a tag of either kind.
-     *
-     * Used to decide whether a whole line is a line of tags. Measured: no percent tag in the archive
-     * is embedded in a sentence — all 33 of them sit on a line with other tags, or alone — so
-     * treating such a line as tags hides no prose.
-     */
-    fun isTagWord(word: String): Boolean =
-        HASHTAG_WORD.matches(word) || PERCENT_WORD.matches(word)
+    /** Whether a single whitespace-delimited word is a tag. Used to decide whether a line is tags. */
+    fun isTagWord(word: String): Boolean = HASHTAG_WORD.matches(word)
 
     /**
      * Whether a whole line consists only of tags and whitespace.
@@ -72,32 +57,21 @@ object Tags {
      * Two definitions of what a tag line is would be two chances to hide a line of somebody's song,
      * so there is one, here, beside the rule it is built from.
      *
-     * Percent tags count even though they are not ordinary hashtags. `Müde.md` reads
-     * `#album/debut #100% #busch`, and requiring every word to be a writable hashtag made that whole
-     * line prose — so the library row for Müde led with its own tags instead of with the song. 32 of
-     * the 33 percent tags in the archive sit on a line like that.
-     *
-     * The line must still be *entirely* tags. A hashtag inside a sentence leaves the sentence
-     * visible, because hiding words the user wrote would be unforgivable — and measurement says no
-     * percent tag is ever embedded in prose, so nothing is lost by counting them.
+     * The line must be *entirely* tags. A hashtag inside a sentence leaves the sentence visible,
+     * because hiding words the user wrote would be unforgivable.
      */
     fun isTagLine(line: String): Boolean {
         val words = line.trim().split(Regex("""\s+""")).filter { it.isNotEmpty() }
         return words.isNotEmpty() && words.all(::isTagWord)
     }
 
-    /** The percent tags written in [body], normalised to bare `100%` form without the `#`. */
-    fun percentInBody(body: String): List<String> =
-        Regex("""(?<=^|\s)#(\d+%)#?""", RegexOption.MULTILINE)
-            .findAll(body).map { it.groupValues[1] }.toList()
-
     /**
-     * The two tags that cannot be written as hashtags at all: `100%` (11 notes) and `50%` (1).
+     * Whether [tag] can be written into a body as a hashtag.
      *
-     * `%` is not in the vocabulary above and the author decided deliberately to keep these names
-     * rather than rename them, so they live in the frontmatter only. In the bodies they survive as
-     * Bear's `#100%#`, which is *text* here — indexed from the frontmatter, rendered as a tag, and
-     * the body left alone. Never "fix" one of these by renaming it.
+     * Every tag in the archive can, since the `%` names were renamed. It stays because the rule and
+     * the vocabulary are not the same thing: a tag typed with a space or a `%` in it would be
+     * writable to the frontmatter and not to the body, and `TagEdit` must know which before it
+     * writes rather than after.
      */
     fun isInlineWritable(tag: String): Boolean = HASHTAG.matches("#$tag")
 

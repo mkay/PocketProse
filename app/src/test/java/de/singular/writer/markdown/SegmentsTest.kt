@@ -98,11 +98,11 @@ class SegmentsTest {
     @Test
     fun `consecutive tag lines are one run, not three chip rows`() {
         // Helen weiss das auch.md ends with exactly this, trailing spaces included.
-        val body = "und weiter\n\n#album/debut \n#100%\n#album/entsetzlich #busch \n"
+        val body = "und weiter\n\n#album/debut \n#100\n#album/entsetzlich #busch \n"
         val segments = Segments.split(body)
         assertEquals(2, segments.size)
         val tags = segments[1] as Segment.Tags
-        assertEquals(listOf("album/debut", "100%", "album/entsetzlich", "busch"), tags.tags)
+        assertEquals(listOf("album/debut", "100", "album/entsetzlich", "busch"), tags.tags)
         assertEquals(body, Segments.join(segments))
     }
 
@@ -154,9 +154,9 @@ class SegmentsTest {
     }
 
     @Test
-    fun `a wrapped percent tag is a tag line and comes back bare`() {
-        val tags = Segments.split("\n#100%#\n").first() as Segment.Tags
-        assertEquals(listOf("100%"), tags.tags)
+    fun `a numeric tag is a tag line like any other`() {
+        val tags = Segments.split("\n#100\n").first() as Segment.Tags
+        assertEquals(listOf("100"), tags.tags)
     }
 
     @Test

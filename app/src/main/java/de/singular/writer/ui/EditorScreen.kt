@@ -87,10 +87,13 @@ class NoteDocument(body: String, tags: List<String>) {
     }
 
     /**
-     * Every tag to draw at the foot, the editable ones first and then whatever the runs carry that
-     * the frontmatter does not — the percent tags the export could not spell. The second group is
-     * shown because the author can see it in their own text, and is not removable because removing
-     * it would mean editing prose.
+     * Every tag to draw at the foot: the editable ones first, then anything the runs carry that the
+     * frontmatter does not.
+     *
+     * The second group is empty on every note in the archive and exists for the note edited
+     * elsewhere and left disagreeing with itself. It is shown because the author can see it in their
+     * own text, and is not removable because the app may not promote a body-only tag into a `tags:`
+     * list on their behalf.
      */
     fun chips(): List<Chip> {
         val fromRuns = segments.filterIsInstance<Segment.Tags>().flatMap { it.tags }

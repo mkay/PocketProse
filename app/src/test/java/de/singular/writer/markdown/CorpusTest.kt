@@ -85,23 +85,28 @@ class CorpusTest {
         val all = corpus.values.map { Note.parse(it).tags }
         val counts = all.flatten().groupingBy { it }.eachCount()
 
-        assertEquals(24, counts.size)
+        // 25 since the percent rename: `75` had no frontmatter entry anywhere before it, so it was
+        // not a tag the app could see at all. See tools/rename-percent-tags.py.
+        assertEquals(25, counts.size)
         assertEquals(131, counts["lyrics/snippet"])
         assertEquals(32, counts["lyrics/titel"])
         assertEquals(25, counts["busch"])
         assertEquals(25, counts["released"])
         assertEquals(19, counts["radio"])
-        assertEquals(11, counts["100%"])
-        assertEquals(1, counts["50%"])
+        // 30 and 2, not the 11 and 1 the frontmatter used to declare — the rename gave the 21 notes
+        // the export had skipped their entry back.
+        assertEquals(30, counts["100"])
+        assertEquals(2, counts["50"])
+        assertEquals(1, counts["75"])
         assertEquals(3, all.count { it.isEmpty() })
-        assertEquals(5, all.maxOf { it.size })
+        assertEquals(6, all.maxOf { it.size })
 
         val tree = Tags.tree(all)
-        // 14 top-level nodes for 13 top-level tags: `album` is synthesised. No note carries a
+        // 15 top-level nodes for 14 top-level tags: `album` is synthesised. No note carries a
         // bare `album`, but its three children need a parent to hang from — which is exactly the
         // behaviour Tags.tree exists to have, so the extra node is the point rather than an
         // off-by-one.
-        assertEquals(14, tree.size)
+        assertEquals(15, tree.size)
         assertEquals(setOf("album", "lyrics", "radio"), tree.filter { it.children.isNotEmpty() }.map { it.path }.toSet())
         assertEquals(11, tree.sumOf { node -> node.children.size })
         // No parent may claim more notes than exist. `lyrics` summed to 185 before totals were
@@ -132,33 +137,57 @@ class CorpusTest {
     }
 
     @Test
-    fun `percent tags are three, not two, and 21 of them live only in a body`() {
+    fun `no tag anywhere still carries a percent sign`() {
+        // `100%`, `50%` and `75%` were renamed to `100`, `50` and `75` on 2026-09-07 — see
+        // tools/rename-percent-tags.py. `%` could not be written as a hashtag, which is what made
+        // those three frontmatter-only and what made the export drop 21 of them.
         val corpus = corpus()
-        val distinct = corpus.values
-            .flatMap { Tags.percentInBody(Note.parse(it).body) + Note.parse(it).frontmatter.tags.filter { t -> "%" in t } }
-            .toSet()
-        // CLAUDE.md names 100% and 50%. `Sieger sehen anders aus.md` also carries #75%.
-        assertEquals(setOf("100%", "50%", "75%"), distinct)
-
-        var bodyOnly = 0
-        var frontmatterOnly = 0
-        for (text in corpus.values) {
+        val left = corpus.filterValues { text ->
             val note = Note.parse(text)
-            val inBody = Tags.percentInBody(note.body).toSet()
-            val inFront = note.frontmatter.tags.filter { "%" in it }.toSet()
-            bodyOnly += (inBody - inFront).size
-            frontmatterOnly += (inFront - inBody).size
-        }
-        // The frontmatter is *not* the complete index of percent tags that CLAUDE.md assumes.
-        assertEquals(21, bodyOnly)
-        assertEquals(0, frontmatterOnly)
+            note.frontmatter.tags.any { "%" in it } || Regex("""(?<=^|\s)#\d+%""").containsMatchIn(note.body)
+        }.keys
+        assertEquals(emptySet<String>(), left)
     }
 
     @Test
-    fun `no percent tag is embedded in prose, so hiding its line hides no words`() {
+    fun `the renamed tags are ordinary tags now, in both places, on every note that has one`() {
+        val corpus = corpus()
+        val counts = corpus.values.map { Note.parse(it).tags }.flatten().groupingBy { it }.eachCount()
+        assertEquals(30, counts["100"])
+        assertEquals(2, counts["50"])
+        assertEquals(1, counts["75"])
+
+        // The point of the rename: no note is left declaring one representation and not the other.
+        val numeric = { tags: List<String> -> tags.filter { tag -> tag.all(Char::isDigit) }.toSet() }
+        val disagreeing = corpus.filter { (_, text) ->
+            val note = Note.parse(text)
+            numeric(note.frontmatter.tags) != numeric(Tags.inBody(note.body))
+        }.keys
+        assertEquals(emptySet<String>(), disagreeing)
+    }
+
+    @Test
+    fun `a digit may open a tag, and nothing else in the archive is caught by that`() {
+        // Widening the rule from "then a letter" to "then a letter or digit" is safe because the 33
+        // renamed hashtags are the only `#digit` sequences in all 168 notes. If a note ever grew a
+        // `#2` in prose this would say so.
+        val corpus = corpus()
+        val digitTags = corpus.values
+            .flatMap { Tags.inBody(Note.parse(it).body) }
+            .filter { it.first().isDigit() }
+        assertEquals(setOf("100", "50", "75"), digitTags.toSet())
+        assertEquals(33, digitTags.size)
+    }
+
+    @Test
+    fun `no numeric tag is embedded in prose, so hiding its line hides no words`() {
+        // All 33 sit on a line with other tags, or alone. If one were mid-sentence, the editor would
+        // have to choose between showing a `#` and hiding a word.
         val corpus = corpus()
         val embedded = corpus.filterValues { text ->
-            Note.parse(text).blocks.any { it is Block.Paragraph && Tags.percentInBody(it.text).isNotEmpty() }
+            Note.parse(text).blocks.any { block ->
+                block is Block.Paragraph && Tags.inBody(block.text).any { it.first().isDigit() }
+            }
         }.keys
         assertEquals(emptySet<String>(), embedded)
     }
@@ -388,27 +417,6 @@ class CorpusTest {
         for ((name, text) in corpus) {
             val note = Note.parse(text)
             assertEquals(name, null, note.withTags(note.body, note.editableTags, now))
-        }
-    }
-
-    @Test
-    fun `a body-only percent tag is never promoted into the frontmatter`() {
-        // 21 of these exist, the export having failed to carry `%` across. Editing some unrelated
-        // chip must not write them into a `tags:` list the author never had.
-        val corpus = corpus()
-        val now = java.time.Instant.parse("2026-09-07T12:00:00Z")
-        val affected = corpus.filterValues { text ->
-            val note = Note.parse(text)
-            (Tags.percentInBody(note.body).toSet() - note.frontmatter.tags.toSet()).isNotEmpty()
-        }
-        assertTrue(affected.isNotEmpty())
-        for ((name, text) in affected) {
-            val note = Note.parse(text)
-            val edited = note.withTags(note.body, note.editableTags + "probe", now)!!
-            val promoted = edited.frontmatter.tags.filter { "%" in it } - note.frontmatter.tags.toSet()
-            assertEquals(name, emptyList<String>(), promoted)
-            // Nor is the text of it disturbed.
-            assertEquals(name, Tags.percentInBody(note.body), Tags.percentInBody(edited.body))
         }
     }
 

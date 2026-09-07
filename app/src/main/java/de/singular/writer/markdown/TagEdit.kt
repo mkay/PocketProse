@@ -21,9 +21,11 @@ package de.singular.writer.markdown
  *
  * Two things are therefore never written:
  *
- * - **A tag that cannot be spelled as a hashtag.** `100%`, `50%` and `75%` live in the frontmatter
- *   only; `%` is not in the tag vocabulary and the author decided to keep the names rather than
- *   rename them. Bodies carrying the wrapped form `#100%#` are text and stay text.
+ * - **A tag that cannot be spelled as a hashtag.** Every tag in the archive can be, since `100%`,
+ *   `50%` and `75%` were renamed to `100`, `50` and `75` on 2026-09-07 — see
+ *   `tools/rename-percent-tags.py`. The guard stays because a name typed with a space or a `%` in
+ *   it would still be writable to the frontmatter and not to a body, and this file must know which
+ *   before it writes rather than after.
  * - **Anything outside a tag line.** A hashtag inside a sentence is part of the sentence. The whole
  *   edit happens through [Segments], which has already decided which lines are tags and which are
  *   somebody's song, so there is no second definition here to drift from the first.

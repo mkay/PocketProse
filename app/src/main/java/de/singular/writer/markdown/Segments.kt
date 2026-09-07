@@ -56,9 +56,8 @@ sealed interface Segment {
      * the cursor at all.
      *
      * [raw] carries the run's own bytes plus the blank lines absorbed with it (see `Segments.split`),
-     * so the file is unchanged by being displayed. [tags] is every tag on the run, in order, the two
-     * spellings folded together: ordinary hashtags without their `#`, and percent tags — which
-     * cannot be written as hashtags at all — as the bare `100%`.
+     * so the file is unchanged by being displayed. [tags] is every tag on the run, in order, without
+     * the `#`.
      */
     data class Tags(
         override val raw: String,
@@ -154,20 +153,11 @@ object Segments {
         return absorbBlankLines(out)
     }
 
-    /**
-     * Every tag on one tag line, in order, in both spellings.
-     *
-     * Percent tags come back bare — `100%` from `#100%` and from the wrapped `#100%#` alike — so
-     * that a chip can show what the author wrote. They are display only: see `Note.tags`, which does
-     * not index them, and `TagEdit`, which will not write them.
-     */
+    /** Every tag on one tag line, in order, without the `#`. */
     private fun tagsOn(line: String): List<String> =
-        line.trim().split(Regex("""\s+""")).filter { it.isNotEmpty() }.mapNotNull { word ->
-            when {
-                Tags.isInlineWritable(word.removePrefix("#")) -> word.removePrefix("#")
-                else -> Tags.percentInBody(word).firstOrNull()
-            }
-        }
+        line.trim().split(Regex("""\s+"""))
+            .filter(Tags::isTagWord)
+            .map { it.removePrefix("#") }
 
     /**
      * Move the blank lines that belong to a tag run out of the prose around it.

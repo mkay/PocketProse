@@ -46,24 +46,24 @@ class BlocksTest {
     }
 
     @Test
-    fun `a percent tag counts towards a tag line in both its spellings`() {
-        // Müde.md reads exactly this. Requiring every word to be a writable hashtag made the whole
-        // line prose, and the library row led with the note's own tags instead of with the song.
+    fun `a numeric tag counts towards a tag line`() {
+        // Müde.md reads exactly this. The middle tag was `#100%` until the rename on 2026-09-07, and
+        // being unreadable it made the whole line prose — so the library row for Müde led with the
+        // note's own tags instead of with the song. Now it is simply one of the three.
         assertEquals(
-            listOf(Block.TagLine(listOf("album/debut", "busch"))),
-            Blocks.parse("#album/debut #100% #busch"),
+            listOf(Block.TagLine(listOf("album/debut", "100", "busch"))),
+            Blocks.parse("#album/debut #100 #busch"),
         )
-        assertEquals(listOf(Block.TagLine(emptyList())), Blocks.parse("#100%#"))
-        assertEquals(listOf(Block.TagLine(emptyList())), Blocks.parse("#75%"))
+        assertEquals(listOf(Block.TagLine(listOf("75"))), Blocks.parse("#75"))
     }
 
     @Test
-    fun `a percent tag inside a sentence leaves the sentence visible`() {
+    fun `a numeric tag inside a sentence leaves the sentence visible`() {
         // No note in the archive does this, but hiding a line of prose would be unforgivable, so
         // the "entirely tags" requirement is pinned rather than assumed.
         assertEquals(
-            listOf(Block.Paragraph("das ist zu #100% mein Ernst")),
-            Blocks.parse("das ist zu #100% mein Ernst"),
+            listOf(Block.Paragraph("das ist zu #100 mein Ernst")),
+            Blocks.parse("das ist zu #100 mein Ernst"),
         )
     }
 

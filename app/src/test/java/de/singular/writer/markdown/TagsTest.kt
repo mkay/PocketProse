@@ -28,12 +28,15 @@ class TagsTest {
     }
 
     @Test
-    fun `Bear's wrapped percent tags stay as text`() {
-        // 11 notes carry #100%# in the body; the tag itself lives in the frontmatter only.
-        assertEquals(emptyList<String>(), Tags.inBody("#100%#"))
-        assertEquals(emptyList<String>(), Tags.inBody("#50%#"))
+    fun `a tag may open with a digit`() {
+        // `100%`, `50%` and `75%` were renamed to `100`, `50` and `75` on 2026-09-07, `%` being a
+        // character no hashtag can hold. Once renamed they are ordinary tags in every respect.
+        assertEquals(listOf("100"), Tags.inBody("#100"))
+        assertEquals(listOf("100", "50", "75"), Tags.inBody("#100 #50 #75"))
+        assertTrue(Tags.isInlineWritable("100"))
+        // Names that still could not be written into a body, which is what the guard is for.
         assertFalse(Tags.isInlineWritable("100%"))
-        assertFalse(Tags.isInlineWritable("50%"))
+        assertFalse(Tags.isInlineWritable("zwei worte"))
         assertTrue(Tags.isInlineWritable("lyrics/snippet"))
         assertTrue(Tags.isInlineWritable("meta-info"))
     }

@@ -104,36 +104,34 @@ class TagEditTest {
     @Test
     fun `a run of three tag lines is edited in place`() {
         // Helen weiss das auch.md ends with exactly this, trailing spaces included.
-        val body = "und weiter\n\n#album/debut \n#100%\n#album/entsetzlich #busch \n"
+        val body = "und weiter\n\n#album/debut \n#100\n#album/entsetzlich #busch \n"
         assertEquals(
-            "und weiter\n\n#album/debut \n#100%\n#album/entsetzlich \n",
+            "und weiter\n\n#album/debut \n#100\n#album/entsetzlich \n",
             TagEdit.apply(body, emptyList(), listOf("busch")),
         )
     }
 
     @Test
-    fun `a percent tag is never written into a body`() {
-        // `%` is not in the tag vocabulary. These live in the frontmatter and the body stays as it is.
-        val body = "\n#lyrics/snippet\n"
-        assertEquals(body, TagEdit.apply(body, listOf("100%"), emptyList()))
-    }
-
-    @Test
-    fun `a percent tag already in a body is never taken out of it`() {
-        // The author decided to keep these names. Removing the frontmatter entry is the user's edit;
-        // rewriting the text they typed is not.
-        val body = "\n#album/debut #100% #busch\n"
-        assertEquals(body, TagEdit.apply(body, emptyList(), listOf("100%")))
+    fun `a numeric tag is written like any other`() {
+        // `100`, `50` and `75` were `100%`, `50%` and `75%` until the rename on 2026-09-07. The
+        // whole point of dropping the `%` is that there is no longer a case here.
         assertEquals(
-            "\n#album/debut #100%\n",
-            TagEdit.apply(body, emptyList(), listOf("busch", "100%")),
+            "\n#lyrics/snippet #100\n",
+            TagEdit.apply("\n#lyrics/snippet\n", listOf("100"), emptyList()),
+        )
+        assertEquals(
+            "\n#lyrics/snippet\n",
+            TagEdit.apply("\n#lyrics/snippet #100\n", emptyList(), listOf("100")),
         )
     }
 
     @Test
-    fun `the wrapped percent form is left exactly as written`() {
-        val body = "und weiter\n\n#100%# #busch\n"
-        assertEquals("und weiter\n\n#100%#\n", TagEdit.apply(body, emptyList(), listOf("busch")))
+    fun `a name that cannot be a hashtag never reaches the body`() {
+        // The frontmatter can hold a name the body cannot. Such a tag is written to the `tags:` list
+        // alone rather than mangled into something a body could carry.
+        val body = "\n#lyrics/snippet\n"
+        assertEquals(body, TagEdit.apply(body, listOf("100%"), emptyList()))
+        assertEquals(body, TagEdit.apply(body, listOf("zwei worte"), emptyList()))
     }
 
     @Test
@@ -178,7 +176,7 @@ class TagEditTest {
             "\n#lyrics/snippet\n\nDu erreichst mich nicht\n",
             "Du erreichst mich nicht\n\n#lyrics/snippet\n",
             "\n#chords #radio\n\nAkkorde\n\n#lyrics/snippet\n",
-            "\n#album/debut \n#100%\n#busch \n",
+            "\n#album/debut \n#100\n#busch \n",
         )) {
             val added = TagEdit.apply(body, listOf("busch2"), emptyList())
             assertEquals(body, TagEdit.apply(added, emptyList(), listOf("busch2")))

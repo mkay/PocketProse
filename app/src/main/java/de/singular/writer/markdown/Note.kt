@@ -32,17 +32,9 @@ data class Note(
      * not occur in the archive today for ordinary tags, and costs one `distinct()` to be right
      * about anyway.
      *
-     * **Percent tags are indexed from the frontmatter only, and that is a decision.** 21 of them are
-     * written in a body whose frontmatter does not list them — `Müde.md` has `#100%` in its text and
-     * no `100%` in its keys — so this deliberately under-counts: the drawer shows `100%` on the 11
-     * notes that declare it, not on the 30-odd that mention it. The author chose this on 2026-09-07,
-     * over indexing both, because the alternative either leaves the drawer disagreeing with the
-     * files or tempts a later version into writing frontmatter into 21 notes nobody edited.
-     *
-     * Indexing is not display. A body-only `#100%` sits on a line the editor hides, so phase 6 chips
-     * it from the run itself — see `Segment.Tags` — and marks it not-removable. It is shown because
-     * the author can plainly see it in their own text; it is still not counted here, and it is not a
-     * member of [editableTags], so no save can either delete it or promote it into the frontmatter.
+     * Since the `%` names were renamed on 2026-09-07 there is no tag the two representations cannot
+     * both hold, so this and [editableTags] differ only when a note is edited elsewhere and left
+     * disagreeing with itself. See `Tags`.
      */
     val tags: List<String>
         get() = (frontmatter.tags + Tags.inBody(body)).map(Tags::normalize).distinct()
@@ -79,8 +71,8 @@ data class Note(
      * **The frontmatter's list, not [tags].** [tags] unions the frontmatter with the body so the
      * index sees everything; handing that union to `Frontmatter.withTags` would promote a body-only
      * tag into the YAML the moment the user changed some unrelated chip — writing to lines nobody
-     * touched. For ordinary tags it would never fire, the two agreeing in all 168 notes. For the 21
-     * percent tags the Standard Notes export failed to carry across it fires immediately.
+     * touched. It fires on nothing in the archive today, the two representations agreeing on every
+     * note — but the rule is what guarantees that stays true, rather than the measurement.
      *
      * So a tag that lives only in a body is shown as a chip and is not a member of this set: the app
      * can neither delete it nor promote it, and the file keeps what the author wrote.
