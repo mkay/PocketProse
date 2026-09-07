@@ -63,21 +63,7 @@ data class Note(
      * archive already carries — see the file format contract. It is passed in rather than read from
      * the clock so this stays a pure function and the test can pin it.
      */
-    fun withBody(newBody: String, now: Instant): Note? = withTags(newBody, editableTags, now)
-
-    /**
-     * The tags the user may edit, and the only ones a save is allowed to write.
-     *
-     * **The frontmatter's list, not [tags].** [tags] unions the frontmatter with the body so the
-     * index sees everything; handing that union to `Frontmatter.withTags` would promote a body-only
-     * tag into the YAML the moment the user changed some unrelated chip — writing to lines nobody
-     * touched. It fires on nothing in the archive today, the two representations agreeing on every
-     * note — but the rule is what guarantees that stays true, rather than the measurement.
-     *
-     * So a tag that lives only in a body is shown as a chip and is not a member of this set: the app
-     * can neither delete it nor promote it, and the file keeps what the author wrote.
-     */
-    val editableTags: List<String> get() = frontmatter.tags.map(Tags::normalize).distinct()
+    fun withBody(newBody: String, now: Instant): Note? = withTags(newBody, tags, now)
 
     /**
      * This note with a different tag set, written to both places at once.
@@ -86,23 +72,30 @@ data class Note(
      * and it is why this exists rather than the caller writing frontmatter and body separately and
      * hoping. `updated` is stamped once, for both.
      *
-     * Only the difference is written. A tag the user did not touch is not rewritten, reordered or
-     * requoted, and the surviving tags keep the order the file already had, new ones going on the
-     * end — sorting them would rewrite every line of a list the user only added to.
+     * **Only the difference is written, and the difference is measured against [tags].** [newTags] is
+     * what the note has after the edit; what it had before is everything on it by either spelling.
+     * So a tag the user did not touch is not rewritten, reordered or requoted — and in particular a
+     * tag written in the body but absent from the `tags:` list is left in exactly that state, being
+     * neither added nor removed, rather than quietly filed on the author's behalf. Touch it and it
+     * moves in both places, which is what touching it means.
+     *
+     * The frontmatter keeps its own order, new tags going on the end. Sorting it would rewrite every
+     * line of a list the user only added to.
      *
      * Returns `null` when neither the body nor the tags actually changed, so an open-and-close still
      * writes nothing. See [withBody] for why that rule is worth this much care.
      */
     fun withTags(newBody: String, newTags: List<String>, now: Instant): Note? {
         val wanted = newTags.map(Tags::normalize).distinct()
-        val current = editableTags
+        val current = tags
         val added = wanted - current.toSet()
         val removed = current - wanted.toSet()
 
         val kept = keepTrailingNewline(TagEdit.apply(keepTrailingNewline(newBody), added, removed))
         if (kept == body && added.isEmpty() && removed.isEmpty()) return null
 
-        val ordered = current.filterNot { it in removed } + added
+        val declared = frontmatter.tags.map(Tags::normalize).distinct()
+        val ordered = declared.filterNot { it in removed } + added
         val block = if (added.isEmpty() && removed.isEmpty()) frontmatter else frontmatter.withTags(ordered)
         return copy(frontmatter = block.withKey("updated", stamp(now)), body = kept)
     }

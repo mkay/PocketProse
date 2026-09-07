@@ -76,12 +76,12 @@ import de.singular.writer.vault.Attachments
 class NoteDocument(val name: String, body: String, tags: List<String>) {
     val segments: List<Segment> = Segments.split(body)
 
-    /**
-     * The tags the chip sheet edits, seeded from the frontmatter.
+/**
+     * The tags on this note, as the chip row shows them and the sheet edits them.
      *
-     * Frontmatter and not the union of both representations — see `Note.editableTags`. A tag that
-     * lives only in a body is chipped from its own run and is deliberately not in here, so no save
-     * can delete it or promote it into a `tags:` list the author never wrote.
+     * Every tag the note carries, in either of the two places the archive keeps them — there is one
+     * list here because there is one thing a reader means by "this note's tags". Which of the two
+     * places a given tag currently sits in is `Note.withTags`' business, and the author's never.
      */
     var tags: List<String> by mutableStateOf(tags)
         private set
@@ -106,20 +106,6 @@ class NoteDocument(val name: String, body: String, tags: List<String>) {
         retag(if (normalized in tags) tags - normalized else tags + normalized)
     }
 
-    /**
-     * Every tag to draw at the foot: the editable ones first, then anything the runs carry that the
-     * frontmatter does not.
-     *
-     * The second group is empty on every note in the archive and exists for the note edited
-     * elsewhere and left disagreeing with itself. It is shown because the author can see it in their
-     * own text, and is not removable because the app may not promote a body-only tag into a `tags:`
-     * list on their behalf.
-     */
-    fun chips(): List<Chip> {
-        val fromRuns = segments.filterIsInstance<Segment.Tags>().flatMap { it.tags }
-        val extra = fromRuns.distinct().filterNot { it in tags }
-        return tags.map { Chip(it, removable = true) } + extra.map { Chip(it, removable = false) }
-    }
 
     private val buffers: Map<Int, TextFieldState> = segments.withIndex()
         .filter { it.value is Segment.Prose }
@@ -131,9 +117,6 @@ class NoteDocument(val name: String, body: String, tags: List<String>) {
     fun body(): String = segments.withIndex().joinToString("") { (i, segment) ->
         if (segment is Segment.Prose) buffers.getValue(i).text.toString() else segment.raw
     }
-
-    /** One tag as the foot of the note draws it. */
-    data class Chip(val tag: String, val removable: Boolean)
 
     /** Where the cursor is, for the format bar — the first buffer that has a selection. */
     fun anySelection(): TextFieldState? = buffers.values.firstOrNull { !it.selection.collapsed }
@@ -249,13 +232,13 @@ fun EditorScreen(
         // than in it, and both belong after the last word rather than before the first.
         var editingTags by remember(document) { mutableStateOf(false) }
         NoteTagBar(
-            chips = document.chips(),
+            tags = document.tags,
             enabled = editable,
             onEdit = { editingTags = true },
         )
         if (editingTags) {
             TagSheet(
-                chips = document.chips(),
+                selected = document.tags,
                 known = knownTags,
                 onToggle = document::toggleTag,
                 onDismiss = { editingTags = false },

@@ -264,7 +264,7 @@ class Vault(context: Context) {
     suspend fun save(
         note: IndexedNote,
         newBody: String,
-        newTags: List<String> = note.note.editableTags,
+        newTags: List<String> = note.note.tags,
         now: Instant = Instant.now(),
     ): SaveResult =
         withContext(Dispatchers.IO) {
@@ -324,7 +324,7 @@ class Vault(context: Context) {
     suspend fun saveCopy(
         note: IndexedNote,
         newBody: String,
-        newTags: List<String> = note.note.editableTags,
+        newTags: List<String> = note.note.tags,
         now: Instant = Instant.now(),
     ): SaveResult =
         withContext(Dispatchers.IO) {

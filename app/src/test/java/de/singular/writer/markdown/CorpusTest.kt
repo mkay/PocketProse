@@ -385,7 +385,7 @@ class CorpusTest {
         val corpus = corpus()
         for ((name, text) in corpus) {
             val note = Note.parse(text)
-            val stripped = TagEdit.apply(note.body, emptyList(), note.editableTags)
+            val stripped = TagEdit.apply(note.body, emptyList(), note.tags)
             val words = { body: String ->
                 Segments.physicalLines(body).filterNot { Tags.isTagLine(it.removeSuffix("\n")) }
             }
@@ -399,14 +399,14 @@ class CorpusTest {
         val now = java.time.Instant.parse("2026-09-07T12:00:00Z")
         for ((name, text) in corpus) {
             val note = Note.parse(text)
-            val edited = note.withTags(note.body, note.editableTags + "probe", now)!!
+            val edited = note.withTags(note.body, note.tags + "probe", now)!!
             assertTrue(name, "probe" in edited.frontmatter.tags)
             assertTrue(name, "#probe" in edited.body)
             assertEquals(name, Note.stamp(now), edited.frontmatter.updated)
             // created is the archive's value and is never the app's to move.
             assertEquals(name, note.frontmatter.created, edited.frontmatter.created)
             // And the tags the user did not touch keep the order and the quoting the file had.
-            assertEquals(name, note.editableTags, edited.frontmatter.tags.dropLast(1).map(Tags::normalize))
+            assertEquals(name, note.tags, edited.frontmatter.tags.dropLast(1).map(Tags::normalize))
         }
     }
 
@@ -416,7 +416,7 @@ class CorpusTest {
         val now = java.time.Instant.parse("2026-09-07T12:00:00Z")
         for ((name, text) in corpus) {
             val note = Note.parse(text)
-            assertEquals(name, null, note.withTags(note.body, note.editableTags, now))
+            assertEquals(name, null, note.withTags(note.body, note.tags, now))
         }
     }
 

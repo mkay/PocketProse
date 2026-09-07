@@ -34,13 +34,12 @@ class NoteDocumentTest {
     """.trimIndent() + "\n"
 
     private fun documentFor(note: Note, name: String = "Atlantik.md") =
-        NoteDocument(name, note.body, note.editableTags)
+        NoteDocument(name, note.body, note.tags)
 
     @Test
-    fun `a document opens with the tags its note declares`() {
+    fun `a document opens with the tags its note carries`() {
         val document = documentFor(Note.parse(text))
         assertEquals(listOf("lyrics/snippet"), document.tags)
-        assertEquals(listOf(NoteDocument.Chip("lyrics/snippet", removable = true)), document.chips())
     }
 
     @Test
@@ -75,19 +74,13 @@ class NoteDocumentTest {
     }
 
     @Test
-    fun `a tag written in the body but not declared is shown and cannot be removed`() {
+    fun `a tag written in the body but not declared is an ordinary tag on the note`() {
+        // It shows as on, because to a reader it is on: it is written in the note. What the app must
+        // not do is *file* it — see the paired test in SaveTest, which proves an unrelated edit
+        // leaves it in the body and out of the `tags:` list.
         val strayText = text.replace("#lyrics/snippet\n", "#lyrics/snippet #busch\n")
-        val note = Note.parse(strayText)
-        val document = documentFor(note)
-        assertEquals(
-            listOf(
-                NoteDocument.Chip("lyrics/snippet", removable = true),
-                NoteDocument.Chip("busch", removable = false),
-            ),
-            document.chips(),
-        )
-        // And it is not in the editable set, so no save can promote it or delete it.
-        assertTrue("busch" !in document.tags)
+        val document = documentFor(Note.parse(strayText))
+        assertEquals(listOf("lyrics/snippet", "busch"), document.tags)
     }
 
     @Test

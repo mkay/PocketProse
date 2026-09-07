@@ -31,8 +31,6 @@
     <string name="tag_sheet_new">Neues Schlagwort</string>
     <string name="tag_sheet_add">Hinzufügen</string>
     <string name="tag_sheet_done">Fertig</string>
-    <string name="tag_sheet_toggle">%1$s</string>
-    <string name="tag_sheet_untracked">Steht in diesem Text, aber nicht in seiner Schlagwortliste</string>
 
     <string name="conflict_title">Dieser Text wurde anderswo geändert</string>
     <string name="conflict_body">Während du geschrieben hast, wurde dieser Text auf einem anderen Gerät bearbeitet. Pocket Prose hat keine der beiden Fassungen angetastet.</string>

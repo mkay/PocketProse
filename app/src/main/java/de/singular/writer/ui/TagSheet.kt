@@ -46,6 +46,11 @@ import de.singular.writer.markdown.Tags
  * The sheet that opens from a note's chip row: every tag in the folder, checkable, plus a field for
  * one that does not exist yet.
  *
+ * **One list, one meaning.** A tag is either on this note or it is not; there is no second class of
+ * tag here and no explanation of where a tag is stored. An earlier version marked tags the note's
+ * text carried but its `tags:` list did not, and said so in a sentence nobody could act on. Which of
+ * the two places a tag sits in is `Note.withTags`' problem, and it keeps both in step by itself.
+ *
  * **A sheet rather than an `✕` on each chip.** Removing a tag rewrites a file — the `tags:` list and
  * the note's own hashtag line, in one save — and a control that does that on a mis-tap, sitting
  * directly under the text somebody is writing in, is the wrong shape for the consequence. Here the
@@ -61,21 +66,24 @@ import de.singular.writer.markdown.Tags
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TagSheet(
-    chips: List<NoteDocument.Chip>,
+    selected: List<String>,
     known: Set<String>,
     onToggle: (String) -> Unit,
     onDismiss: () -> Unit,
 ) {
     val state = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    val selected = chips.filter { it.removable }.map { it.tag }.toSet()
-    val untracked = chips.filterNot { it.removable }.map { it.tag }.toSet()
+    val on = selected.toSet()
 
     // On this note first, then the rest of the folder. Within each group alphabetical, so a tag is
     // where it was last time — see Tags.tree for why frequency order was rejected there too.
-    val order = compareByDescending<String> { it in selected || it in untracked }
-        .then(String.CASE_INSENSITIVE_ORDER)
-    val rows = remember(known, selected, untracked) {
-        (known + selected + untracked).sortedWith(order)
+    //
+    // Sorted once per opening rather than on every tap: a row that jumped to the top the instant it
+    // was ticked would make a second tap land on whatever slid into its place.
+    val rows = remember(known) {
+        val start = on
+        (known + start).sortedWith(
+            compareByDescending<String> { it in start }.then(String.CASE_INSENSITIVE_ORDER),
+        )
     }
 
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = state) {
@@ -106,14 +114,7 @@ fun TagSheet(
             // it disappears, and 25 tags do not need a full screen.
             LazyColumn(Modifier.heightIn(max = 320.dp)) {
                 items(rows, key = { it }) { tag ->
-                    TagSheetRow(
-                        tag = tag,
-                        checked = tag in selected,
-                        // A tag the note's text carries but its list does not. The app shows it and
-                        // will not file it on the author's behalf — see Note.editableTags.
-                        untracked = tag in untracked && tag !in selected,
-                        onClick = { onToggle(tag) },
-                    )
+                    TagSheetRow(tag = tag, checked = tag in on, onClick = { onToggle(tag) })
                 }
             }
         }
@@ -163,16 +164,16 @@ private fun NewTagField(onAdd: (String) -> Unit) {
     }
 }
 
-/** One tag in the sheet: a check where one would go, the tag, and why it cannot be unchecked. */
+/** One tag in the sheet: a check where one would go, and the tag. Tap it to turn it on or off. */
 @Composable
-private fun TagSheetRow(tag: String, checked: Boolean, untracked: Boolean, onClick: () -> Unit) {
+private fun TagSheetRow(tag: String, checked: Boolean, onClick: () -> Unit) {
     val scheme = MaterialTheme.colorScheme
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(enabled = !untracked, onClick = onClick)
+            .clickable(onClick = onClick)
             .padding(horizontal = 20.dp, vertical = 12.dp),
     ) {
         Icon(
@@ -184,20 +185,12 @@ private fun TagSheetRow(tag: String, checked: Boolean, untracked: Boolean, onCli
             tint = if (checked) scheme.onSurface else Color.Transparent,
             modifier = Modifier.size(20.dp),
         )
-        Column(Modifier.weight(1f)) {
-            Text(
-                text = stringResource(R.string.tag_sheet_toggle, tag),
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = if (checked) FontWeight.Medium else FontWeight.Normal,
-                color = if (untracked) scheme.onSurfaceVariant else scheme.onSurface,
-            )
-            if (untracked) {
-                Text(
-                    text = stringResource(R.string.tag_sheet_untracked),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = scheme.onSurfaceVariant,
-                )
-            }
-        }
+        Text(
+            text = tag,
+            style = MaterialTheme.typography.bodyLarge,
+            fontWeight = if (checked) FontWeight.Medium else FontWeight.Normal,
+            color = scheme.onSurface,
+            modifier = Modifier.weight(1f),
+        )
     }
 }

@@ -82,12 +82,6 @@
     <string name="tag_sheet_add">Add</string>
     <!-- Closes the sheet and writes the change. -->
     <string name="tag_sheet_done">Done</string>
-    <!-- Spoken by a screen reader for a tag row in the sheet. %1$s is the tag. -->
-    <string name="tag_sheet_toggle">%1$s</string>
-    <!-- Shown under a tag the note carries in its own text but has not filed. Rare: it means the
-         note was edited elsewhere and its two lists disagree. The app shows the tag rather than
-         hiding it, and will not file it on the writer's behalf. -->
-    <string name="tag_sheet_untracked">Written in this note, not in its tag list</string>
 
     <!-- Shown when a note changed somewhere else (a laptop, another phone) while it was open here.
          Not an error: this folder is synced, so it is an ordinary thing to happen. Never overwrite

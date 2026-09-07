@@ -53,11 +53,12 @@ class SaveTest {
         """.trimIndent() + "\n"
         val note = Note.parse(text)
 
-        // The index sees both representations; the editable set is the frontmatter's alone.
-        assertTrue("busch" in note.tags)
-        assertEquals(listOf("lyrics/snippet"), note.editableTags)
+        // Both representations are one list to a reader, and that is what the sheet shows.
+        assertEquals(listOf("lyrics/snippet", "busch"), note.tags)
+        // The `tags:` list is the narrower thing, and stays narrower unless the user says otherwise.
+        assertEquals(listOf("lyrics/snippet"), note.frontmatter.tags)
 
-        val saved = note.withTags(note.body, note.editableTags + "radio", now)!!
+        val saved = note.withTags(note.body, note.tags + "radio", now)!!
         // Not promoted into the `tags:` list the author never wrote it into...
         assertTrue("busch" !in saved.frontmatter.tags)
         // ...and not struck from the text the author did write it into.

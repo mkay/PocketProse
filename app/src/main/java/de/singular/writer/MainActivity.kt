@@ -175,7 +175,7 @@ private fun PocketProseApp(settings: Settings) {
         NoteDocument(
             name = openNote?.file?.name.orEmpty(),
             body = openNote?.note?.body.orEmpty(),
-            tags = openNote?.note?.editableTags.orEmpty(),
+            tags = openNote?.note?.tags.orEmpty(),
         )
     }
     val attachments = remember { Attachments(vault, context) }
