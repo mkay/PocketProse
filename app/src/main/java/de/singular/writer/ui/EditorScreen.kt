@@ -61,6 +61,7 @@ import androidx.compose.ui.unit.dp
 import de.singular.writer.R
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import de.singular.writer.markdown.FormatActions
 import de.singular.writer.markdown.LinkRef
 import de.singular.writer.markdown.Segment
@@ -436,7 +437,14 @@ fun NewNoteDialog(onCreate: (String) -> Unit, onDismiss: () -> Unit) {
                 label = { Text(text = stringResource(R.string.new_note_label)) },
                 singleLine = true,
                 shape = ControlShape,
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                // Sentence capitalisation, because a title starts with a capital and nobody should
+                // have to reach for shift to write one. Sentences rather than Words: German
+                // capitalises its nouns and the keyboard cannot know which they are, so capitalising
+                // every word would be wrong more often than right.
+                keyboardOptions = KeyboardOptions(
+                    capitalization = KeyboardCapitalization.Sentences,
+                    imeAction = ImeAction.Done,
+                ),
                 keyboardActions = KeyboardActions(onDone = { submit() }),
                 modifier = Modifier.fillMaxWidth().focusRequester(focus),
             )
