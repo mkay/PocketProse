@@ -13,6 +13,8 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -79,12 +81,16 @@ class MainActivity : AppCompatActivity() {
                 // bar and lets the bare activity window show through — which on a light theme is
                 // a black strip across the top. A writing app is a page edge to edge or it is
                 // not a page.
+                //
+                // The **top** inset is deliberately not taken here. Each screen's header takes it
+                // itself, so the header's own ground runs up behind the status bar instead of
+                // leaving a band of page colour above it — a seam across the full width of the
+                // phone, which is exactly what padding the Surface used to produce lower down.
+                val sides = WindowInsets.safeDrawing.only(
+                    WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom,
+                )
                 Surface(color = MaterialTheme.colorScheme.background) {
-                    Box(
-                        Modifier
-                            .windowInsetsPadding(WindowInsets.safeDrawing)
-                            .consumeWindowInsets(WindowInsets.safeDrawing),
-                    ) {
+                    Box(Modifier.windowInsetsPadding(sides).consumeWindowInsets(sides)) {
                         PocketProseApp()
                     }
                 }

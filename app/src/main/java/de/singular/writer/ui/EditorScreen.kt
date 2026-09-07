@@ -13,7 +13,10 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.BasicTextField
@@ -104,6 +107,9 @@ fun EditorScreen(
                 }
             },
             colors = TopAppBarDefaults.topAppBarColors(containerColor = scheme.surface),
+            // The editor's bar is the page's own colour, so it needs no ground of its own — but it
+            // still takes the top inset, MainActivity having left it alone.
+            modifier = Modifier.windowInsetsPadding(WindowInsets.statusBars),
         )
 
         if (!editable) {

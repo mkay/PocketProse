@@ -9,9 +9,12 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -33,8 +36,12 @@ import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -95,28 +102,29 @@ fun LibraryScreen(
         )
 
         null -> Column(modifier.fillMaxSize()) {
+            // The header is one block — bar, strip, and the status bar above them — and it is the
+            // **page's own colour**, with no tint at all. It takes the top inset itself so the page
+            // runs to the very top of the screen; see the note in MainActivity.
+            //
+            // Two tinted versions were tried on 2026-09-07 and both were wrong. Tinting the strip
+            // alone made a band across the screen that read as a toolbar rather than as a caption.
+            // Tinting bar and strip together fixed that but put the header a step *down* the ramp
+            // from the page, so the top of the screen receded when what a header does is sit above.
+            // Going a step up instead was the obvious next move and was not taken: at this palette's
+            // contrast a lifted header is still a slab, and the divider under the strip already
+            // says where the list begins. The header needs no ground of its own.
+            Column(Modifier.windowInsetsPadding(WindowInsets.statusBars)) {
             TopAppBar(
                 title = {
                     if (searching) {
                         SearchField(query, onQueryChange)
                     } else {
-                        Column {
-                            Text(
-                                text = folderName ?: stringResource(R.string.library_title),
-                                style = MaterialTheme.typography.titleLarge,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                            )
-                            Text(
-                                text = selectedTag
-                                    ?.let { stringResource(R.string.filter_showing, it) }
-                                    ?: pluralStringResource(R.plurals.note_count, notes.size, notes.size),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                            )
-                        }
+                        Text(
+                            text = folderName ?: stringResource(R.string.library_title),
+                            style = MaterialTheme.typography.titleLarge,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
                     }
                 },
                 navigationIcon = {
@@ -137,10 +145,13 @@ fun LibraryScreen(
                         )
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                ),
+                // The bar and the strip beneath it share one ground, so the top of the screen reads
+                // as a single header block sitting a shade above the page rather than as two bands.
+                // The only rule below it is the one under the strip, dividing header from list.
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
             )
+            StatusStrip(count = notes.size, tag = selectedTag)
+            }
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
             if (notes.isEmpty()) {
@@ -157,6 +168,48 @@ fun LibraryScreen(
                 }
             }
         }
+    }
+}
+
+/**
+ * The thin line under the title: what is being shown, and how much of it.
+ *
+ * It used to be a second line inside the top bar, stacked under the folder name. That made the bar
+ * two-storeys tall on every screen to carry a count that is glanceable at best, and it left the
+ * name and the count reading as one block of title. A strip of its own is quieter — a different,
+ * slightly recessed ground says "this is about the list below", not "this is the heading".
+ *
+ * The tag sits left and the count right, on one line. That avoids joining them with a separator,
+ * which would be either a hardcoded character or a string resource that no translator can do
+ * anything useful with.
+ */
+@Composable
+private fun StatusStrip(count: Int, tag: String?) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = 6.dp),
+    ) {
+        if (tag != null) {
+            // weight(1f) rather than weight(1f, fill = false): the label must claim the whole space
+            // left over so the count is pushed flush to the right edge, where it lines up with the
+            // counts in the tag drawer. With fill = false a short tag left the count floating.
+            Text(
+                text = stringResource(R.string.filter_showing, tag),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
+            )
+        }
+        Text(
+            text = pluralStringResource(R.plurals.note_count, count, count),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+        )
     }
 }
 
@@ -237,9 +290,23 @@ private fun Empty(query: String, onChooseFolder: () -> Unit) {
     }
 }
 
+/**
+ * The search field, which takes the cursor the moment it appears.
+ *
+ * Tapping the magnifier is unambiguously "I want to search", so making someone then tap the field
+ * as well is a second gesture for a decision already made. The focus request also brings the
+ * keyboard up, so the next thing that happens is typing.
+ *
+ * The requester is fired from a [LaunchedEffect] keyed on nothing, so it runs once when the field
+ * enters the composition and never again — re-requesting focus on every recomposition would fight
+ * the user the moment they tapped anywhere else.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SearchField(query: String, onQueryChange: (String) -> Unit) {
+    val focus = remember { FocusRequester() }
+    LaunchedEffect(Unit) { focus.requestFocus() }
+
     TextField(
         value = query,
         onValueChange = onQueryChange,
@@ -255,7 +322,7 @@ private fun SearchField(query: String, onQueryChange: (String) -> Unit) {
             focusedIndicatorColor = Color.Transparent,
             unfocusedIndicatorColor = Color.Transparent,
         ),
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().focusRequester(focus),
     )
 }
 
@@ -268,7 +335,10 @@ private fun Invitation(
     onAction: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+    Box(
+        modifier.fillMaxSize().windowInsetsPadding(WindowInsets.statusBars),
+        contentAlignment = Alignment.Center,
+    ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(12.dp),
