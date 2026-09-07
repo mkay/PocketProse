@@ -62,7 +62,7 @@ private val PageLight = Color(0xFFFBFAFA)
  * Type, in two weights.
  *
  * `onSurface` is a note's title and the words in the editor. `onSurfaceVariant` is everything that
- * supports them — the excerpt in a list row, the date, a tag, the "Nothing written yet" placeholder.
+ * supports them — the excerpt in a list row, the date, a tag, the empty-note placeholder.
  * The gap between them is deliberately narrow (5.24 against 4.43 on dark) because at this contrast
  * level a wide split would make the secondary tier illegible rather than merely quieter.
  */

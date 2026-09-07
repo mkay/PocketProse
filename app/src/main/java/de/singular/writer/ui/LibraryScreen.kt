@@ -256,9 +256,9 @@ private fun NoteRow(note: IndexedNote, onClick: () -> Unit) {
         )
         Text(
             // 40 of the author's 168 notes have no prose at all — they are a title filed under a
-            // tag, which is a legitimate kind of note here and not a defect. The placeholder keeps
-            // every row the same height so the list has an even rhythm; it is set in the secondary
-            // colour and nothing about it is alarming.
+            // tag, which is a legitimate kind of note here and not a defect. A bare dash keeps
+            // every row the same height so the list has an even rhythm, without a sentence that
+            // draws more attention to the gap than the gap deserves.
             text = excerpt.ifEmpty { stringResource(R.string.note_empty) },
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,

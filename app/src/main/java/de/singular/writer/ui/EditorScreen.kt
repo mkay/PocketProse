@@ -131,8 +131,10 @@ fun EditorScreen(
         TopAppBar(
             title = {
                 Text(
+                    // No style override: the bar's own titleLarge, which is what a screen title is
+                    // meant to look like. Shrinking it to titleMedium made the note read as a
+                    // subordinate detail rather than as the thing being edited.
                     text = title,
-                    style = MaterialTheme.typography.titleMedium,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
