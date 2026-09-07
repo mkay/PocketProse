@@ -2,11 +2,6 @@
 
 package de.singular.writer.ui
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,6 +9,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.statusBars
@@ -29,6 +25,7 @@ import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
@@ -61,6 +58,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalTextToolbar
 import androidx.compose.foundation.text.contextmenu.provider.LocalTextContextMenuDropdownProvider
 import androidx.compose.foundation.text.contextmenu.provider.LocalTextContextMenuToolbarProvider
@@ -147,20 +145,6 @@ class NoteDocument(val name: String, body: String, tags: List<String>) {
     /** Whether the note has no words in it at all — not whether it has no tags or no pictures. */
     val isEmpty: Boolean get() = buffers.values.all { it.text.isBlank() }
 
-    /** Where the cursor is, for the format bar — the first buffer that has a selection. */
-    fun anySelection(): TextFieldState? = buffers.values.firstOrNull { !it.selection.collapsed }
-
-    /**
-     * Any editable buffer at all, or null when the note has none.
-     *
-     * For the format bar, which keeps composing while it animates away after the selection has gone
-     * and so needs *something* to hold. It used to reach for `bufferAt(0)`, which assumed the note
-     * opens with text — and 66 tag runs in the archive sit at the head of their note, so segment 0
-     * is a run of tags with no buffer behind it. Deselecting in one of those crashed the app.
-     *
-     * Null is a real answer: a body that is nothing but an image line has no text to edit.
-     */
-    fun anyBuffer(): TextFieldState? = buffers.values.firstOrNull()
 }
 
 /**
@@ -213,6 +197,7 @@ fun EditorScreen(
     // images has several fields, and "the first with a selection" was a guess at which one the
     // writer meant.
     var focused by remember(document) { mutableStateOf<Int?>(null) }
+    val focusManager = LocalFocusManager.current
     val opening = remember { FocusRequester() }
     LaunchedEffect(document) {
         if (focusOnOpen && editable) runCatching { opening.requestFocus() }
@@ -347,19 +332,6 @@ fun EditorScreen(
                     is Segment.Tags -> Unit
                 }
             }
-
-            // The note's tags, **inside the scroller**, after the last word.
-            //
-            // They were pinned above the format bar, which made them a permanent strip across the
-            // bottom of the page: on a short note the writing had a band of chips under it that
-            // never moved, and with the keyboard up they took a line of what was left. Tags are part
-            // of the note rather than a control over it, so they scroll with it and are reached by
-            // reaching the end — which is also where they sit in the file.
-            NoteTagBar(
-                tags = document.tags,
-                enabled = editable,
-                onEdit = { editingTags = true },
-            )
         }
 
         if (editingTags) {
@@ -377,15 +349,30 @@ fun EditorScreen(
 
         // Formatting exists only while something is selected. A collapsed cursor is someone
         // writing; a selection is someone looking at a piece of text and considering it.
-        // Held across the exit animation: the bar is still composed while it slides away, by which
-        // time the field it belonged to may have lost focus.
-        val target = focused?.let(document::bufferAt) ?: document.anyBuffer()
-        AnimatedVisibility(
-            visible = editable && focused != null,
-            enter = fadeIn() + slideInVertically { it },
-            exit = fadeOut() + slideOutVertically { it },
-        ) {
-            if (target != null) FormatBar(target)
+        // **One strip above the keyboard, holding one of two things.**
+        //
+        // Reading, it holds the note's tags. Writing, it holds the format bar. The same slot and the
+        // same height, so nothing is ever stacked on anything and nothing jumps as you start typing
+        // — and the signal is the one already there, a text field having focus or not having it.
+        //
+        // The tags were tried in both other places and both were worse. Pinned *above* the bar they
+        // were a permanent band across the page, taking a line of what little the keyboard leaves.
+        // Scrolled into the note they stopped being reachable at a glance, which is the whole use of
+        // them. Swapping is what was left, and it turns out to be the honest answer: the strip is
+        // about the note, and what you want to know about a note differs between reading and
+        // writing.
+        val writing = editable && focused != null
+        val target = focused?.let(document::bufferAt)
+        Box(Modifier.heightIn(min = 56.dp)) {
+            if (writing && target != null) {
+                FormatBar(target, onDone = { focusManager.clearFocus() })
+            } else {
+                NoteTagBar(
+                    tags = document.tags,
+                    enabled = editable,
+                    onEdit = { editingTags = true },
+                )
+            }
         }
     }
     }
@@ -414,17 +401,19 @@ fun EditorScreen(
  * sometimes two storeys tall moves the writing up and down as you work.
  */
 @Composable
-private fun FormatBar(body: TextFieldState, modifier: Modifier = Modifier) {
+private fun FormatBar(body: TextFieldState, onDone: () -> Unit, modifier: Modifier = Modifier) {
     val clipboard = LocalClipboardManager.current
     val selected = !body.selection.collapsed
     Surface(
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
         modifier = modifier.fillMaxWidth().imePadding(),
     ) {
+      Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
         Row(
             horizontalArrangement = Arrangement.spacedBy(2.dp),
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
+                .weight(1f)
                 .horizontalScroll(rememberScrollState())
                 .padding(horizontal = 8.dp, vertical = 4.dp),
         ) {
@@ -458,6 +447,21 @@ private fun FormatBar(body: TextFieldState, modifier: Modifier = Modifier) {
                 clipboard.getText()?.text?.let(body::replaceSelection)
             }
         }
+
+        // **Outside the scrolling row**, so a way out cannot be scrolled off the screen. Eleven
+        // buttons do not fit a phone; the one that ends writing has to be where it always is.
+        //
+        // It puts the keyboard away and brings the tags back, which until now needed the system back
+        // gesture — the same gesture that leaves the note, so there was no way to stop typing
+        // without risking losing your place.
+        BarDivider()
+        IconButton(onClick = onDone, modifier = Modifier.padding(end = 4.dp)) {
+            Icon(
+                imageVector = Icons.Filled.Close,
+                contentDescription = stringResource(R.string.format_done),
+            )
+        }
+      }
     }
 }
 

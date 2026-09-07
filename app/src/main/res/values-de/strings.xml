@@ -30,6 +30,7 @@
     <string name="format_cut">Ausschneiden</string>
     <string name="format_copy">Kopieren</string>
     <string name="format_paste">Einfügen</string>
+    <string name="format_done">Schreiben beenden</string>
 
     <string name="editor_readonly_title">Dieser Text ist nur zum Lesen geöffnet</string>
     <string name="editor_readonly_body">Pocket Prose kann nicht sicher sein, diesen Text unverändert zu speichern, und ändert ihn deshalb gar nicht. Du kannst ihn hier lesen und anderswo bearbeiten.</string>

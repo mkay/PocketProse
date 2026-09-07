@@ -77,6 +77,9 @@
     <string name="format_cut">Cut</string>
     <string name="format_copy">Copy</string>
     <string name="format_paste">Paste</string>
+    <!-- Ends writing: puts the keyboard away and brings the note's tags back. Pinned outside the
+         scrolling part of the bar so it can never be scrolled out of reach. -->
+    <string name="format_done">Stop writing</string>
 
     <!-- Shown instead of the editor when the app cannot reproduce a note's bytes exactly. It is
          better to refuse to edit than to risk rewriting a note wrongly — see IndexedNote.roundTrips.
