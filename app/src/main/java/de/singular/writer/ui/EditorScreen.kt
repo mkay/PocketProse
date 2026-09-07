@@ -67,8 +67,13 @@ import de.singular.writer.vault.Attachments
  *
  * [body] reassembles the note. Segments that are not text hand back their original bytes untouched,
  * so an image line survives being scrolled past exactly as it was written.
+ *
+ * [name] is the file this document was built from, and it is checked before every write. A document
+ * is an editor's worth of unsaved state; writing one into a different note's file would put one
+ * song into another's, and the only way to be sure that cannot happen is to carry the identity
+ * around with the state rather than to reason about which composition holds what.
  */
-class NoteDocument(body: String, tags: List<String>) {
+class NoteDocument(val name: String, body: String, tags: List<String>) {
     val segments: List<Segment> = Segments.split(body)
 
     /**

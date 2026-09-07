@@ -160,10 +160,23 @@ private fun PocketProseApp(settings: Settings) {
     val openNote: IndexedNote? = remember(index, openNoteUri) {
         openNoteUri?.let { uri -> index.notes.firstOrNull { it.file.uri.toString() == uri } }
     }
-    // One document per note. Keyed on the uri so switching notes starts a fresh one, and not on the
-    // content, so a background refresh does not throw away what is being typed.
-    val document = remember(openNoteUri) {
-        NoteDocument(openNote?.note?.body.orEmpty(), openNote?.note?.editableTags.orEmpty())
+    // One document per note, keyed on the note's **file name**.
+    //
+    // Not on the uri, which was the original key and was wrong in a way that cost a tag: `Vault.save`
+    // swaps a note by deleting the old document and renaming a temp into its place, so the provider
+    // hands back a new id for the same file. Keying on that rebuilt the document after every save —
+    // and rebuilt it from an `index` that the refresh had not yet replaced, so `openNote` was
+    // momentarily null and the document came back **empty**. A second save in that window wrote an
+    // empty tag list, and would have written an empty body.
+    //
+    // The name survives the swap, being what the temp is renamed to. Not on the content either, so
+    // a background refresh does not throw away what is being typed.
+    val document = remember(openNote?.file?.name) {
+        NoteDocument(
+            name = openNote?.file?.name.orEmpty(),
+            body = openNote?.note?.body.orEmpty(),
+            tags = openNote?.note?.editableTags.orEmpty(),
+        )
     }
     val attachments = remember { Attachments(vault, context) }
 
@@ -211,6 +224,10 @@ private fun PocketProseApp(settings: Settings) {
      */
     suspend fun saveOpenNote(): Boolean {
         val note = openNote ?: return true
+        // Never write one note's editor into another note's file. This should be impossible, the
+        // document being keyed on the very name compared here — but the cost of being wrong is
+        // somebody's only copy of a song, so it is checked rather than reasoned about.
+        if (document.name != note.file.name) return true
         return when (val result = vault.save(note, document.body(), document.tags)) {
             is SaveResult.Unchanged, is SaveResult.Refused -> true
             is SaveResult.Saved -> {
@@ -219,8 +236,13 @@ private fun PocketProseApp(settings: Settings) {
                 // re-pointing here, backgrounding the app mid-note would leave this pointing at a
                 // document that no longer exists — the editor would close by itself on return, and
                 // anything typed after that would have nowhere to go.
+                //
+                // **The index is reloaded first, and waited for.** Pointing at the new uri while the
+                // old index is still in place leaves it resolving to no note at all, which closed
+                // the editor on its own and — before the document was keyed on the file name —
+                // silently emptied it.
+                refresh().join()
                 openNoteUri = result.uri.toString()
-                refresh()
                 true
             }
             is SaveResult.Conflict -> { conflict = true; false }
