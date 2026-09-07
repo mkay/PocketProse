@@ -33,6 +33,41 @@ class SaveTest {
     """.trimIndent() + "\n"
 
     @Test
+    fun `a tag a body carries and the frontmatter does not is neither promoted nor deleted`() {
+        // The archive has no note in this state — the percent rename was what emptied the category —
+        // so it has to be built on purpose. It is the case that decides whether the app is allowed
+        // to reconcile the two representations behind the author's back, and the answer is no: it
+        // may only add the tag just added and remove the tag just removed.
+        val text = """
+            ---
+            title: "Atlantik"
+            created: 2025-04-25T16:56:15.332Z
+            updated: 2025-04-26T15:04:16.978Z
+            tags:
+              - "lyrics/snippet"
+            ---
+
+            Du erreichst mich nicht
+
+            #lyrics/snippet #busch
+        """.trimIndent() + "\n"
+        val note = Note.parse(text)
+
+        // The index sees both representations; the editable set is the frontmatter's alone.
+        assertTrue("busch" in note.tags)
+        assertEquals(listOf("lyrics/snippet"), note.editableTags)
+
+        val saved = note.withTags(note.body, note.editableTags + "radio", now)!!
+        // Not promoted into the `tags:` list the author never wrote it into...
+        assertTrue("busch" !in saved.frontmatter.tags)
+        // ...and not struck from the text the author did write it into.
+        assertTrue("#busch" in saved.body)
+        // The tag actually asked for reaches both places.
+        assertTrue("radio" in saved.frontmatter.tags)
+        assertTrue("#radio" in saved.body)
+    }
+
+    @Test
     fun `an unchanged body is not a save at all`() {
         val note = Note.parse(text)
         assertNull(note.withBody(note.body, now))

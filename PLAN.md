@@ -115,7 +115,7 @@ Images are mounted on paper — the light scheme's own `surfaceContainerHighest`
 
 One deviation from `CLAUDE.md`, deliberately: attachments open from a strip at the foot of the note rather than by tapping the link text. The editor is always live, so a tap in it means "put the cursor here"; making a tap sometimes mean "leave the app and open a PDF" is a coin toss played while writing. The links are untouched — this adds an affordance, not a rewrite.
 
-**6 — Tag chips, two-way sync.** Still outstanding, and still the most dangerous write path in the app. The editor currently shows hashtag lines as ordinary text, so the design's "no `#` anywhere" is true of the list and the drawer but not yet of the editor.
+**6 — Tag chips, two-way sync. Done.** The most dangerous write path in the app, and the one that changed the archive rather than only reading it. "No `#` anywhere" is now true of the editor as well as the list and the drawer.
 
 **Nothing is converted, and nothing moves.** Both representations already exist in every note and both stay. A tag line in a body is *hidden from the editor*, never deleted; the frontmatter list is left exactly as it is unless the user changes a chip. The app has no operation that reads one representation and rewrites the other — the only writes it can make are "add the tag just added" and "remove the tag just removed", to both places at once. That is the whole of the two-way sync, and the absence of a reconciliation path is the feature.
 
@@ -128,6 +128,10 @@ One deviation from `CLAUDE.md`, deliberately: attachments open from a strip at t
 **A tag a body carries and the frontmatter does not is chipped and marked not-removable.** It is displayed because the author can see it in their own text, and it is not removable because the app may not promote it into a `tags:` list on their behalf. No note in the archive is in this state any more — the percent rename was what emptied the category — so this now exists for the note edited elsewhere and left disagreeing with itself.
 
 Writing goes through `Vault.save` unchanged in shape — refuse a note that did not round-trip, no-op if nothing changed, re-read and compare by content hash, then temp-file, verify, swap — with the tag set carried alongside the body so `updated` is stamped once for both.
+
+What it cost, honestly: three of the phase's original decisions were elaborate ways of *displaying* a problem the data did not have to have, and the fix was a one-time rename of three tags — see below. The remaining machinery is small, and all of it is about not writing: a tag run leaves the editable text as a segment rather than being hidden in place, the editable set is the frontmatter's and never the union, and `Note.withTags` returns null when nothing moved so an open-and-close still writes nothing.
+
+Two things phase 6 found and did not fix. Returning to the foreground refreshes the index but **does not rebuild an open note's document**, so a file that changes underneath a note you are looking at is not picked up until you leave the note and come back — defensible while somebody is typing, but currently silent, and phase 7's business. And `NoteDocument` has no unit tests: its two pieces of logic, `chips()` and `toggleTag`, are three lines each and everything underneath them is covered, but they are the only tag logic in the app reached by no test.
 
 **7 — Sync, conflicts, polish.** Foreground re-read, pull-to-refresh, keep-both on conflict with the difference surfaced, never auto-delete on a vanished file. Then settings, about, German strings, fastlane metadata and the F-Droid layout.
 
