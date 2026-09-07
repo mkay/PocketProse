@@ -133,6 +133,10 @@ What it cost, honestly: three of the phase's original decisions were elaborate w
 
 Two things phase 6 found and did not fix. Returning to the foreground refreshes the index but **does not rebuild an open note's document**, so a file that changes underneath a note you are looking at is not picked up until you leave the note and come back — defensible while somebody is typing, but currently silent, and phase 7's business. And `NoteDocument` has no unit tests: its two pieces of logic, `chips()` and `toggleTag`, are three lines each and everything underneath them is covered, but they are the only tag logic in the app reached by no test.
 
+**Both representations stay. Decided on 2026-09-07, after the case for dropping them was made and rejected.** The argument against was real and is worth keeping written down: every tag bug this project has had came from the duplication, `TagEdit` is the most delicate code in the app because it edits inside somebody's lyric, and YAML frontmatter is the broader standard — Obsidian, Zettlr, Logseq and Hugo all read `tags:` natively, so inline hashtags are the narrower convention rather than the safer one. Dropping them would have deleted a whole category of bug along with 165 notes' worth of tag lines.
+
+The author kept them anyway. The files are the database, both copies are in the files, and an app that removes one of them because its own code would be simpler has the relationship backwards. So the duplication is a fact of the archive to be preserved, not a defect to be tidied — which is the prime directive applied to the app's own convenience. Do not propose this again without the author raising it first.
+
 **7 — Sync, conflicts, polish.** Foreground re-read, pull-to-refresh, keep-both on conflict with the difference surfaced, never auto-delete on a vanished file. Then settings, about, German strings, fastlane metadata and the F-Droid layout.
 
 Three things phase 6 handed it, all found by running against the real archive rather than the fixture:
