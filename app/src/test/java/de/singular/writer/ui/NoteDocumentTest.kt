@@ -3,7 +3,10 @@
 package de.singular.writer.ui
 
 import de.singular.writer.markdown.Note
+import de.singular.writer.markdown.Segment
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.Instant
@@ -89,6 +92,25 @@ class NoteDocumentTest {
         // being saved is one composition's editor pointed at another composition's file.
         assertEquals("Atlantik.md", documentFor(Note.parse(text)).name)
         assertEquals("Wer geht vor.md", documentFor(Note.parse(text), "Wer geht vor.md").name)
+    }
+
+    @Test
+    fun `a note whose tags come first still offers a buffer to the format bar`() {
+        // The crash: 66 tag runs in the archive sit at the head of their note, so segment 0 is a run
+        // of tags and has no buffer behind it. The format bar reached for buffer 0 while animating
+        // away, and the app died on deselecting text in any of them.
+        val document = documentFor(Note.parse(text))
+        assertTrue(document.segments.first() is Segment.Tags)
+        assertNotNull(document.anyBuffer())
+        assertNull(document.anySelection())
+    }
+
+    @Test
+    fun `a note that is nothing but an image has no buffer, and says so`() {
+        // Null rather than a throw: there is genuinely no text to edit, and the format bar is the
+        // one caller — it simply does not draw.
+        val document = NoteDocument("Casablanca (chords).md", "![](attachments/a.png)\n", emptyList())
+        assertNull(document.anyBuffer())
     }
 
     companion object {

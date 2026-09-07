@@ -120,6 +120,18 @@ class NoteDocument(val name: String, body: String, tags: List<String>) {
 
     /** Where the cursor is, for the format bar — the first buffer that has a selection. */
     fun anySelection(): TextFieldState? = buffers.values.firstOrNull { !it.selection.collapsed }
+
+    /**
+     * Any editable buffer at all, or null when the note has none.
+     *
+     * For the format bar, which keeps composing while it animates away after the selection has gone
+     * and so needs *something* to hold. It used to reach for `bufferAt(0)`, which assumed the note
+     * opens with text — and 66 tag runs in the archive sit at the head of their note, so segment 0
+     * is a run of tags with no buffer behind it. Deselecting in one of those crashed the app.
+     *
+     * Null is a real answer: a body that is nothing but an image line has no text to edit.
+     */
+    fun anyBuffer(): TextFieldState? = buffers.values.firstOrNull()
 }
 
 /**
@@ -252,12 +264,15 @@ fun EditorScreen(
         // Formatting exists only while something is selected. A collapsed cursor is someone
         // writing; a selection is someone looking at a piece of text and considering it.
         val selected = document.anySelection()
+        // Held across the exit animation: the bar is still composed while it slides away, by which
+        // time nothing is selected any more.
+        val target = selected ?: document.anyBuffer()
         AnimatedVisibility(
             visible = editable && selected != null,
             enter = fadeIn() + slideInVertically { it },
             exit = fadeOut() + slideOutVertically { it },
         ) {
-            FormatBar(selected ?: document.bufferAt(0))
+            if (target != null) FormatBar(target)
         }
     }
 }
