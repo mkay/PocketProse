@@ -260,10 +260,13 @@
     <string name="leading_tight">Tight</string>
     <string name="leading_normal">Normal</string>
     <string name="leading_airy">Airy</string>
-    <!-- PLACEHOLDER paragraph, to be replaced with a real one. Shown at the chosen face, size and
-         spacing, so it has to be long enough to wrap several lines — line spacing cannot be seen on
-         a single line — and it is clipped to a fixed height, so an overlong one loses its end. -->
-    <string name="settings_prose_preview">Ein Platzhalter, bis der richtige Absatz hier steht. Er läuft über mehrere Zeilen, damit der Zeilenabstand überhaupt zu sehen ist, und er bleibt kurz genug, dass die Regler darunter nicht wandern.</string>
+    <!-- The sample paragraph, shown at the chosen face, size and spacing. Dylan Moran, trimmed to
+         start at the second sentence so the submarine — the line worth quoting — is still on screen
+         at the largest size, where only three lines fit. A quotation, so it stands in the original
+         in every language; the attribution beside it is not translated either. Long enough to
+         overflow the box at every size, which is what keeps the fade at its foot meaningful. -->
+    <string name="settings_prose_preview" translatable="false">As far as I\'m concerned, I am a writer — whether my writing\'s spoken or written in a blog, paper, book or printed on the side of a submarine.</string>
+    <string name="settings_prose_preview_source" translatable="false">— Dylan Moran</string>
     <!-- Under the size and spacing chips. Same reassurance as the font caption: the file is not
          touched, and the phone's own font size still applies on top of this. -->
     <string name="settings_size_caption">How your notes are set on screen. Your phone\'s own text size still applies on top of this.</string>

@@ -52,6 +52,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import de.singular.writer.ProseFont
@@ -205,6 +206,18 @@ private fun EditorSettings(
 
     SettingsSectionLabel(R.string.settings_section_size)
     ProsePreview(font = proseFont, size = proseSize, leading = proseLeading)
+    // Whose words those are. A quotation running unattributed under a heading reads as the app's
+    // own prose, and this one is somebody's living work. Small, to the right, out of the way of the
+    // thing being judged.
+    Text(
+        text = stringResource(R.string.settings_prose_preview_source),
+        style = MaterialTheme.typography.labelSmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(end = 16.dp, top = 2.dp),
+        textAlign = TextAlign.End,
+    )
     SettingsChoiceLabel(R.string.settings_text_size)
     ProseSizeChips(
         size = proseSize,
