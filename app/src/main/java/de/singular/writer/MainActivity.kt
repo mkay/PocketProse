@@ -185,6 +185,7 @@ private fun PocketProseApp(settings: Settings) {
             name = openNote?.file?.name.orEmpty(),
             body = openNote?.note?.body.orEmpty(),
             tags = openNote?.note?.tags.orEmpty(),
+            title = openNote?.note?.title.orEmpty(),
         )
     }
     val attachments = remember { Attachments(vault, context) }
@@ -255,7 +256,9 @@ private fun PocketProseApp(settings: Settings) {
         // document being keyed on the very name compared here — but the cost of being wrong is
         // somebody's only copy of a song, so it is checked rather than reasoned about.
         if (document.name != note.file.name) return true
-        return when (val result = vault.save(note, document.body(), document.tags)) {
+        return when (
+            val result = vault.save(note, document.body(), document.tags, newTitle = document.title())
+        ) {
             is SaveResult.Unchanged, is SaveResult.Refused -> true
             is SaveResult.Saved -> {
                 // The uri changes: the swap in Vault.save deletes the old document and renames the
@@ -399,7 +402,6 @@ private fun PocketProseApp(settings: Settings) {
         }
 
         EditorScreen(
-            title = openNote.title,
             document = document,
             attachments = attachments,
             links = links,
@@ -453,7 +455,12 @@ private fun PocketProseApp(settings: Settings) {
             ConflictDialog(
                 onKeepBoth = {
                     scope.launch {
-                        val result = vault.saveCopy(openNote, document.body(), document.tags)
+                        val result = vault.saveCopy(
+                            openNote,
+                            document.body(),
+                            document.tags,
+                            newTitle = document.title(),
+                        )
                         conflict = false
                         if (result is SaveResult.Failed) message = result.reason else {
                             refresh()

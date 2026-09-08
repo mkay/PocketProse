@@ -35,7 +35,7 @@ class NoteDocumentTest {
     """.trimIndent() + "\n"
 
     private fun documentFor(note: Note, name: String = "Atlantik.md") =
-        NoteDocument(name, note.body, note.tags)
+        NoteDocument(name, note.body, note.tags, note.title.orEmpty())
 
     @Test
     fun `a document opens with the tags its note carries`() {
@@ -106,7 +106,7 @@ class NoteDocumentTest {
     fun `a note that is nothing but an image has no editable text at all`() {
         // Not a defect: there is genuinely nothing to type into. Whatever draws the fields has to
         // cope with finding none rather than assuming there is at least one.
-        val document = NoteDocument("Casablanca (chords).md", "![](attachments/a.png)\n", emptyList())
+        val document = NoteDocument("Casablanca (chords).md", "![](attachments/a.png)\n", emptyList(), "Casablanca")
         assertEquals(-1, document.firstProseIndex)
     }
 

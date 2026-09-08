@@ -151,4 +151,80 @@ class SaveTest {
         assertEquals("more words\n", saved.render())
         assertTrue("no frontmatter may be added", !saved.render().startsWith("---"))
     }
+    @Test
+    fun `retyping the same title writes nothing`() {
+        val note = Note.parse(text)
+        assertNull(note.withTags(note.body, note.tags, now, "Atlantik"))
+    }
+
+    @Test
+    fun `a blank title is somebody halfway through typing, not an erasure`() {
+        val note = Note.parse(text)
+        // Every note in the archive has a title, and a note that lost its own would be a blank row
+        // in the list with nothing to say which file it is.
+        assertNull(note.withTags(note.body, note.tags, now, "   "))
+        assertNull(note.withTags(note.body, note.tags, now, ""))
+    }
+
+    @Test
+    fun `a new title moves updated and leaves created alone`() {
+        val note = Note.parse(text)
+        val saved = note.withTags(note.body, note.tags, now, "Atlantik II")!!
+
+        assertEquals("Atlantik II", saved.title)
+        assertEquals(note.body, saved.body)
+        assertTrue(saved.render().contains("created: 2025-04-25T16:56:15.332Z"))
+        assertTrue(saved.render().contains("updated: 2026-09-07T14:30:00.123Z"))
+        // The tags are untouched: a title is not a reason to rewrite a list.
+        assertTrue(saved.render().contains("  - \"lyrics/snippet\""))
+    }
+
+    @Test
+    fun `the filename is not the app's business, so a title may say anything`() {
+        val note = Note.parse(text)
+        // 11 titles in the archive end in a `?` their filenames cannot hold. Nothing here knows
+        // about files at all — which is the point: renaming one is forbidden.
+        val saved = note.withTags(note.body, note.tags, now, "Wer geht vor?")!!
+        assertEquals("Wer geht vor?", saved.title)
+        assertEquals("title: \"Wer geht vor?\"", saved.render().lines()[1])
+    }
+
+    @Test
+    fun `a title with a quote or a backslash survives being written and read again`() {
+        val note = Note.parse(text)
+        val awkward = """He said "no" \ twice"""
+        val saved = note.withTags(note.body, note.tags, now, awkward)!!
+
+        assertEquals(awkward, saved.title)
+        // And again, from the bytes rather than from the object: the escaping has to be the exact
+        // inverse of the unescaping, or a quote breeds a pair every time the note is saved.
+        assertEquals(awkward, Note.parse(saved.render()).title)
+        assertEquals(awkward, Note.parse(Note.parse(saved.render()).withTags(note.body, note.tags, now, awkward)?.render() ?: saved.render()).title)
+    }
+
+    @Test
+    fun `an unquoted title line gains quotes only when the value needs them`() {
+        val bare = """
+            ---
+            title: Atlantik
+            created: 2025-04-25T16:56:15.332Z
+            updated: 2025-04-26T15:04:16.978Z
+            tags: []
+            ---
+
+            Du erreichst mich nicht
+        """.trimIndent() + "\n"
+        val note = Note.parse(bare)
+
+        // Nothing to be afraid of: the line keeps the shape the file gave it.
+        val plain = note.withTags(note.body, note.tags, now, "Nordsee")!!
+        assertEquals("title: Nordsee", plain.render().lines()[1])
+
+        // A colon would make YAML read a mapping, so the value is quoted despite the line's style.
+        // No note in the archive is written this way; a file from somewhere else may well be.
+        val risky = note.withTags(note.body, note.tags, now, "Atlantik: doch")!!
+        assertEquals("""title: "Atlantik: doch"""", risky.render().lines()[1])
+        assertEquals("Atlantik: doch", Note.parse(risky.render()).title)
+    }
+
 }

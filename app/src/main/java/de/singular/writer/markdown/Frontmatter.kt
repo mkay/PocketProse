@@ -218,12 +218,40 @@ class Frontmatter private constructor(
             else -> value
         }
 
-        /** [value] quoted the way [old] was quoted — the app never changes a value's quoting style. */
+        /**
+         * [value] quoted the way [old] was quoted — the app never changes a value's quoting style.
+         *
+         * The one exception is an unquoted line handed a value that cannot be written bare: YAML
+         * reads `title: Wer geht vor: doch` as a mapping and `title: #100` as a comment, so a value
+         * like that gets quotes it did not have. Every note in the archive quotes its title already,
+         * so this fires only for a file that came from somewhere else — and adding a pair of quotes
+         * is the only alternative to writing a block the next read cannot parse.
+         */
         private fun requote(old: String, value: String): String = when {
-            old.startsWith('"') -> "\"" + escape(value) + "\""
+            old.startsWith('"') -> quoted(value)
             old.startsWith('\'') -> "'" + value.replace("'", "''") + "'"
+            needsQuotes(value) -> quoted(value)
             else -> value
         }
+
+        /**
+         * Whether a bare value would be read back as something other than itself.
+         *
+         * Deliberately broad rather than a reading of the YAML grammar: quoting something that did
+         * not need it costs a pair of quotes on one line, and missing a case costs a note whose
+         * frontmatter no longer parses.
+         */
+        private fun needsQuotes(value: String): Boolean =
+            value.isEmpty() ||
+                value != value.trim() ||
+                value.first() in INDICATORS ||
+                value.contains(": ") ||
+                value.endsWith(':') ||
+                value.contains(" #") ||
+                value.any { it.isISOControl() }
+
+        /** The characters YAML gives a meaning to when a scalar begins with one. */
+        private const val INDICATORS = "-?:,[]{}#&*!|>'\"%@`"
 
         /** Quoting for a key being added, matched to how `title` is written in the same block. */
         private fun quoteLike(titleLine: String?, value: String): String =

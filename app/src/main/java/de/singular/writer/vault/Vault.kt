@@ -294,11 +294,13 @@ class Vault(context: Context) {
         newBody: String,
         newTags: List<String> = note.note.tags,
         now: Instant = Instant.now(),
+        newTitle: String? = note.note.title,
     ): SaveResult =
         withContext(Dispatchers.IO) {
             if (!note.roundTrips) return@withContext SaveResult.Refused
 
-            val updated = note.note.withTags(newBody, newTags, now) ?: return@withContext SaveResult.Unchanged
+            val updated = note.note.withTags(newBody, newTags, now, newTitle)
+                ?: return@withContext SaveResult.Unchanged
             val text = updated.render()
 
             val current = read(note.file.uri)
@@ -474,6 +476,7 @@ class Vault(context: Context) {
         newBody: String,
         newTags: List<String> = note.note.tags,
         now: Instant = Instant.now(),
+        newTitle: String? = note.note.title,
     ): SaveResult =
         withContext(Dispatchers.IO) {
             if (!note.roundTrips) return@withContext SaveResult.Refused
@@ -489,7 +492,7 @@ class Vault(context: Context) {
             // The copy carries the tag change too. A conflict is not a reason to lose the chip the
             // user just tapped — that would make "keep both" quietly mean "keep neither version of
             // the tags", and the user would have no way of knowing.
-            val text = (note.note.withTags(newBody, newTags, now) ?: note.note).render()
+            val text = (note.note.withTags(newBody, newTags, now, newTitle) ?: note.note).render()
 
             val created = runCatching {
                 createNamed(parent, name)

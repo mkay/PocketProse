@@ -82,22 +82,38 @@ data class Note(
      * The frontmatter keeps its own order, new tags going on the end. Sorting it would rewrite every
      * line of a list the user only added to.
      *
-     * Returns `null` when neither the body nor the tags actually changed, so an open-and-close still
-     * writes nothing. See [withBody] for why that rule is worth this much care.
+     * [newTitle] rides along here rather than in a `withTitle` of its own, because this is the one
+     * place where a change becomes a write and where "nothing changed, write nothing" is decided.
+     * Two write paths for one save would mean two places to get that rule right. A blank title is
+     * ignored, and a title identical to the current one is not a change.
+     *
+     * Returns `null` when neither the body, the tags nor the title actually changed, so an
+     * open-and-close still writes nothing. See [withBody] for why that rule is worth this much care.
      */
-    fun withTags(newBody: String, newTags: List<String>, now: Instant): Note? {
+    fun withTags(
+        newBody: String,
+        newTags: List<String>,
+        now: Instant,
+        newTitle: String? = title,
+    ): Note? {
         val wanted = newTags.map(Tags::normalize).distinct()
         val current = tags
         val added = wanted - current.toSet()
         val removed = current - wanted.toSet()
 
+        // An emptied title is not a title. The field can be blank while somebody is retyping one,
+        // and a note that saved in that moment would be a blank row in the list with nothing to say
+        // which file it is — every note in the archive has a title. Blank means "leave it alone".
+        val retitled = newTitle?.trim()?.takeIf { it.isNotBlank() && it != title }
+
         val kept = keepTrailingNewline(TagEdit.apply(keepTrailingNewline(newBody), added, removed))
-        if (kept == body && added.isEmpty() && removed.isEmpty()) return null
+        if (kept == body && added.isEmpty() && removed.isEmpty() && retitled == null) return null
 
         val declared = frontmatter.tags.map(Tags::normalize).distinct()
         val ordered = declared.filterNot { it in removed } + added
-        val block = if (added.isEmpty() && removed.isEmpty()) frontmatter else frontmatter.withTags(ordered)
-        return copy(frontmatter = block.withKey("updated", stamp(now)), body = kept)
+        val tagged = if (added.isEmpty() && removed.isEmpty()) frontmatter else frontmatter.withTags(ordered)
+        val titled = if (retitled == null) tagged else tagged.withKey("title", retitled)
+        return copy(frontmatter = titled.withKey("updated", stamp(now)), body = kept)
     }
 
     /**

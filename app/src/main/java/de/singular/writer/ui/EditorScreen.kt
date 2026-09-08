@@ -21,6 +21,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.input.InputTransformation
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -64,6 +65,7 @@ import androidx.compose.foundation.text.contextmenu.provider.LocalTextContextMen
 import androidx.compose.foundation.text.contextmenu.provider.LocalTextContextMenuToolbarProvider
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -94,8 +96,23 @@ import de.singular.writer.vault.Attachments
  * song into another's, and the only way to be sure that cannot happen is to carry the identity
  * around with the state rather than to reason about which composition holds what.
  */
-class NoteDocument(val name: String, body: String, tags: List<String>) {
+class NoteDocument(val name: String, body: String, tags: List<String>, title: String) {
     val segments: List<Segment> = Segments.split(body)
+
+    /**
+     * The note's title, live, as the field at the top of the page holds it.
+     *
+     * A buffer like the prose ones and saved on the same occasions, so retyping a title costs no
+     * more writes than retyping a line does. It is the frontmatter's `title` and never a heading in
+     * the body: no note in the archive carries an ATX heading and this must not write the first one.
+     *
+     * A blank one is somebody halfway through retyping, not an instruction to erase the title —
+     * `Note.withTags` is where that is decided, and it leaves the old one alone.
+     */
+    val titleBuffer: TextFieldState = TextFieldState(title)
+
+    /** The title as it stands, for the save path. */
+    fun title(): String = titleBuffer.text.toString()
 
 /**
      * The tags on this note, as the chip row shows them and the sheet edits them.
@@ -152,7 +169,8 @@ class NoteDocument(val name: String, body: String, tags: List<String>) {
  *
  * **The design is what is absent.** No toolbar, no formatting controls, no word count, no mode
  * switch — tapping a note in the list puts the cursor in it and the page is the writing. The only
- * chrome is a back arrow and the title. Formatting appears when text is selected and goes away
+ * chrome is a back arrow and a menu holding the one irreversible thing; the title is not chrome at
+ * all, but the first line of the note. Formatting appears when text is selected and goes away
  * again, which is the one moment it is wanted.
  *
  * The Markdown is invisible: see [MarkdownTransformation], which hides the markers and brings them
@@ -161,7 +179,6 @@ class NoteDocument(val name: String, body: String, tags: List<String>) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditorScreen(
-    title: String,
     document: NoteDocument,
     attachments: Attachments,
     links: List<LinkRef>,
@@ -224,16 +241,11 @@ fun EditorScreen(
     ) {
     Column(modifier.fillMaxSize()) {
         TopAppBar(
-            title = {
-                Text(
-                    // No style override: the bar's own titleLarge, which is what a screen title is
-                    // meant to look like. Shrinking it to titleMedium made the note read as a
-                    // subordinate detail rather than as the thing being edited.
-                    text = title,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            },
+            // Empty on purpose. The title is in the note now, in the note's own face, scrolling with
+            // it — so repeating it here would name the page twice, and the bar's job on a writing
+            // screen is to hold the way out and nothing else. The tags left the top of this screen
+            // for the same reason.
+            title = {},
             navigationIcon = {
                 IconButton(onClick = onBack) {
                     Icon(
@@ -283,6 +295,8 @@ fun EditorScreen(
                 .weight(1f)
                 .verticalScroll(rememberScrollState()),
         ) {
+            NoteTitleField(document = document, editable = editable)
+
             document.segments.forEachIndexed { i, segment ->
                 when (segment) {
                     is Segment.Prose -> BasicTextField(
@@ -638,6 +652,75 @@ private fun TextFieldState.prefixLine(prefix: String) {
     edit {
         replace(0, length, result.text)
         selection = TextRange(result.selectionStart, result.selectionEnd)
+    }
+}
+
+/**
+ * The note's title, at the top of the page and part of it.
+ *
+ * **In the document rather than in the bar.** A title is what a note *is* in this archive — 40 of
+ * the 168 are a title and a tag and nothing else — so it belongs on the page in the page's own face,
+ * scrolling away with the words under it, not pinned above them as chrome. The tags left the top of
+ * this screen for the same reason. It is the last piece of the note that could not be edited where
+ * it is read.
+ *
+ * Set in the prose face at 1.5×, so it follows the reader's face, size and spacing settings and
+ * reads as the same document as the lyric below it rather than as a label attached to it.
+ *
+ * **It is frontmatter, never a heading.** Nothing here writes a `#` line into the body; the value
+ * goes to `title:`, and `Note.withTags` decides whether that is a change worth a write. No note in
+ * the archive carries an ATX heading and this must not be the one that adds the first.
+ *
+ * **No newline can enter it.** `title:` is one scalar line, and a newline in it would write a block
+ * that the next read cannot parse — the note would come back with a title ending mid-word and a
+ * stray key after it. Pasting two lines here joins them with a space instead.
+ */
+@Composable
+private fun NoteTitleField(document: NoteDocument, editable: Boolean) {
+    val scheme = MaterialTheme.colorScheme
+    val prose = LocalProseStyle.current
+    val style = prose.copy(
+        fontSize = prose.fontSize * 1.5f,
+        lineHeight = prose.lineHeight * 1.5f,
+        fontWeight = FontWeight.Medium,
+        color = scheme.onSurface,
+    )
+    BasicTextField(
+        state = document.titleBuffer,
+        enabled = editable,
+        textStyle = style,
+        cursorBrush = SolidColor(scheme.primary),
+        inputTransformation = SingleLine,
+        decorator = { field ->
+            Box {
+                if (document.titleBuffer.text.isEmpty()) {
+                    Text(
+                        text = stringResource(R.string.new_note_label),
+                        style = style,
+                        color = scheme.onSurfaceVariant.copy(alpha = 0.6f),
+                    )
+                }
+                field()
+            }
+        },
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = 8.dp),
+    )
+}
+
+/**
+ * Keeps a field to one line without making it scroll sideways.
+ *
+ * `TextFieldLineLimits.SingleLine` would also forbid the newline, and would wrap nothing: a 69
+ * character title — the longest in the archive — would run off the side of the phone with no way to
+ * see its end. So the field wraps like prose and the newline is taken out of the input instead.
+ * A pasted line break becomes a space, which is what somebody pasting two lines into a title meant.
+ */
+private val SingleLine = InputTransformation {
+    val text = asCharSequence()
+    for (i in text.length - 1 downTo 0) {
+        if (text[i] == '\n' || text[i] == '\r') replace(i, i + 1, " ")
     }
 }
 
