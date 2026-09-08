@@ -3,24 +3,36 @@
   Pocket Prose's launcher icon: a closed notebook seen from above and slightly to one side, with a
   black ribbon marker laid across the cover and folded over the fore edge.
 
-  Generated from assets/icon_mk3.svg, which is the editable source and lives beside this repository
+  Generated from assets/icon_mk5.svg, which is the editable source and lives beside this repository
   rather than in it. Re-export from there; do not hand-edit the path data below.
 
-  mk3 is drawn on transparency already, so unlike mk2 there are no background rects to strip. An
+  mk5 is drawn on transparency already, so unlike mk2 there are no background rects to strip. An
   adaptive icon keeps its ground in a separate layer regardless: the tile colour lives in
   values/ic_launcher_background.xml and the two must be changed together. mk2 carried a cream
-  #E9DEC7 rect that became that colour; mk3 offers no such hint, so the tile is now a decision this
-  repo holds on its own rather than one inherited from the source.
+  #E9DEC7 rect that became that colour; mk3 and mk5 offer no such hint, so the tile is a decision
+  this repo holds on its own rather than one inherited from the source.
 
-  Eight paths, bottom to top: each of the two dark sheets is a #3F3839 copy sitting 2 units lower
-  than the sheet itself, which shows only as a hairline along its lower edge and is what gives the
-  layers a defined bottom rather than a soft fade. Then the white middle sheet, a 12% black shading
-  wash across the stack, and the ribbon in two pieces — the diagonal across the cover and the
-  vertical fold over the fore edge.
+  WHAT MK5 CHANGED, and why the tile did not. The bottom sheet was invisible: #5D5B54 sits at
+  2.57:1 on the #1C1917 tile, and mk3's #3F3839 hairline under it at 1.53:1 — dark on near-black has
+  nowhere to go. mk5 replaces that hairline with a light border, #907878 at 4.28:1, so the edge is
+  lit rather than the ground. A blurred glow behind the stack was tried first (mk4) and rejected:
+  Android's vector format has no filters at all, and baked, the glow lifts the ground to #37342B and
+  drops the sheet it was meant to reveal to 1.83:1 against it — while the launcher mask cuts the
+  halo off with a hard edge. Lightening the tile instead was rendered too: on cream everything reads
+  except the white sheet, which falls to 1.13:1 and takes the icon's brightest element with it, and
+  a mid grey puts every element between 1.1 and 1.9:1. Dark tile, lit edge.
 
-  There is a ninth path in the source with no fill attribute, duplicating the cover outline. SVG
-  inherits fill="none" from the root there, so it draws nothing; it is dropped rather than exported
-  as an opaque black shape, which is what a naive conversion produces.
+  Nine paths, bottom to top: a dark wedge at the fore edge, then the #907878 border under the bottom
+  sheet, the sheet itself, the near-white middle sheet (#F6E9E9), a 28% #3F3839 shading wash across
+  the stack, the #3F3839 hairline under the cover, the cover's own gradient, and the ribbon in two
+  pieces — the vertical fold over the fore edge and the diagonal across the cover. mk5's ribbon is
+  #3F3839 rather than black, which reads as a gap rather than a stroke where it crosses the tile.
+
+  There is a path in the source with no fill attribute, duplicating the cover outline. SVG inherits
+  fill="none" from the root there, so it draws nothing; it is dropped rather than exported as an
+  opaque black shape, which is what a naive conversion produces. It cost an hour twice: the same
+  trap catches any renderer handed the paths without the root element, including the comparison
+  renders made while choosing mk5.
 
   SIZE. This is the number that has been got wrong twice, so read the whole paragraph before
   changing it. The layers are 108dp, but a launcher only ever shows the **centre 72dp** — the outer
@@ -42,7 +54,9 @@
   Re-measure X0/Y0/W/H by rendering the source and taking its bounding box if the artwork changes;
   they are facts about the file (63, 148, 653 x 485), not constants. mk3's underlay paths made it
   two units taller than mk2's, which is the whole of the difference between this translateY and
-  mk2's — small enough to look like a typo and not one.
+  mk2's — small enough to look like a typo and not one. mk5 measures identical to mk3 — the border
+  replaced the hairline in place rather than adding to the outline — so the placement below is
+  mk3's, unchanged and re-measured rather than assumed.
 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:aapt="http://schemas.android.com/aapt"
@@ -53,47 +67,42 @@
     <group android:translateX="17.018" android:translateY="16.923"
         android:scaleX="0.094946" android:scaleY="0.094946">
         <path
-            android:pathData="M313.3 287.249C330.834 277.53 353.766 273.871 373.65 274.806C388.73 275.574 403.464 279.606 416.833 286.623C424.091 290.411 432.302 296.054 439.312 300.566C453.238 309.534 467.114 318.579 480.942 327.701C524.133 355.827 571.251 386.941 615.005 413.462C634.714 425.244 655.161 435.741 676.22 444.885C686.06 449.229 705.539 455.384 715.764 460.715V462.705C706.53 472.264 693.321 479.927 682.132 487.098C665.295 497.889 647.546 507.742 630.625 518.352C616.894 525.913 600.32 536.42 586.487 544.61L508.795 590.503C501.977 594.593 495.201 598.785 488.384 602.862C472.756 612.216 458.728 622.589 440.978 627.757C419.926 633.891 397.178 634.155 376.171 627.673C361.593 623.17 349.209 614.728 336.521 606.795L306.136 587.788L206.939 525.931C188.98 514.621 164.194 497.942 146.209 488.032C130.24 477.835 114.115 467.882 97.8428 458.176C88.475 452.61 70.4869 443.363 63.2363 436.566L63.2363 434.57C72.4772 427.904 93.5469 417.446 101.666 412.751L158.045 379.609L263.584 316.428C279.903 306.674 296.672 296.464 313.3 287.249Z"
+            android:pathData="M715.298 461.48V337.109L596.704 408.639L715.298 461.48Z"
             android:fillColor="#FF3F3839" />
+        <path
+            android:pathData="M313.3 287.249C330.834 277.53 353.766 273.871 373.65 274.806C388.73 275.574 403.464 279.606 416.833 286.623C424.091 290.411 432.302 296.054 439.312 300.566C453.238 309.534 467.114 318.579 480.942 327.701C524.133 355.827 571.251 386.941 615.005 413.462C634.714 425.244 655.161 435.741 676.22 444.885C686.06 449.229 705.539 455.384 715.764 460.715V462.705C706.53 472.264 693.321 479.927 682.132 487.098C665.295 497.889 647.546 507.742 630.625 518.352C616.894 525.913 600.32 536.42 586.487 544.61L508.795 590.503C501.977 594.593 495.201 598.785 488.384 602.862C472.756 612.216 458.728 622.589 440.978 627.757C419.926 633.891 397.178 634.155 376.171 627.673C361.593 623.17 349.209 614.728 336.521 606.795L306.136 587.788L206.939 525.931C188.98 514.621 164.194 497.942 146.209 488.032C130.24 477.835 114.115 467.882 97.8428 458.176C88.475 452.61 70.4869 443.363 63.2363 436.566L63.2363 434.57C72.4772 427.904 93.5469 417.446 101.666 412.751L158.045 379.609L263.584 316.428C279.903 306.674 296.672 296.464 313.3 287.249Z"
+            android:fillColor="#FF907878" />
         <path
             android:pathData="M313.3 285.249C330.834 275.53 353.766 271.871 373.65 272.806C388.73 273.574 403.463 277.606 416.833 284.623C424.091 288.411 432.302 294.054 439.312 298.566C453.237 307.534 467.114 316.579 480.942 325.701C524.133 353.827 571.251 384.941 615.005 411.462C634.714 423.244 655.161 433.741 676.22 442.885C687.169 447.718 706.08 455.082 715.764 460.705C706.53 470.264 693.321 477.927 682.132 485.098C665.295 495.889 647.546 505.742 630.625 516.352C616.894 523.913 600.32 534.42 586.487 542.61L508.795 588.503C501.977 592.593 495.201 596.785 488.384 600.862C472.756 610.216 458.728 620.589 440.978 625.757C419.926 631.891 397.178 632.155 376.171 625.673C361.593 621.17 349.209 612.728 336.521 604.795L306.136 585.788L206.939 523.931C188.98 512.621 164.194 495.942 146.209 486.032C130.239 475.835 114.115 465.882 97.8428 456.176C88.475 450.61 70.4869 441.363 63.2363 434.566C70.3432 428.069 92.1681 416.244 101.666 410.751L158.045 377.609L263.584 314.428C279.903 304.674 296.672 294.464 313.3 285.249Z"
             android:fillColor="#FF5D5B54" />
         <path
             android:pathData="M313.3 228.581C330.834 218.862 353.766 215.203 373.65 216.138C388.73 216.906 403.463 220.938 416.833 227.955C424.091 231.743 432.302 237.387 439.312 241.898C453.237 250.867 467.114 259.912 480.942 269.033C524.133 297.16 571.251 328.273 615.005 354.795C634.714 366.577 655.161 377.073 676.22 386.218C687.169 391.05 706.08 398.414 715.764 404.037C706.53 413.596 693.321 421.26 682.132 428.43C665.295 439.222 647.546 449.074 630.625 459.684C616.894 467.245 600.32 477.753 586.487 485.942L508.795 531.836C501.977 535.925 495.201 540.117 488.384 544.194C472.756 553.548 458.728 563.921 440.978 569.09C419.926 575.224 397.178 575.487 376.171 569.006C361.593 564.503 349.209 556.061 336.521 548.128L306.136 529.12L206.939 467.263C188.98 455.953 164.194 439.274 146.209 429.364C130.239 419.167 114.115 409.214 97.8428 399.509C88.475 393.942 70.4869 384.695 63.2363 377.898C63.2363 377.898 127.992 338.608 158.045 320.941L263.584 257.761C279.903 248.006 296.672 237.796 313.3 228.581Z"
-            android:fillColor="#FFFFFFFF" />
+            android:fillColor="#FFF6E9E9" />
         <path
             android:pathData="M319.28 224.263C334.978 215.562 355.508 212.286 373.31 213.124C386.811 213.811 400.001 217.421 411.971 223.703C418.469 227.094 425.82 232.147 432.095 236.186C444.563 244.215 456.986 252.313 469.366 260.479C508.033 285.66 550.217 313.515 589.389 337.259C607.034 347.807 625.286 362.406 640.144 370.251C649.88 373.85 675.812 386.077 675.812 386.077C675.77 386.058 649.834 403.565 649.834 403.565C634.76 413.226 620.04 422.2 604.891 431.699C592.597 438.468 577.094 449.094 564.71 456.425L495.998 498.27C476.191 510.152 456.825 522.346 433.587 529.112C414.739 534.604 394.374 534.84 375.567 529.037C362.516 525.006 351.429 517.448 340.069 510.346L312.866 493.328L224.058 437.95C207.98 427.824 185.789 412.891 169.687 404.019C155.39 394.89 140.955 385.979 126.386 377.29C118 372.307 101.895 364.028 95.404 357.943C101.767 352.127 121.306 341.54 129.809 336.622L180.284 306.951L274.77 250.387C289.381 241.654 304.393 232.513 319.28 224.263Z"
-            android:fillAlpha="0.12"
-            android:fillColor="#FF000000" />
-        <path
-            android:pathData="M313.3 163.137C330.834 153.419 353.766 149.759 373.65 150.695C388.73 151.462 403.463 155.495 416.833 162.511C424.091 166.3 432.302 171.943 439.312 176.455C453.237 185.423 467.114 194.468 480.942 203.589C524.133 231.716 571.251 262.83 615.005 289.351C634.714 301.133 655.161 311.629 676.22 320.774C685.835 325.018 705.509 331.385 715.764 336.64C715.764 336.64 715.81 338.545 715.764 338.593C706.53 348.153 693.32 355.816 682.132 362.987C665.295 373.778 647.546 383.631 630.625 394.241C616.894 401.802 600.32 412.309 586.487 420.499L508.795 466.392C501.977 470.481 495.201 474.673 488.384 478.75C472.756 488.104 458.728 498.477 440.978 503.646C419.926 509.78 397.178 510.044 376.171 503.562C361.593 499.059 349.209 490.617 336.521 482.684L306.136 463.676L206.94 401.82C188.981 390.509 164.194 373.83 146.209 363.92C130.239 353.723 114.115 343.77 97.8428 334.065C88.475 328.499 70.6059 318.841 63.3553 312.044C63.3442 311.84 63.2422 310.461 63.2422 310.461C72.0997 303.83 93.1803 293.547 101.666 288.639L158.045 255.498L263.584 192.317C279.903 182.562 296.672 172.353 313.3 163.137Z"
+            android:fillAlpha="0.28"
             android:fillColor="#FF3F3839" />
         <path
-            android:pathData="M313.3 161.137C330.834 151.419 353.766 147.759 373.65 148.695C388.73 149.462 403.463 153.495 416.833 160.511C424.091 164.3 432.302 169.943 439.312 174.455C453.237 183.423 467.114 192.468 480.942 201.589C524.133 229.716 571.251 260.83 615.005 287.351C634.714 299.133 655.161 309.629 676.22 318.774C687.169 323.607 706.08 330.971 715.764 336.593C706.53 346.153 693.321 353.816 682.132 360.987C665.295 371.778 647.546 381.631 630.625 392.241C616.894 399.802 600.32 410.309 586.487 418.499L508.795 464.392C501.977 468.481 495.201 472.673 488.384 476.75C472.756 486.104 458.728 496.477 440.978 501.646C419.926 507.78 397.178 508.044 376.171 501.562C361.593 497.059 349.209 488.617 336.521 480.684L306.136 461.676L206.939 399.82C188.98 388.509 164.194 371.83 146.209 361.92C130.239 351.723 114.115 341.77 97.8428 332.065C88.475 326.499 70.4869 317.251 63.2363 310.455C70.3432 303.958 92.1681 292.132 101.666 286.639L158.045 253.498L263.584 190.317C279.903 180.562 296.672 170.353 313.3 161.137Z">
+            android:pathData="M313.3 163.137C330.834 153.419 353.766 149.759 373.65 150.695C388.73 151.462 403.463 155.495 416.833 162.511C424.091 166.3 432.302 171.943 439.312 176.455C453.237 185.423 467.114 194.468 480.942 203.589C524.133 231.716 571.251 262.83 615.005 289.351C634.714 301.133 655.161 311.629 676.22 320.774C685.835 325.018 705.509 331.385 715.764 336.64C715.764 336.64 715.81 338.546 715.764 338.593C706.53 348.153 693.32 355.816 682.132 362.987C665.295 373.778 647.546 383.631 630.625 394.241C616.894 401.802 600.32 412.309 586.487 420.499L508.795 466.392C501.977 470.481 495.201 474.673 488.384 478.75C472.756 488.104 458.728 498.477 440.978 503.646C419.926 509.78 397.178 510.044 376.171 503.562C361.593 499.059 349.209 490.617 336.521 482.684L306.136 463.676L206.94 401.82C188.981 390.509 164.194 373.83 146.209 363.92C130.239 353.723 114.115 343.77 97.8428 334.065C88.475 328.499 70.6059 318.841 63.3553 312.044C63.3442 311.84 63.2422 310.461 63.2422 310.461C72.0997 303.83 93.1803 293.547 101.666 288.639L158.045 255.498L263.584 192.317C279.903 182.562 296.672 172.353 313.3 163.137Z"
+            android:fillColor="#FF3F3839" />
+        <path
+            android:pathData="M313.3 161.137C330.834 151.419 353.766 147.759 373.65 148.695C388.73 149.462 403.463 153.495 416.833 160.511C424.091 164.3 432.302 169.943 439.312 174.455C453.237 183.423 467.114 192.468 480.942 201.589C524.133 229.716 571.251 260.83 615.005 287.351C634.714 299.133 655.161 309.629 676.22 318.774C687.169 323.607 706.08 330.971 715.764 336.593C706.53 346.153 693.321 353.816 682.132 360.987C665.295 371.778 647.546 381.631 630.625 392.241C616.894 399.802 600.32 410.309 586.487 418.499L508.795 464.392C501.977 468.481 495.201 472.673 488.384 476.75C472.756 486.104 458.728 496.477 440.978 501.646C419.926 507.78 397.178 508.044 376.171 501.562C361.593 497.059 349.209 488.617 336.521 480.684L306.136 461.676L206.939 399.82C188.98 388.509 164.194 371.83 146.209 361.92C130.239 351.723 114.115 341.77 97.8428 332.065C88.475 326.499 70.4869 317.251 63.2363 310.455C70.3432 303.958 92.1681 292.132 101.666 286.639L158.045 253.498L263.584 190.317C279.903 180.562 296.672 170.353 313.3 161.137Z"
+            >
             <aapt:attr name="android:fillColor">
                 <gradient
+                    android:type="linear"
                     android:startX="389.5" android:startY="148.553"
-                    android:endX="389.5" android:endY="506.335"
-                    android:type="linear">
-                    <item android:offset="0.0" android:color="#FF7B7972" />
-                    <item android:offset="1.0" android:color="#FF5D5B54" />
+                    android:endX="389.5" android:endY="506.335">
+                    <item android:offset="0" android:color="#FF7B7972" />
+                    <item android:offset="1" android:color="#FF5D5B54" />
                 </gradient>
             </aapt:attr>
         </path>
         <path
-            android:pathData="M457.772 490.458L490.952 475.255L488.86 600.748L470.783 611.953L457.772 619.124V490.458Z"
-            android:fillColor="#FF000000" />
+            android:pathData="M457.772 490.458L490.952 475.255L489.242 602.579L471.622 613.443L457.772 621.172V490.458Z"
+            android:fillColor="#FF3F3839" />
         <path
-            android:pathData="M143.352 262.295L491.329 475.133L465.937 490.628L457.993 494.834L113.44 279.742L143.352 262.295Z">
-            <aapt:attr name="android:fillColor">
-                <gradient
-                    android:startX="122.57" android:startY="265.125"
-                    android:endX="482.198" android:endY="489.751"
-                    android:type="linear">
-                    <item android:offset="0.0" android:color="#FF252525" />
-                    <item android:offset="1.0" android:color="#FF000000" />
-                </gradient>
-            </aapt:attr>
-        </path>
+            android:pathData="M143.352 262.295L491.329 475.133L465.937 490.628L457.993 494.834L113.44 279.742L143.352 262.295Z"
+            android:fillColor="#FF3F3839" />
     </group>
 </vector>

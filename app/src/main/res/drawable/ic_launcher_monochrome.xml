@@ -27,6 +27,15 @@
   mk3's 12 per cent shading wash is ignored — it covers most of the stack, and any alpha it
   contributes would fill the gaps back in.
 
+  STILL MK3'S, AFTER THE FOREGROUND MOVED TO MK5, and deliberately. What mk5 changed is colour: the
+  bottom sheet's #3F3839 hairline became a #907878 border so it would show against the dark tile,
+  and this layer discards colour by definition — the same geometry, lit differently, is the same
+  silhouette. Checked rather than assumed: mk5's bottom underlay is byte-identical to mk3's, and the
+  two silhouettes rendered at launcher scale differ in 285 pixels of 104,976, a hairline along the
+  fore edge where mk5 adds a small wedge. Below anything the themed pass can show. If mk5's outline
+  is ever genuinely edited, this has to be rebuilt from it — the boolean recipe above is the whole
+  of the method, and the numbers below it are judged at 48px.
+
   THE TWO NUMBERS. 16 source units is 1.5dp at this scale, and 6 is the radius the ribbon is
   widened by before it is cut out. Both were chosen by rendering at 48px, not by eye at full size:
   gaps of 10 close up at launcher scale and the stack goes back to a lump, 22 eats into the sheets;
