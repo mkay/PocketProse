@@ -19,6 +19,8 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import de.singular.writer.ProseFont
+import de.singular.writer.ProseLeading
+import de.singular.writer.ProseSize
 import de.singular.writer.R
 import de.singular.writer.ThemeMode
 
@@ -282,13 +284,32 @@ private val EbGaramond = FontFamily(
 val LocalProseStyle = staticCompositionLocalOf { TextStyle.Default }
 
 /**
- * The prose style for one face, whichever face is currently chosen or not.
+ * The prose style for one face at one size and leading, whichever is currently chosen or not.
  *
- * Public because the settings screen previews all three at once and has to be able to ask for a
- * style it is not currently wearing. [LocalProseStyle] answers only for the chosen one.
+ * Public because the settings screen previews all three faces at once and has to be able to ask for
+ * a style it is not currently wearing. [LocalProseStyle] answers only for the chosen one.
+ *
+ * The reader's two settings are applied last, on top of the per-face correction below, and both are
+ * multipliers — see [ProseSize] and [ProseLeading] for why neither is an absolute number. Size
+ * carries leading with it so a face keeps its proportions as it grows; [ProseLeading] then adds or
+ * removes air from that.
  */
 @Composable
-fun proseStyleFor(font: ProseFont): TextStyle {
+fun proseStyleFor(
+    font: ProseFont,
+    size: ProseSize = ProseSize.NORMAL,
+    leading: ProseLeading = ProseLeading.NORMAL,
+): TextStyle {
+    val corrected = correctedFor(font)
+    return corrected.copy(
+        fontSize = corrected.fontSize * size.scale,
+        lineHeight = corrected.lineHeight * size.scale * leading.scale,
+    )
+}
+
+/** The face at its own size and leading, before the reader has said anything about either. */
+@Composable
+private fun correctedFor(font: ProseFont): TextStyle {
     val base = MaterialTheme.typography.bodyLarge
     return when (font) {
         ProseFont.SYSTEM -> base
@@ -320,11 +341,16 @@ fun proseStyleFor(font: ProseFont): TextStyle {
 fun PocketProseTheme(
     mode: ThemeMode = ThemeMode.SYSTEM,
     font: ProseFont = ProseFont.SYSTEM,
+    size: ProseSize = ProseSize.NORMAL,
+    leading: ProseLeading = ProseLeading.NORMAL,
     content: @Composable () -> Unit,
 ) {
     MaterialTheme(
         colorScheme = if (isDark(mode)) PocketDarkColors else PocketLightColors,
     ) {
-        CompositionLocalProvider(LocalProseStyle provides proseStyleFor(font), content = content)
+        CompositionLocalProvider(
+            LocalProseStyle provides proseStyleFor(font, size, leading),
+            content = content,
+        )
     }
 }

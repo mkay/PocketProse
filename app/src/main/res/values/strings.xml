@@ -225,6 +225,7 @@
     <string name="settings_section_writing">Writing</string>
     <string name="settings_section_appearance">Appearance</string>
     <string name="settings_section_folder">Folder</string>
+    <string name="settings_section_size">Size and spacing</string>
 
     <!-- The faces a note can be set in. "System" is whatever the phone uses everywhere else; the
          other two are font names and are never translated. -->
@@ -244,6 +245,28 @@
     <!-- Under the font chips. Says what the setting does and, as importantly, what it does not:
          nothing about the note on disk changes. -->
     <string name="settings_font_caption">The face your notes are shown in. Only on screen — nothing in your folder changes.</string>
+
+    <!-- Above each row of chips in the size section, naming which of the two it sets. -->
+    <string name="settings_text_size">Text size</string>
+    <string name="settings_line_spacing">Line spacing</string>
+    <!-- The five text sizes. Steps, not measurements: the size in points would mean nothing here,
+         since each face is corrected to its own size before this multiplies it. -->
+    <string name="size_small">Small</string>
+    <string name="size_normal">Normal</string>
+    <string name="size_large">Large</string>
+    <string name="size_larger">Larger</string>
+    <string name="size_largest">Largest</string>
+    <!-- The three line spacings: less air between the lines, the face's own, more. -->
+    <string name="leading_tight">Tight</string>
+    <string name="leading_normal">Normal</string>
+    <string name="leading_airy">Airy</string>
+    <!-- PLACEHOLDER paragraph, to be replaced with a real one. Shown at the chosen face, size and
+         spacing, so it has to be long enough to wrap several lines — line spacing cannot be seen on
+         a single line — and it is clipped to a fixed height, so an overlong one loses its end. -->
+    <string name="settings_prose_preview">Ein Platzhalter, bis der richtige Absatz hier steht. Er läuft über mehrere Zeilen, damit der Zeilenabstand überhaupt zu sehen ist, und er bleibt kurz genug, dass die Regler darunter nicht wandern.</string>
+    <!-- Under the size and spacing chips. Same reassurance as the font caption: the file is not
+         touched, and the phone's own font size still applies on top of this. -->
+    <string name="settings_size_caption">How your notes are set on screen. Your phone\'s own text size still applies on top of this.</string>
 
     <!-- The three theme choices. "System" means whatever the phone is doing. -->
     <string name="theme_system">System</string>

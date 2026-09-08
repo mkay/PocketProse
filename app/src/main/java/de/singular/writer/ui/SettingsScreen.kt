@@ -4,9 +4,13 @@ package de.singular.writer.ui
 
 import androidx.activity.compose.BackHandler
 import androidx.annotation.StringRes
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
@@ -43,12 +47,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import de.singular.writer.ProseFont
+import de.singular.writer.ProseLeading
+import de.singular.writer.ProseSize
 import de.singular.writer.R
 import de.singular.writer.ThemeMode
 
@@ -91,6 +99,10 @@ fun SettingsScreen(
     onThemeModeChange: (ThemeMode) -> Unit,
     proseFont: ProseFont,
     onProseFontChange: (ProseFont) -> Unit,
+    proseSize: ProseSize,
+    onProseSizeChange: (ProseSize) -> Unit,
+    proseLeading: ProseLeading,
+    onProseLeadingChange: (ProseLeading) -> Unit,
     folderName: String?,
     onChooseFolder: () -> Unit,
     onClose: () -> Unit,
@@ -130,7 +142,14 @@ fun SettingsScreen(
         // carry its offset across a tab switch, landing you halfway down the one you arrived at.
         when (tab) {
             SettingsTab.EDITOR -> SettingsPage {
-                EditorSettings(proseFont = proseFont, onProseFontChange = onProseFontChange)
+                EditorSettings(
+                    proseFont = proseFont,
+                    onProseFontChange = onProseFontChange,
+                    proseSize = proseSize,
+                    onProseSizeChange = onProseSizeChange,
+                    proseLeading = proseLeading,
+                    onProseLeadingChange = onProseLeadingChange,
+                )
             }
             SettingsTab.SYSTEM -> SettingsPage {
                 SystemSettings(
@@ -158,10 +177,23 @@ private fun SettingsPage(content: @Composable ColumnScope.() -> Unit) {
     )
 }
 
-/** What happens while you are writing. So far: the face a note is set in. */
+/** What happens while you are writing: the face a note is set in, and how it is set. */
 @Composable
-private fun EditorSettings(proseFont: ProseFont, onProseFontChange: (ProseFont) -> Unit) {
+private fun EditorSettings(
+    proseFont: ProseFont,
+    onProseFontChange: (ProseFont) -> Unit,
+    proseSize: ProseSize,
+    onProseSizeChange: (ProseSize) -> Unit,
+    proseLeading: ProseLeading,
+    onProseLeadingChange: (ProseLeading) -> Unit,
+) {
     SettingsSectionLabel(R.string.settings_section_writing)
+    // The face keeps a sample of its own on every row, and that is not a duplicate of the paragraph
+    // below. Choosing a face is a comparison — three of them, side by side, at a glance — and one
+    // shared preview would turn it into tap, look, remember, tap. Size and leading are not
+    // comparisons: nobody can judge one step against another in the abstract, only whether what is
+    // in front of them reads comfortably, and leading is invisible on the single line a face row
+    // can hold. So they get the paragraph, and the faces keep their line.
     ProseFont.entries.forEach { font ->
         ProseFontOption(
             font = font,
@@ -170,6 +202,134 @@ private fun EditorSettings(proseFont: ProseFont, onProseFontChange: (ProseFont) 
         )
     }
     SettingsCaption(R.string.settings_font_caption)
+
+    SettingsSectionLabel(R.string.settings_section_size)
+    ProsePreview(font = proseFont, size = proseSize, leading = proseLeading)
+    SettingsChoiceLabel(R.string.settings_text_size)
+    ProseSizeChips(
+        size = proseSize,
+        onSelect = onProseSizeChange,
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+    )
+    SettingsChoiceLabel(R.string.settings_line_spacing)
+    ProseLeadingChips(
+        leading = proseLeading,
+        onSelect = onProseLeadingChange,
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+    )
+    SettingsCaption(R.string.settings_size_caption)
+}
+
+/**
+ * The paragraph that shows what the two settings below it do.
+ *
+ * A real [Text] at the real [proseStyleFor], so the lines break where they will break in a note.
+ * Drawing it by hand would make this a picture of what the settings screen believes the editor does.
+ * 12dp of margin and 8dp of padding, so the text sits at the same 20dp from the edge as prose does
+ * in the editor and the wrap points are the ones a note would have.
+ *
+ * **On a panel of its own.** Unpainted it read as the settings page's own body copy — a paragraph
+ * of German under a heading, which is exactly what a caption looks like — and a sample nobody
+ * recognises as a sample is not a preview of anything. The tint says "this is the thing being
+ * changed" before a word of it is read.
+ *
+ * **A fixed height, and the text clipped to it.** The paragraph grows and shrinks; the box must not.
+ * A preview that changed the page's height would move the chips out from under the thumb that is
+ * stepping through the sizes — the control would run away from the reader at every tap. Tall enough
+ * for three lines at the largest setting and rather more at the smallest, which is what it takes to
+ * see leading at all.
+ */
+@Composable
+private fun ProsePreview(font: ProseFont, size: ProseSize, leading: ProseLeading) {
+    val panel = MaterialTheme.colorScheme.surfaceVariant
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 4.dp)
+            .clip(ControlShape)
+            .background(panel)
+            .height(148.dp)
+            .clipToBounds(),
+    ) {
+        Text(
+            text = stringResource(R.string.settings_prose_preview),
+            style = proseStyleFor(font, size, leading),
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp),
+        )
+        // The paragraph outruns the box at every setting, and a hard edge across the middle of a
+        // sentence reads as something gone wrong rather than as a sample carrying on. The fade says
+        // "more of this", and it holds for whatever paragraph ends up in the string — which is the
+        // point, since the real one is not written yet.
+        Box(
+            Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .height(28.dp)
+                .background(Brush.verticalGradient(listOf(Color.Transparent, panel))),
+        )
+    }
+}
+
+/**
+ * A single-select row of Small … Largest chips.
+ *
+ * A [FlowRow] rather than a [Row]: five words do not fit the width of a phone, and a plain row
+ * answered by squeezing "Largest" into a column of four letters. Wrapping to a second line is what
+ * a row of chips is supposed to do when it runs out of width.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun ProseSizeChips(
+    size: ProseSize,
+    onSelect: (ProseSize) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    FlowRow(
+        modifier,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        val label = mapOf(
+            ProseSize.SMALL to R.string.size_small,
+            ProseSize.NORMAL to R.string.size_normal,
+            ProseSize.LARGE to R.string.size_large,
+            ProseSize.LARGER to R.string.size_larger,
+            ProseSize.LARGEST to R.string.size_largest,
+        )
+        ProseSize.entries.forEach { step ->
+            FilterChip(
+                selected = size == step,
+                onClick = { onSelect(step) },
+                label = { Text(stringResource(label.getValue(step))) },
+                shape = ControlShape,
+            )
+        }
+    }
+}
+
+/** A single-select row of Tight / Normal / Airy chips. */
+@Composable
+private fun ProseLeadingChips(
+    leading: ProseLeading,
+    onSelect: (ProseLeading) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(modifier, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        val label = mapOf(
+            ProseLeading.TIGHT to R.string.leading_tight,
+            ProseLeading.NORMAL to R.string.leading_normal,
+            ProseLeading.AIRY to R.string.leading_airy,
+        )
+        ProseLeading.entries.forEach { step ->
+            FilterChip(
+                selected = leading == step,
+                onClick = { onSelect(step) },
+                label = { Text(stringResource(label.getValue(step))) },
+                shape = ControlShape,
+            )
+        }
+    }
 }
 
 @Composable
@@ -208,6 +368,17 @@ private fun SettingsSectionLabel(@StringRes text: Int) {
         style = MaterialTheme.typography.labelSmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier.padding(start = 28.dp, top = 16.dp, bottom = 4.dp),
+    )
+}
+
+/** The name of one choice, where a section holds more than one row of chips. */
+@Composable
+private fun SettingsChoiceLabel(@StringRes text: Int) {
+    Text(
+        stringResource(text),
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(start = 28.dp, top = 10.dp),
     )
 }
 

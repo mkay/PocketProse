@@ -113,7 +113,12 @@ class MainActivity : AppCompatActivity() {
                     isAppearanceLightNavigationBars = !dark
                 }
             }
-            PocketProseTheme(settings.themeMode, settings.proseFont) {
+            PocketProseTheme(
+                settings.themeMode,
+                settings.proseFont,
+                settings.proseSize,
+                settings.proseLeading,
+            ) {
                 // The Surface is full-bleed and the *content* takes the insets, not the other
                 // way round. Padding the Surface itself stops the page colour below the status
                 // bar and lets the bare activity window show through — which on a light theme is
@@ -374,6 +379,10 @@ private fun PocketProseApp(settings: Settings) {
             onThemeModeChange = { settings.themeMode = it },
             proseFont = settings.proseFont,
             onProseFontChange = { settings.proseFont = it },
+            proseSize = settings.proseSize,
+            onProseSizeChange = { settings.proseSize = it },
+            proseLeading = settings.proseLeading,
+            onProseLeadingChange = { settings.proseLeading = it },
             folderName = folderName,
             onChooseFolder = { pickFolder.launch(null) },
             onClose = { showSettings = false },
