@@ -288,7 +288,7 @@ fun EditorScreen(
                     is Segment.Prose -> BasicTextField(
                         state = document.bufferAt(i),
                         enabled = editable,
-                        textStyle = MaterialTheme.typography.bodyLarge.copy(color = scheme.onSurface),
+                        textStyle = LocalProseStyle.current.copy(color = scheme.onSurface),
                         cursorBrush = SolidColor(scheme.primary),
                         outputTransformation = transformation,
                         // An empty note is a normal kind of note here — 40 of the archive's 168 are
@@ -300,7 +300,10 @@ fun EditorScreen(
                                 if (document.isEmpty && i == document.firstProseIndex) {
                                     Text(
                                         text = stringResource(R.string.editor_empty),
-                                        style = MaterialTheme.typography.bodyLarge,
+                                        // The placeholder wears the prose style too, so choosing
+                                        // a face does not make the empty page and the first line
+                                        // typed onto it two different sizes.
+                                        style = LocalProseStyle.current,
                                         color = scheme.onSurfaceVariant.copy(alpha = 0.6f),
                                     )
                                 }

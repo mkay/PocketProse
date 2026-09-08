@@ -43,6 +43,37 @@ since the GPL would oblige the editable source to ship alongside. Re-export from
 there rather than hand-editing the path data in the drawable.
 
 
+FONTS
+
+Literata is not mine and is not covered by either licence above. It is bundled
+under the SIL Open Font License 1.1, whose full text is in
+`licenses/Literata-OFL.txt` and must travel with any copy of these files:
+
+  app/src/main/res/font/literata_regular.ttf
+  app/src/main/res/font/literata_italic.ttf
+  app/src/main/res/font/literata_bold.ttf
+  app/src/main/res/font/literata_bold_italic.ttf
+
+  SPDX-License-Identifier: OFL-1.1
+  Copyright 2017 The Literata Project Authors
+  <https://github.com/googlefonts/literata>
+
+These four files are modified versions of the upstream release, and the OFL
+requires saying so. Upstream ships two variable fonts, roman and italic, with
+an optical-size and a weight axis. Each of the four here is a static instance
+cut from those at `opsz` 12 — the axis default, and the value drawn for running
+text — and at `wght` 400 or 700, then subset to Latin: Basic, Supplement,
+Extended-A and Extended-B, general punctuation, currency, and the f-ligatures.
+
+That is 466 KB for four faces where the two variable fonts alone are 1.8 MB.
+The cost is that Literata's Greek and Cyrillic are gone; a note written in
+either renders in the system font instead, because Android falls back per
+glyph. Deliberate, and reversible by re-cutting from upstream.
+
+The OFL permits this. Its restriction is on names, and Literata declares no
+Reserved Font Name, so the modified files may keep the name they came with.
+
+
 THE NAME
 
 "Pocket Prose" is not licensed by either grant above. Give a fork its own name:

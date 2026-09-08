@@ -11,6 +11,16 @@ import androidx.compose.runtime.setValue
 enum class ThemeMode { SYSTEM, LIGHT, DARK }
 
 /**
+ * Which face a note is set in. SYSTEM is whatever the phone uses everywhere else; LITERATA is the
+ * serif bundled with the app.
+ *
+ * Only note text follows this. The list, the drawer and this settings screen stay in the system
+ * font on purpose: the choice is about the writing, and chrome in a serif reads as a theme rather
+ * than as a reading setting.
+ */
+enum class ProseFont { SYSTEM, LITERATA }
+
+/**
  * The app's own preferences — everything that is not the folder.
  *
  * Deliberately its own preference file rather than a corner of the `Vault`'s. The vault's prefs are
@@ -44,8 +54,25 @@ class Settings(context: Context) {
             prefs.edit().putString(KEY_THEME_MODE, value.name).apply()
         }
 
+    /**
+     * The face note text is set in. Same fallback rule as the theme: an unreadable stored value is
+     * a preference to ignore, not a reason to refuse to start.
+     */
+    private var font by mutableStateOf(
+        ProseFont.entries.firstOrNull { it.name == prefs.getString(KEY_PROSE_FONT, null) }
+            ?: ProseFont.SYSTEM,
+    )
+
+    var proseFont: ProseFont
+        get() = font
+        set(value) {
+            font = value
+            prefs.edit().putString(KEY_PROSE_FONT, value.name).apply()
+        }
+
     private companion object {
         const val PREFS = "settings"
         const val KEY_THEME_MODE = "theme_mode"
+        const val KEY_PROSE_FONT = "prose_font"
     }
 }

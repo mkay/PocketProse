@@ -55,7 +55,7 @@ fun NoteImages(segment: Segment.Images, attachments: Attachments, modifier: Modi
         if (segment.trailing.isNotEmpty()) {
             Text(
                 text = segment.trailing,
-                style = MaterialTheme.typography.bodyLarge,
+                style = LocalProseStyle.current,
                 color = MaterialTheme.colorScheme.onSurface,
             )
         }

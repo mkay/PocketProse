@@ -44,6 +44,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import de.singular.writer.ProseFont
 import de.singular.writer.R
 import de.singular.writer.ThemeMode
 
@@ -84,6 +85,8 @@ private enum class SettingsTab(@StringRes val title: Int) {
 fun SettingsScreen(
     themeMode: ThemeMode,
     onThemeModeChange: (ThemeMode) -> Unit,
+    proseFont: ProseFont,
+    onProseFontChange: (ProseFont) -> Unit,
     folderName: String?,
     onChooseFolder: () -> Unit,
     onClose: () -> Unit,
@@ -122,7 +125,9 @@ fun SettingsScreen(
         // and its own scroll — it is a page, not a column of rows — and a shared scroll state would
         // carry its offset across a tab switch, landing you halfway down the one you arrived at.
         when (tab) {
-            SettingsTab.EDITOR -> SettingsPage { EditorSettings() }
+            SettingsTab.EDITOR -> SettingsPage {
+                EditorSettings(proseFont = proseFont, onProseFontChange = onProseFontChange)
+            }
             SettingsTab.SYSTEM -> SettingsPage {
                 SystemSettings(
                     themeMode = themeMode,
@@ -149,16 +154,16 @@ private fun SettingsPage(content: @Composable ColumnScope.() -> Unit) {
     )
 }
 
-/**
- * Nothing yet, and it says so.
- *
- * A tab that opens on a blank page reads as a screen that failed to load. One line of explanation
- * costs a string and turns a bug into a promise.
- */
+/** What happens while you are writing. So far: the face a note is set in. */
 @Composable
-private fun EditorSettings() {
+private fun EditorSettings(proseFont: ProseFont, onProseFontChange: (ProseFont) -> Unit) {
     SettingsSectionLabel(R.string.settings_section_writing)
-    SettingsCaption(R.string.settings_editor_empty)
+    ProseFontChips(
+        font = proseFont,
+        onSelect = onProseFontChange,
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+    )
+    SettingsCaption(R.string.settings_font_caption)
 }
 
 @Composable
@@ -229,6 +234,36 @@ private fun ThemeModeChips(
                 selected = mode == m,
                 onClick = { onSelect(m) },
                 label = { Text(stringResource(label.getValue(m))) },
+                shape = ControlShape,
+            )
+        }
+    }
+}
+
+/**
+ * The face a note is set in. Chips rather than a list, the same shape the theme uses one section
+ * away: two choices that are instantly reversible, where a menu would hide one behind a tap.
+ *
+ * The chips are labelled by name and not set in the face they choose. A one-word sample is not
+ * enough of either font to judge, and a chip row where each chip is a different size is a mess —
+ * the note behind the settings is the preview, and it is one tap away.
+ */
+@Composable
+private fun ProseFontChips(
+    font: ProseFont,
+    onSelect: (ProseFont) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(modifier, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        val label = mapOf(
+            ProseFont.SYSTEM to R.string.font_system,
+            ProseFont.LITERATA to R.string.font_literata,
+        )
+        ProseFont.entries.forEach { f ->
+            FilterChip(
+                selected = font == f,
+                onClick = { onSelect(f) },
+                label = { Text(stringResource(label.getValue(f))) },
                 shape = ControlShape,
             )
         }

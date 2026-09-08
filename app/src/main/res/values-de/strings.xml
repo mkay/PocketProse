@@ -104,7 +104,8 @@
     <string name="settings_section_appearance">Darstellung</string>
     <string name="settings_section_folder">Ordner</string>
 
-    <string name="settings_editor_empty">Einstellungen fürs Schreiben kommen hierher.</string>
+    <string name="font_system">System</string>
+    <string name="settings_font_caption">Die Schrift, in der deine Texte angezeigt werden. Nur auf dem Bildschirm — in deinem Ordner ändert sich nichts.</string>
 
     <string name="theme_system">System</string>
     <string name="theme_light">Hell</string>

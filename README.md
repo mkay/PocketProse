@@ -52,6 +52,8 @@ The icon and the wordmark are licensed separately, under **CC BY 4.0**. [COPYRIG
 
 The **name** is not licensed by either grant — give a fork its own.
 
+Notes can be set in **Literata**, bundled under the [SIL Open Font License 1.1](licenses/Literata-OFL.txt) — © 2017 The Literata Project Authors. The four bundled faces are static instances cut from the upstream variable fonts and subset to Latin; `COPYRIGHT` says exactly how.
+
 ## Disclaimer
 
 This project was developed with the assistance of Claude, under my direction and functional review.

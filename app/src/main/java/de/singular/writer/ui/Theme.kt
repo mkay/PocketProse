@@ -9,8 +9,17 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import de.singular.writer.ProseFont
+import de.singular.writer.R
 import de.singular.writer.ThemeMode
 
 /**
@@ -216,10 +225,61 @@ fun isDark(mode: ThemeMode): Boolean = when (mode) {
     ThemeMode.DARK -> true
 }
 
+/**
+ * Literata, four static cuts of it, bundled in `res/font`.
+ *
+ * A serif drawn for reading on screens rather than adapted from print, which is the whole reason it
+ * is here and not one of the classical faces. Bundled rather than fetched through the Google Fonts
+ * provider: that provider is absent on a de-Googled ROM, and its failure mode is silently getting
+ * the default font back — on an app whose manifest claims to talk to nothing, borrowing another
+ * process's network is also a claim you have to start qualifying.
+ *
+ * All four cuts are real drawings. Handing Compose only a regular would get bold and italic
+ * synthesised — a slanted roman and a smeared one — which on a serif is worse than not offering
+ * the font at all.
+ */
+private val Literata = FontFamily(
+    Font(R.font.literata_regular, FontWeight.Normal, FontStyle.Normal),
+    Font(R.font.literata_italic, FontWeight.Normal, FontStyle.Italic),
+    Font(R.font.literata_bold, FontWeight.Bold, FontStyle.Normal),
+    Font(R.font.literata_bold_italic, FontWeight.Bold, FontStyle.Italic),
+)
+
+/**
+ * The style note text is set in — the one thing [ProseFont] changes.
+ *
+ * A whole [TextStyle] rather than a font family, because swapping only the family is the mistake
+ * that makes a font setting look broken. Two measurements, taken from the files rather than
+ * guessed:
+ *
+ * - Literata's x-height is 0.507 em against Roboto's 0.528, so at an identical `fontSize` it reads
+ *   about 4% smaller. Hence the size bump.
+ * - Literata's own line box is 1.485 em against Roboto's 1.172. `bodyLarge` sets 24sp of line
+ *   height at 16sp, which leaves Roboto comfortable and Literata with almost no leading at all —
+ *   its natural box is already 23.8sp. Hence the larger bump to line height.
+ *
+ * Read by the editor and the reading view. Everything else keeps `MaterialTheme.typography`.
+ */
+val LocalProseStyle = staticCompositionLocalOf { TextStyle.Default }
+
 @Composable
-fun PocketProseTheme(mode: ThemeMode = ThemeMode.SYSTEM, content: @Composable () -> Unit) {
+fun PocketProseTheme(
+    mode: ThemeMode = ThemeMode.SYSTEM,
+    font: ProseFont = ProseFont.SYSTEM,
+    content: @Composable () -> Unit,
+) {
     MaterialTheme(
         colorScheme = if (isDark(mode)) PocketDarkColors else PocketLightColors,
-        content = content,
-    )
+    ) {
+        val base = MaterialTheme.typography.bodyLarge
+        val prose = when (font) {
+            ProseFont.SYSTEM -> base
+            ProseFont.LITERATA -> base.copy(
+                fontFamily = Literata,
+                fontSize = base.fontSize * 1.04f,
+                lineHeight = base.lineHeight * 1.15f,
+            )
+        }
+        CompositionLocalProvider(LocalProseStyle provides prose, content = content)
+    }
 }

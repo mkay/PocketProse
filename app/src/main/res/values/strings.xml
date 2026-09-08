@@ -222,9 +222,13 @@
     <string name="settings_section_appearance">Appearance</string>
     <string name="settings_section_folder">Folder</string>
 
-    <!-- Shown in the Editor tab, which has nothing in it yet. Says so plainly: a tab that opens on
-         a blank page reads as a screen that failed to load. -->
-    <string name="settings_editor_empty">Settings for writing will appear here.</string>
+    <!-- The two faces a note can be set in. "System" is whatever the phone uses everywhere else.
+         Literata is a font name and is never translated. -->
+    <string name="font_system">System</string>
+    <string name="font_literata" translatable="false">Literata</string>
+    <!-- Under the font chips. Says what the setting does and, as importantly, what it does not:
+         nothing about the note on disk changes. -->
+    <string name="settings_font_caption">The face your notes are shown in. Only on screen — nothing in your folder changes.</string>
 
     <!-- The three theme choices. "System" means whatever the phone is doing. -->
     <string name="theme_system">System</string>
@@ -259,7 +263,7 @@
     <string name="about_section_license">License</string>
     <!-- A legal notice, and never translated. -->
     <string name="about_copyright" translatable="false">Copyright © 2026 Kreuder</string>
-    <string name="about_license" translatable="false">Pocket Prose is free software under the GPL-3.0-only. The wordmark and the icon are CC BY 4.0; the name is not licensed, so a fork needs its own. Built with AndroidX and Jetpack Compose, licensed under Apache 2.0.</string>
+    <string name="about_license" translatable="false">Pocket Prose is free software under the GPL-3.0-only. The wordmark and the icon are CC BY 4.0; the name is not licensed, so a fork needs its own. Built with AndroidX and Jetpack Compose, licensed under Apache 2.0. Sets your notes in Literata, © 2017 The Literata Project Authors, under the SIL Open Font License 1.1.</string>
 
     <!-- ===== Support ===== -->
 
