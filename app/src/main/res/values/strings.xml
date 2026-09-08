@@ -222,10 +222,21 @@
     <string name="settings_section_appearance">Appearance</string>
     <string name="settings_section_folder">Folder</string>
 
-    <!-- The two faces a note can be set in. "System" is whatever the phone uses everywhere else.
-         Literata is a font name and is never translated. -->
+    <!-- The faces a note can be set in. "System" is whatever the phone uses everywhere else; the
+         other two are font names and are never translated. -->
     <string name="font_system">System</string>
     <string name="font_literata" translatable="false">Literata</string>
+    <string name="font_source_serif" translatable="false">Source Serif</string>
+    <!-- Beside each name, saying what kind of face it is — the thing a font name alone does not
+         tell anyone who does not already know the font. Two words the audience does meet on any
+         font menu, so they earn their place where "Markdown" would not. -->
+    <string name="font_kind_sans">Sans-serif</string>
+    <string name="font_kind_serif">Serif</string>
+    <!-- The sample line under each name, set in the face it belongs to. Not a pangram: this is
+         about how a face reads, not about which letters it has, so translate it as a line someone
+         might actually write. Keep it short enough for one line on a narrow phone, and keep some
+         letters that go above and below — the b, the g and the capital give the face away. -->
+    <string name="font_preview">Handwritten pages, quietly kept</string>
     <!-- Under the font chips. Says what the setting does and, as importantly, what it does not:
          nothing about the note on disk changes. -->
     <string name="settings_font_caption">The face your notes are shown in. Only on screen — nothing in your folder changes.</string>
@@ -263,7 +274,7 @@
     <string name="about_section_license">License</string>
     <!-- A legal notice, and never translated. -->
     <string name="about_copyright" translatable="false">Copyright © 2026 Kreuder</string>
-    <string name="about_license" translatable="false">Pocket Prose is free software under the GPL-3.0-only. The wordmark and the icon are CC BY 4.0; the name is not licensed, so a fork needs its own. Built with AndroidX and Jetpack Compose, licensed under Apache 2.0. Sets your notes in Literata, © 2017 The Literata Project Authors, under the SIL Open Font License 1.1.</string>
+    <string name="about_license" translatable="false">Pocket Prose is free software under the GPL-3.0-only. The wordmark and the icon are CC BY 4.0; the name is not licensed, so a fork needs its own. Built with AndroidX and Jetpack Compose, licensed under Apache 2.0. Sets your notes in Literata, © 2017 The Literata Project Authors, or Source Serif 4, © 2014–2021 Adobe Systems Incorporated — both under the SIL Open Font License 1.1.</string>
 
     <!-- ===== Support ===== -->
 

@@ -5,6 +5,7 @@ package de.singular.writer.ui
 import androidx.activity.compose.BackHandler
 import androidx.annotation.StringRes
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -13,6 +14,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
@@ -28,6 +30,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.PrimaryTabRow
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -42,6 +45,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import de.singular.writer.ProseFont
@@ -158,11 +162,13 @@ private fun SettingsPage(content: @Composable ColumnScope.() -> Unit) {
 @Composable
 private fun EditorSettings(proseFont: ProseFont, onProseFontChange: (ProseFont) -> Unit) {
     SettingsSectionLabel(R.string.settings_section_writing)
-    ProseFontChips(
-        font = proseFont,
-        onSelect = onProseFontChange,
-        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-    )
+    ProseFont.entries.forEach { font ->
+        ProseFontOption(
+            font = font,
+            selected = font == proseFont,
+            onSelect = { onProseFontChange(font) },
+        )
+    }
     SettingsCaption(R.string.settings_font_caption)
 }
 
@@ -241,30 +247,57 @@ private fun ThemeModeChips(
 }
 
 /**
- * The face a note is set in. Chips rather than a list, the same shape the theme uses one section
- * away: two choices that are instantly reversible, where a menu would hide one behind a tap.
+ * One face, offered the way a font is actually chosen: by looking at it.
  *
- * The chips are labelled by name and not set in the face they choose. A one-word sample is not
- * enough of either font to judge, and a chip row where each chip is a different size is a mess —
- * the note behind the settings is the preview, and it is one tap away.
+ * This was a chip row first, and a chip row cannot do the job. "System" and "Literata" side by side
+ * say nothing about what either one is — not that one is a serif, not what its serif looks like —
+ * and a font name is only meaningful to someone who already knows the font. So each option names
+ * the face, says what kind it is, and then sets a line of text in it.
+ *
+ * The sample is drawn at the real prose style, [proseStyleFor], including the size and leading each
+ * face is corrected by. A preview at some tidy settings-screen size would be a preview of a
+ * different thing than the one the button turns on.
  */
 @Composable
-private fun ProseFontChips(
-    font: ProseFont,
-    onSelect: (ProseFont) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Row(modifier, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        val label = mapOf(
-            ProseFont.SYSTEM to R.string.font_system,
-            ProseFont.LITERATA to R.string.font_literata,
-        )
-        ProseFont.entries.forEach { f ->
-            FilterChip(
-                selected = font == f,
-                onClick = { onSelect(f) },
-                label = { Text(stringResource(label.getValue(f))) },
-                shape = ControlShape,
+private fun ProseFontOption(font: ProseFont, selected: Boolean, onSelect: () -> Unit) {
+    val kind = when (font) {
+        ProseFont.SYSTEM -> R.string.font_kind_sans
+        ProseFont.LITERATA, ProseFont.SOURCE_SERIF -> R.string.font_kind_serif
+    }
+    val name = when (font) {
+        ProseFont.SYSTEM -> R.string.font_system
+        ProseFont.LITERATA -> R.string.font_literata
+        ProseFont.SOURCE_SERIF -> R.string.font_source_serif
+    }
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 2.dp)
+            .clip(ControlShape)
+            .selectable(selected = selected, role = Role.RadioButton, onClick = onSelect)
+            .padding(start = 4.dp, end = 16.dp, top = 10.dp, bottom = 12.dp),
+        verticalAlignment = Alignment.Top,
+    ) {
+        RadioButton(selected = selected, onClick = null)
+        Column(Modifier.padding(start = 4.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    stringResource(name),
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                Text(
+                    stringResource(kind),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(start = 8.dp),
+                )
+            }
+            Spacer(Modifier.height(6.dp))
+            Text(
+                stringResource(R.string.font_preview),
+                style = proseStyleFor(font),
+                color = MaterialTheme.colorScheme.onSurface,
             )
         }
     }

@@ -246,6 +246,26 @@ private val Literata = FontFamily(
 )
 
 /**
+ * Source Serif 4, four static cuts of it, bundled in `res/font`.
+ *
+ * Unlike [Literata] these are upstream's own files, byte for byte, and that is a licence decision
+ * rather than laziness: Source Serif reserves the name "Source" under the OFL, so a modified copy
+ * could not keep the name it is offered under. Cutting instances and subsetting it the way Literata
+ * was cut would save about 450 KB and cost the right to call it Source Serif. See COPYRIGHT.
+ *
+ * The plain family rather than the SmText or Caption cuts, which are drawn for smaller sizes and
+ * would arguably suit a phone better. This is the family's own default optical size, the same basis
+ * on which Literata was cut at its default `opsz` 12 — a reading setting should offer the face, not
+ * a reading of it.
+ */
+private val SourceSerif = FontFamily(
+    Font(R.font.source_serif_regular, FontWeight.Normal, FontStyle.Normal),
+    Font(R.font.source_serif_italic, FontWeight.Normal, FontStyle.Italic),
+    Font(R.font.source_serif_bold, FontWeight.Bold, FontStyle.Normal),
+    Font(R.font.source_serif_bold_italic, FontWeight.Bold, FontStyle.Italic),
+)
+
+/**
  * The style note text is set in — the one thing [ProseFont] changes.
  *
  * A whole [TextStyle] rather than a font family, because swapping only the family is the mistake
@@ -262,6 +282,35 @@ private val Literata = FontFamily(
  */
 val LocalProseStyle = staticCompositionLocalOf { TextStyle.Default }
 
+/**
+ * The prose style for one face, whichever face is currently chosen or not.
+ *
+ * Public because the settings screen previews all three at once and has to be able to ask for a
+ * style it is not currently wearing. [LocalProseStyle] answers only for the chosen one.
+ */
+@Composable
+fun proseStyleFor(font: ProseFont): TextStyle {
+    val base = MaterialTheme.typography.bodyLarge
+    return when (font) {
+        ProseFont.SYSTEM -> base
+        ProseFont.LITERATA -> base.copy(
+            fontFamily = Literata,
+            fontSize = base.fontSize * 1.04f,
+            lineHeight = base.lineHeight * 1.15f,
+        )
+        // Source Serif is the smaller-eyed of the two by a long way — 0.475 em against Literata's
+        // 0.507 and Roboto's 0.528 — so it needs 11% rather than 4% to sit at the same apparent
+        // size. Its line box is 1.371 em, and the leading is then set to the same 1.66 of the grown
+        // size that Literata ends up with, so the two serifs read as one setting with two faces
+        // rather than as two different paragraph styles.
+        ProseFont.SOURCE_SERIF -> base.copy(
+            fontFamily = SourceSerif,
+            fontSize = base.fontSize * 1.11f,
+            lineHeight = base.lineHeight * 1.23f,
+        )
+    }
+}
+
 @Composable
 fun PocketProseTheme(
     mode: ThemeMode = ThemeMode.SYSTEM,
@@ -271,15 +320,6 @@ fun PocketProseTheme(
     MaterialTheme(
         colorScheme = if (isDark(mode)) PocketDarkColors else PocketLightColors,
     ) {
-        val base = MaterialTheme.typography.bodyLarge
-        val prose = when (font) {
-            ProseFont.SYSTEM -> base
-            ProseFont.LITERATA -> base.copy(
-                fontFamily = Literata,
-                fontSize = base.fontSize * 1.04f,
-                lineHeight = base.lineHeight * 1.15f,
-            )
-        }
-        CompositionLocalProvider(LocalProseStyle provides prose, content = content)
+        CompositionLocalProvider(LocalProseStyle provides proseStyleFor(font), content = content)
     }
 }

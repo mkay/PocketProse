@@ -105,6 +105,9 @@
     <string name="settings_section_folder">Ordner</string>
 
     <string name="font_system">System</string>
+    <string name="font_kind_sans">Serifenlos</string>
+    <string name="font_kind_serif">Serif</string>
+    <string name="font_preview">Handgeschriebene Seiten, still bewahrt</string>
     <string name="settings_font_caption">Die Schrift, in der deine Texte angezeigt werden. Nur auf dem Bildschirm — in deinem Ordner ändert sich nichts.</string>
 
     <string name="theme_system">System</string>

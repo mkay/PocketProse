@@ -11,14 +11,18 @@ import androidx.compose.runtime.setValue
 enum class ThemeMode { SYSTEM, LIGHT, DARK }
 
 /**
- * Which face a note is set in. SYSTEM is whatever the phone uses everywhere else; LITERATA is the
- * serif bundled with the app.
+ * Which face a note is set in. SYSTEM is whatever the phone uses everywhere else; the other two are
+ * serifs bundled with the app.
  *
  * Only note text follows this. The list, the drawer and this settings screen stay in the system
  * font on purpose: the choice is about the writing, and chrome in a serif reads as a theme rather
  * than as a reading setting.
+ *
+ * Order is the order of the chips, and SYSTEM is first because it is the default. New entries go on
+ * the end: the name is what is stored, so reordering is free, but the chip row is read left to right
+ * and a face that appears in the middle of it looks like it replaced something.
  */
-enum class ProseFont { SYSTEM, LITERATA }
+enum class ProseFont { SYSTEM, LITERATA, SOURCE_SERIF }
 
 /**
  * The app's own preferences — everything that is not the folder.
