@@ -35,7 +35,7 @@ author. A free licence rather than a reservation, deliberately: F-Droid's
 inclusion policy weighs an app's assets as well as its source, and artwork held
 back earns the NonFreeAssets flag.
 
-The icon and the wordmark are generated from `assets/icon_mk1.svg` and
+The icon and the wordmark are generated from `assets/icon_mk3.svg` and
 `assets/wordmark.svg`, which live beside this repository rather than in it — CC BY rather than the GPL for exactly that reason,
 since the GPL would oblige the editable source to ship alongside. Re-export from
 there rather than hand-editing the path data in the drawable.

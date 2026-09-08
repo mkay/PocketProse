@@ -1,22 +1,36 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!--
-      The tile the stack of paper sits on. The source artwork is transparent, so this is the whole of
-      the icon's ground; change it together with assets/icon_mk1.svg rather than instead of it.
+      The tile the notebook sits on. assets/icon_mk3.svg is drawn on transparency, so this is the
+      whole of the icon's ground and the only place its colour exists — mk2 carried a cream #E9DEC7
+      rect that stated it, mk3 states nothing. Leaving the background layer transparent is not the
+      alternative it sounds like: Android composites both layers regardless, so it would leave the
+      notebook floating on the wallpaper rather than producing a tile-less icon.
 
-      Near-black, warmed onto the app's own hue (350) rather than left a true black, so the tile
-      belongs to this app and not to Android.
+      WHAT THIS COLOUR DECIDES. Dark and light are not two finishes of one icon here, they are two
+      different marks, because the drawing has both a near-white sheet and near-black ink in it and
+      the tile picks which of them carries it.
 
-      This deliberately gives up on the sheets reading against the ground — their dark end is
-      #0C0B0B and lands at 1.1:1 here, so the bottom of the stack merges into the tile and what the
-      eye gets is the near-white page edges floating, with the sheets implied above them by the
-      gradient's lighter top. That is a look rather than a mistake: it is the same one the reference dark
-      theme has, and it is why this was chosen over the mid grey that made all three tones legible.
+      On the cream this replaces, the mark was a dark object on paper: the cover sat at 4.8:1 and
+      the ribbon at 13.9:1, so the ribbon was the first thing the eye found. On #1C1917 that
+      inverts. The white middle sheet goes to 17.5:1 and becomes the whole icon — a bright curve of
+      pages with a black slit across it — while the ribbon drops to roughly 1:1 against the tile and
+      survives only where it crosses the cover and that white edge, read as a gap rather than as a
+      stroke. Both work at 48px; this one arguably better, since the brightest element is now the
+      one doing the identifying instead of the ground.
 
-      The cost is that on a black wallpaper the tile has almost no edge of its own — 1.1:1 against a
-      #141414 launcher — so the icon reads as a floating mark rather than as a tile. If that ever
-      looks broken rather than elegant, the mid grey #9B8C8F is the measured alternative: sheets
-      6.1:1 and 2.3:1, edges 2.4:1.
+      WHY NOT DARKER. #000000 measures better on every element (white sheet 21:1) and was rejected
+      anyway: it has no edge of its own against a black wallpaper, so the tile stops existing and the
+      icon reads as a floating mark. That is the same failure the old #14100F tile had. #1C1917 is
+      lifted just far enough to keep that edge while staying in the app's warm hue family. Going the
+      other way, #332C2B washes the cover out to 3.1:1.
+
+      KNOWN COST. mk3's #3F3839 underlays — the two-unit hairline under each dark sheet — sit at
+      1.5:1 here and do not register at all. They were drawn to give the dark sheets a defined lower
+      edge against a light ground; on this tile the sheets end in the tile instead and the edge that
+      separates them is the white sheet above. Do not read their absence as a rendering fault, and do
+      not go darkening the tile to try to recover them — that makes it worse. If they ever need to
+      show again, the tile is what changes, not the artwork.
     -->
-    <color name="ic_launcher_background">#14100F</color>
+    <color name="ic_launcher_background">#1C1917</color>
 </resources>
