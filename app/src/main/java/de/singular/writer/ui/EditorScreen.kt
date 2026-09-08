@@ -295,7 +295,16 @@ fun EditorScreen(
                 .weight(1f)
                 .verticalScroll(rememberScrollState()),
         ) {
-            NoteTitleField(document = document, editable = editable)
+            NoteTitleField(
+                document = document,
+                editable = editable,
+                // The keyboard's key puts the title down: focus goes, the keyboard goes, the note
+                // stays where it is. Moving the cursor into the note instead was tried and is
+                // worse in both directions — a buffer's cursor sits at the end of its text, so the
+                // page jumped to the foot of the note, and starting it at the top would mean the
+                // next thing typed landed in front of the first line of the lyric.
+                onDone = { focusManager.clearFocus() },
+            )
 
             document.segments.forEachIndexed { i, segment ->
                 when (segment) {
@@ -676,7 +685,7 @@ private fun TextFieldState.prefixLine(prefix: String) {
  * stray key after it. Pasting two lines here joins them with a space instead.
  */
 @Composable
-private fun NoteTitleField(document: NoteDocument, editable: Boolean) {
+private fun NoteTitleField(document: NoteDocument, editable: Boolean, onDone: () -> Unit) {
     val scheme = MaterialTheme.colorScheme
     val prose = LocalProseStyle.current
     val style = prose.copy(
@@ -691,6 +700,12 @@ private fun NoteTitleField(document: NoteDocument, editable: Boolean) {
         textStyle = style,
         cursorBrush = SolidColor(scheme.primary),
         inputTransformation = SingleLine,
+        // The key on a wrapping field would be Enter, and Enter in a title means the writer is
+        // finished with it — not that they want a second line, which this field cannot have. So the
+        // keyboard offers Done and it puts the title down. [SingleLine] stays as the backstop for
+        // text arriving some other way, a paste of two lines being the ordinary case.
+        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+        onKeyboardAction = { onDone() },
         decorator = { field ->
             Box {
                 if (document.titleBuffer.text.isEmpty()) {
@@ -716,6 +731,7 @@ private fun NoteTitleField(document: NoteDocument, editable: Boolean) {
  * character title — the longest in the archive — would run off the side of the phone with no way to
  * see its end. So the field wraps like prose and the newline is taken out of the input instead.
  * A pasted line break becomes a space, which is what somebody pasting two lines into a title meant.
+ * The keyboard's own key never arrives here: it is an IME action, and it puts the title down.
  */
 private val SingleLine = InputTransformation {
     val text = asCharSequence()
