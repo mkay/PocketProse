@@ -29,6 +29,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -79,12 +80,30 @@ fun TagSheet(
     //
     // Sorted once per opening rather than on every tap: a row that jumped to the top the instant it
     // was ticked would make a second tap land on whatever slid into its place.
-    val rows = remember(known) {
+    val folder = remember(known) {
         val start = on
         (known + start).sortedWith(
             compareByDescending<String> { it in start }.then(String.CASE_INSENSITIVE_ORDER),
         )
     }
+
+    // A tag typed into the field is not in `known`: the index only learns a tag when the file is
+    // saved, which is after the sheet is gone. So the sheet remembers what was typed into it and
+    // shows those rows itself — otherwise the field emptied and nothing appeared to have happened,
+    // and the tag only turned up back in the list view.
+    //
+    // They are drawn under the field, outside the scrolling list, rather than as its first rows.
+    // Inside the list they landed at the top of something that is usually scrolled somewhere else,
+    // so the row existed but was off-screen, and scrolling the list back to it fights the list's own
+    // habit of holding its position by key when an item is inserted above. Out here the row is where
+    // it was typed and cannot be scrolled away from. Few enough to sit unbounded: this is what one
+    // sitting at the sheet has invented, not the folder's tag list.
+    //
+    // Kept in a list of its own rather than derived from `selected`, so unticking one leaves the row
+    // where it is instead of making it vanish with no way to tick it again. Held for as long as the
+    // sheet is open; dismissing it drops the list, by which time `known` has the tag.
+    val typedHere = remember(known) { mutableStateListOf<String>() }
+    val rows = folder.filterNot { it in typedHere }
 
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = state) {
         Column(Modifier.padding(bottom = 12.dp)) {
@@ -103,7 +122,20 @@ fun TagSheet(
                 }
             }
 
-            NewTagField(onAdd = onToggle)
+            NewTagField(
+                onAdd = { tag ->
+                    // Typing a tag puts it on the note; it never takes one off, whatever state the
+                    // row was in. A tag the folder already has is moved up here too, so the answer
+                    // to typing is always a checked row under the field rather than a change
+                    // somewhere below the fold.
+                    if (tag !in typedHere) typedHere.add(0, tag)
+                    if (tag !in on) onToggle(tag)
+                },
+            )
+
+            for (tag in typedHere) {
+                TagSheetRow(tag = tag, checked = tag in on, onClick = { onToggle(tag) })
+            }
 
             HorizontalDivider(
                 color = MaterialTheme.colorScheme.outlineVariant,
