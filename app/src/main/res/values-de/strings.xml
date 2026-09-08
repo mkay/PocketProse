@@ -13,6 +13,7 @@
     <string name="folder_gone_choose">Anderen Ordner wählen</string>
 
     <string name="note_empty">-</string>
+    <string name="library_loading">Sieht deinen Ordner durch</string>
     <string name="library_empty">Noch keine Texte in diesem Ordner</string>
     <string name="action_change_folder">Ordner wechseln</string>
 

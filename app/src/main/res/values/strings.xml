@@ -47,6 +47,10 @@
          yet. 36 of the author's own notes are a title and a tag and nothing else, so this is a
          normal state, not an error — keep it plain and unalarmed. -->
     <string name="note_empty">-</string>
+    <!-- Spoken by a screen reader for the three dots that show while the folder is being read.
+         Never seen: the dots carry no text. Says what is happening rather than "loading", because
+         what is happening is that a folder is being looked through. -->
+    <string name="library_loading">Looking through your folder</string>
     <!-- Shown when the chosen folder holds no notes at all. -->
     <string name="library_empty">No notes in this folder yet</string>
     <!-- Opens the folder picker again, to point at a different folder. -->
