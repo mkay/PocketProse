@@ -22,7 +22,7 @@ enum class ThemeMode { SYSTEM, LIGHT, DARK }
  * the end: the name is what is stored, so reordering is free, but the chip row is read left to right
  * and a face that appears in the middle of it looks like it replaced something.
  */
-enum class ProseFont { SYSTEM, LITERATA, SOURCE_SERIF }
+enum class ProseFont { SYSTEM, LITERATA, EB_GARAMOND }
 
 /**
  * The app's own preferences — everything that is not the folder.

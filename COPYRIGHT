@@ -47,19 +47,13 @@ FONTS
 
 Two serifs are bundled, and neither is mine or covered by either licence above.
 Both are under the SIL Open Font License 1.1, whose full text is in `licenses/`
-and must travel with any copy of the files.
-
-They are handled differently on purpose, and the difference is the OFL's rule
-about names. Literata reserves no font name, so it can be cut down and still be
-called Literata. Source Serif reserves the name "Source", so a modified copy
-could not be offered under the name it is offered under here — and it is
-therefore bundled exactly as its authors published it, at about 450 KB more than
-a cut-down copy would have cost.
+and must travel with any copy of the files. Neither declares a Reserved Font
+Name, so the cut-down copies here may keep the names they came with — the OFL's
+restriction is on names, and that is the clause that decides whether a font can
+be trimmed at all before it ships.
 
 
 LITERATA
-
-Bundled under the OFL 1.1, full text in `licenses/Literata-OFL.txt`:
 
   app/src/main/res/font/literata_regular.ttf
   app/src/main/res/font/literata_italic.ttf
@@ -69,52 +63,52 @@ Bundled under the OFL 1.1, full text in `licenses/Literata-OFL.txt`:
   SPDX-License-Identifier: OFL-1.1
   Copyright 2017 The Literata Project Authors
   <https://github.com/googlefonts/literata>
+  Full licence: licenses/Literata-OFL.txt
 
-These four files are modified versions of the upstream release, and the OFL
-requires saying so. Upstream ships two variable fonts, roman and italic, with
-an optical-size and a weight axis. Each of the four here is a static instance
-cut from those at `opsz` 12 — the axis default, and the value drawn for running
-text — and at `wght` 400 or 700, then subset to Latin: Basic, Supplement,
-Extended-A and Extended-B, general punctuation, currency, and the f-ligatures.
-
-That is 466 KB for four faces where the two variable fonts alone are 1.8 MB.
-The cost is that Literata's Greek and Cyrillic are gone; a note written in
-either renders in the system font instead, because Android falls back per
-glyph. Deliberate, and reversible by re-cutting from upstream.
-
-The OFL permits this. Its restriction is on names, and Literata declares no
-Reserved Font Name, so the modified files may keep the name they came with.
+Upstream ships two variable fonts, roman and italic, with an optical-size and a
+weight axis. Each file here is a static instance cut at `opsz` 12 — the axis
+default, and the value drawn for running text — and at `wght` 400 or 700.
 
 
-SOURCE SERIF 4
+EB GARAMOND
 
-Bundled under the OFL 1.1, full text in `licenses/SourceSerif4-OFL.txt`:
-
-  app/src/main/res/font/source_serif_regular.ttf
-  app/src/main/res/font/source_serif_italic.ttf
-  app/src/main/res/font/source_serif_bold.ttf
-  app/src/main/res/font/source_serif_bold_italic.ttf
+  app/src/main/res/font/ebgaramond_regular.ttf
+  app/src/main/res/font/ebgaramond_italic.ttf
+  app/src/main/res/font/ebgaramond_bold.ttf
+  app/src/main/res/font/ebgaramond_bold_italic.ttf
 
   SPDX-License-Identifier: OFL-1.1
-  Copyright 2014-2021 Adobe Systems Incorporated
-  <https://github.com/adobe-fonts/source-serif>
+  Copyright 2017 The EB Garamond Project Authors
+  <https://github.com/octaviopardo/EBGaramond12>
+  Full licence: licenses/EBGaramond-OFL.txt
 
-These four are byte-identical to the Regular, It, Bold and BoldIt of the plain
-`Source Serif 4` family in Adobe's own 4.004 release — unmodified, and verifiably
-so by checksum against that release. Not instanced and not subset, unlike the
-Literata files above, because this font's name table declares `with Reserved
-Font Name 'Source'`: under OFL clause 3 a Modified Version may not use a
-Reserved Font Name, so subsetting it and still calling it Source Serif is not
-something this licence allows.
+Same treatment. Upstream has a weight axis and no optical size, so these are
+instances at `wght` 400 and 700 of the roman and the italic.
 
-The plain family rather than the SmText, Caption, Subhead or Display cuts, which
-Adobe also ships. Those are drawn for other sizes, and a couple of them arguably
-suit a phone better; the plain one is the family's own default optical size,
-which is the same basis Literata was cut on.
 
-The upstream release also ships variable fonts covering every weight in one file.
-They are 2.06 MB for the pair against 892 KB for these four statics, and Compose
-would need per-weight variation settings to use them.
+THE CUT, WHICH IS THE SAME FOR BOTH
+
+Both families are subset to Latin — Basic, Supplement, Extended-A and Extended-B,
+general punctuation, currency, and the f-ligatures — and to the OpenType features
+running text actually uses: kern, liga, clig, calt, ccmp, locl, mark, mkmk, rlig.
+Dropping the rest is where most of the weight goes; EB Garamond ships small caps,
+old-style figures and swashes that a lyric will never ask for, and they cost 460 KB
+across four files.
+
+That is 706 KB for eight faces. The eight upstream files they were cut from are
+about 4 MB.
+
+The cost is that both families' Greek and Cyrillic are gone, along with those
+extra figure and small-cap sets. A note written in either script renders in the
+system font instead, because Android falls back glyph by glyph. Deliberate, and
+reversible by re-cutting from upstream.
+
+Source Serif 4 was bundled here between 2026-09-08 and the same day, and was
+removed for being too close to Literata to be a choice. It is worth recording why
+it was handled differently while it was here: its name table declares `with
+Reserved Font Name 'Source'`, so under OFL clause 3 it could not be cut down and
+still be called Source Serif, and it shipped unmodified at 892 KB. If it or any
+other RFN font is ever wanted, that is the constraint.
 
 
 THE NAME

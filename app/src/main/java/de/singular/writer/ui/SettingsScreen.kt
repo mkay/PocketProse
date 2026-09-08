@@ -262,12 +262,12 @@ private fun ThemeModeChips(
 private fun ProseFontOption(font: ProseFont, selected: Boolean, onSelect: () -> Unit) {
     val kind = when (font) {
         ProseFont.SYSTEM -> R.string.font_kind_sans
-        ProseFont.LITERATA, ProseFont.SOURCE_SERIF -> R.string.font_kind_serif
+        ProseFont.LITERATA, ProseFont.EB_GARAMOND -> R.string.font_kind_serif
     }
     val name = when (font) {
         ProseFont.SYSTEM -> R.string.font_system
         ProseFont.LITERATA -> R.string.font_literata
-        ProseFont.SOURCE_SERIF -> R.string.font_source_serif
+        ProseFont.EB_GARAMOND -> R.string.font_eb_garamond
     }
     Row(
         Modifier

@@ -226,7 +226,7 @@
          other two are font names and are never translated. -->
     <string name="font_system">System</string>
     <string name="font_literata" translatable="false">Literata</string>
-    <string name="font_source_serif" translatable="false">Source Serif</string>
+    <string name="font_eb_garamond" translatable="false">EB Garamond</string>
     <!-- Beside each name, saying what kind of face it is — the thing a font name alone does not
          tell anyone who does not already know the font. Two words the audience does meet on any
          font menu, so they earn their place where "Markdown" would not. -->
@@ -274,7 +274,7 @@
     <string name="about_section_license">License</string>
     <!-- A legal notice, and never translated. -->
     <string name="about_copyright" translatable="false">Copyright © 2026 Kreuder</string>
-    <string name="about_license" translatable="false">Pocket Prose is free software under the GPL-3.0-only. The wordmark and the icon are CC BY 4.0; the name is not licensed, so a fork needs its own. Built with AndroidX and Jetpack Compose, licensed under Apache 2.0. Sets your notes in Literata, © 2017 The Literata Project Authors, or Source Serif 4, © 2014–2021 Adobe Systems Incorporated — both under the SIL Open Font License 1.1.</string>
+    <string name="about_license" translatable="false">Pocket Prose is free software under the GPL-3.0-only. The wordmark and the icon are CC BY 4.0; the name is not licensed, so a fork needs its own. Built with AndroidX and Jetpack Compose, licensed under Apache 2.0. Sets your notes in Literata, © 2017 The Literata Project Authors, or EB Garamond, © 2017 The EB Garamond Project Authors — both under the SIL Open Font License 1.1.</string>
 
     <!-- ===== Support ===== -->
 

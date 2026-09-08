@@ -246,23 +246,22 @@ private val Literata = FontFamily(
 )
 
 /**
- * Source Serif 4, four static cuts of it, bundled in `res/font`.
+ * EB Garamond, four static cuts of it, bundled in `res/font`.
  *
- * Unlike [Literata] these are upstream's own files, byte for byte, and that is a licence decision
- * rather than laziness: Source Serif reserves the name "Source" under the OFL, so a modified copy
- * could not keep the name it is offered under. Cutting instances and subsetting it the way Literata
- * was cut would save about 450 KB and cost the right to call it Source Serif. See COPYRIGHT.
+ * The other kind of serif, which is the only reason to offer a second one. Literata is a
+ * screen-first face with a large eye and low contrast; this is an old-style book face after
+ * Claude Garamont, with a small eye, long extenders and real stroke contrast. Two faces that differ
+ * in kind are a choice; two that differ in name are a duplicate, which is what Source Serif 4 was
+ * beside Literata and why it is gone.
  *
- * The plain family rather than the SmText or Caption cuts, which are drawn for smaller sizes and
- * would arguably suit a phone better. This is the family's own default optical size, the same basis
- * on which Literata was cut at its default `opsz` 12 — a reading setting should offer the face, not
- * a reading of it.
+ * Cut the same way Literata is — instances at `wght` 400 and 700, roman and italic, subset to
+ * Latin. EB Garamond reserves no font name either, so the cut copies may keep it. See COPYRIGHT.
  */
-private val SourceSerif = FontFamily(
-    Font(R.font.source_serif_regular, FontWeight.Normal, FontStyle.Normal),
-    Font(R.font.source_serif_italic, FontWeight.Normal, FontStyle.Italic),
-    Font(R.font.source_serif_bold, FontWeight.Bold, FontStyle.Normal),
-    Font(R.font.source_serif_bold_italic, FontWeight.Bold, FontStyle.Italic),
+private val EbGaramond = FontFamily(
+    Font(R.font.ebgaramond_regular, FontWeight.Normal, FontStyle.Normal),
+    Font(R.font.ebgaramond_italic, FontWeight.Normal, FontStyle.Italic),
+    Font(R.font.ebgaramond_bold, FontWeight.Bold, FontStyle.Normal),
+    Font(R.font.ebgaramond_bold_italic, FontWeight.Bold, FontStyle.Italic),
 )
 
 /**
@@ -298,15 +297,21 @@ fun proseStyleFor(font: ProseFont): TextStyle {
             fontSize = base.fontSize * 1.04f,
             lineHeight = base.lineHeight * 1.15f,
         )
-        // Source Serif is the smaller-eyed of the two by a long way — 0.475 em against Literata's
-        // 0.507 and Roboto's 0.528 — so it needs 11% rather than 4% to sit at the same apparent
-        // size. Its line box is 1.371 em, and the leading is then set to the same 1.66 of the grown
-        // size that Literata ends up with, so the two serifs read as one setting with two faces
-        // rather than as two different paragraph styles.
-        ProseFont.SOURCE_SERIF -> base.copy(
-            fontFamily = SourceSerif,
-            fontSize = base.fontSize * 1.11f,
-            lineHeight = base.lineHeight * 1.23f,
+        // Garamond's eye is tiny — 0.400 em against Literata's 0.507 and Roboto's 0.528 — so
+        // matching x-heights exactly would put it at 21.1sp, and rendered at the phone's real
+        // density that overshoots: it looks set in large print and wraps a line early. 1.22 lands
+        // at 19.5sp, which is 93% of the full correction and the size this was chosen at. The
+        // face's long ascenders and descenders make up the rest of the apparent size, which is
+        // exactly what a pure x-height match fails to account for.
+        //
+        // Leading keeps the 1.66 of the grown size that both other faces end on, so a note does not
+        // change rhythm when the face changes. 400 is the designer's regular; if the hairlines ever
+        // look thin on the dark page, 450 is the knob, and it means re-cutting rather than editing
+        // a number here.
+        ProseFont.EB_GARAMOND -> base.copy(
+            fontFamily = EbGaramond,
+            fontSize = base.fontSize * 1.22f,
+            lineHeight = base.lineHeight * 1.35f,
         )
     }
 }

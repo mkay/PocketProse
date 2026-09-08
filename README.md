@@ -52,7 +52,7 @@ The icon and the wordmark are licensed separately, under **CC BY 4.0**. [COPYRIG
 
 The **name** is not licensed by either grant — give a fork its own.
 
-Notes can be set in **Literata** (© 2017 The Literata Project Authors) or **Source Serif 4** (© 2014–2021 Adobe Systems Incorporated), both bundled under the **SIL Open Font License 1.1** — [Literata](licenses/Literata-OFL.txt), [Source Serif](licenses/SourceSerif4-OFL.txt). The Literata faces are static instances cut from the upstream variable fonts and subset to Latin; the Source Serif faces are unmodified upstream files, because that family reserves its name and a modified copy could not keep it. `COPYRIGHT` says exactly how.
+Notes can be set in **Literata** (© 2017 The Literata Project Authors) or **EB Garamond** (© 2017 The EB Garamond Project Authors), both bundled under the **SIL Open Font License 1.1** — [Literata](licenses/Literata-OFL.txt), [EB Garamond](licenses/EBGaramond-OFL.txt). Both are static instances cut from the upstream variable fonts and subset to Latin; `COPYRIGHT` says exactly how.
 
 ## Disclaimer
 
