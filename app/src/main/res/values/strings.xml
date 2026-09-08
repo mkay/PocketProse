@@ -19,6 +19,11 @@
 
     <!-- The app's name. Not licensed for use by forks, and never translated. -->
     <string name="app_name" translatable="false">Pocket Prose</string>
+    <!-- The app's one-line description, under the wordmark on the About page and as the repository's
+         description. Three verbs, not a sentence about software: what the writer does, not what the
+         app is. Translate it as a slogan rather than word for word — "capture inspiration" is the
+         only part that has to survive intact. -->
+    <string name="app_tagline">Write, keep, capture inspiration</string>
 
     <!-- ===== Choosing the folder ===== -->
 

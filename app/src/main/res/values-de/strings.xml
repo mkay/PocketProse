@@ -2,6 +2,8 @@
 <!-- SPDX-License-Identifier: GPL-3.0-only -->
 <resources>
 
+    <string name="app_tagline">Schreiben, bewahren, Inspiration festhalten</string>
+
     <string name="welcome_title">Deine Texte liegen in einem Ordner</string>
     <string name="welcome_body">Zeig Pocket Prose den Ordner, in dem deine Texte schon liegen. Es wird nichts kopiert und nichts verschoben — alles bleibt genau dort, wo es ist.</string>
     <string name="welcome_choose">Ordner wählen</string>

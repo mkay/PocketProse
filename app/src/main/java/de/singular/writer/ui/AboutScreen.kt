@@ -89,7 +89,16 @@ fun AboutScreen(modifier: Modifier = Modifier) {
             tint = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.height(28.dp),
         )
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(10.dp))
+        // The tagline sits with the wordmark rather than in the About section below, because it
+        // belongs to the name: the two are read as one line, and the section under them is a
+        // paragraph in the first person. Same string the repository is described by.
+        Text(
+            stringResource(R.string.app_tagline),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.height(6.dp))
         // Long-press to copy. Android 13 and up pops its own clipboard confirmation, so only older
         // versions get a toast.
         Text(
