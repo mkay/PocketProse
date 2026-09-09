@@ -324,6 +324,45 @@ class CorpusTest {
     }
 
     @Test
+    fun `renaming the archive's biggest tag moves not one date`() {
+        // `CLAUDE.md`'s ninth definition-of-done item, over the real archive rather than a fixture.
+        // `lyrics/snippet` is on 131 of the 168 notes, so this is the rename that would do the most
+        // damage if `updated` moved with it — the 2015-2025 span is the thing this archive is kept
+        // for, and restamping 131 notes would flatten most of it to one afternoon.
+        val corpus = corpus()
+        val now = java.time.Instant.parse("2026-09-09T12:00:00Z")
+        var touched = 0
+        for ((name, text) in corpus) {
+            val note = Note.parse(text)
+            if (note.tags.none { Tags.isUnder(it, "lyrics/snippet") }) continue
+            val renamed = note.withTags(note.body, Tags.rename(note.tags, "lyrics/snippet", "songs/idee"), now)!!
+            touched++
+            assertEquals(name, note.frontmatter.updated, renamed.frontmatter.updated)
+            assertEquals(name, note.frontmatter.created, renamed.frontmatter.created)
+            // The words are not what is being renamed.
+            assertEquals(name, note.body, renamed.body)
+            assertTrue(name, "songs/idee" in renamed.frontmatter.tags)
+            assertTrue(name, renamed.frontmatter.tags.none { it == "lyrics/snippet" })
+        }
+        assertEquals(131, touched)
+    }
+
+    @Test
+    fun `a second rename over an already renamed archive writes nothing`() {
+        // What `RenameResult.Partial` tells the user to do. If a rename stops half way, running it
+        // again has to be safe on the notes it already did — and safe means writing nothing at all,
+        // not writing the same bytes back.
+        val corpus = corpus()
+        val now = java.time.Instant.parse("2026-09-09T12:00:00Z")
+        for ((name, text) in corpus) {
+            val note = Note.parse(text)
+            if (note.tags.none { Tags.isUnder(it, "busch") } ) continue
+            val once = note.withTags(note.body, Tags.rename(note.tags, "busch", "wilhelm"), now)!!
+            assertEquals(name, null, once.withTags(once.body, Tags.rename(once.tags, "busch", "wilhelm"), now))
+        }
+    }
+
+    @Test
     fun `an unchanged tag set writes nothing at all`() {
         val corpus = corpus()
         val now = java.time.Instant.parse("2026-09-07T12:00:00Z")

@@ -136,7 +136,7 @@ class NoteIndex(notes: List<IndexedNote>) {
      * so an exact match there would return nothing at all.
      */
     fun withTag(path: String): List<IndexedNote> = notes.filter { indexed ->
-        indexed.tags.any { it == path || it.startsWith("$path/") }
+        indexed.tags.any { Tags.isUnder(it, path) }
     }
 
     /**

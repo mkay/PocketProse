@@ -2,6 +2,7 @@
 
 package de.singular.writer.ui
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -72,6 +73,11 @@ fun LibraryScreen(
     folderName: String?,
     error: VaultFailure?,
     loading: Boolean,
+    // What `loading` is doing, for the drift's description. The library cannot tell a folder being
+    // read from a tag being renamed across it, and both stop the list being drawable.
+    @StringRes loadingSays: Int,
+    // A line under the drift, or null for none — see `LoadingSheets`. Startup passes null.
+    @StringRes loadingCaption: Int?,
     query: String,
     onQueryChange: (String) -> Unit,
     searching: Boolean,
@@ -172,7 +178,11 @@ fun LibraryScreen(
                 // What must not happen here is the "nothing matches" line appearing before anything
                 // has been looked at, which is why this branch exists at all.
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    LoadingSheets(Modifier.padding(bottom = 48.dp))
+                    LoadingSheets(
+                        Modifier.padding(bottom = 48.dp),
+                        describedBy = loadingSays,
+                        caption = loadingCaption,
+                    )
                 }
             } else if (notes.isEmpty()) {
                 Empty(query, onChooseFolder)

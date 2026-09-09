@@ -3,7 +3,9 @@
 package de.singular.writer.ui
 
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -53,6 +55,10 @@ fun TagDrawer(
     selected: String?,
     onSelect: (String?) -> Unit,
     modifier: Modifier = Modifier,
+    // Null where a long-press should do nothing — the settings screen borrows this drawer to pick a
+    // start view, and renaming the archive from inside a preference is not what that gesture means
+    // there.
+    onRename: ((String) -> Unit)? = null,
 ) {
     Surface(
         color = MaterialTheme.colorScheme.surfaceContainerLow,
@@ -80,7 +86,7 @@ fun TagDrawer(
                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp),
                 )
             }
-            items(tree, selected, onSelect)
+            items(tree, selected, onSelect, onRename)
         }
     }
 }
@@ -96,6 +102,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.items(
     nodes: List<Tags.Node>,
     selected: String?,
     onSelect: (String?) -> Unit,
+    onRename: ((String) -> Unit)?,
     depth: Int = 0,
 ) {
     nodes.forEach { node ->
@@ -115,11 +122,12 @@ private fun androidx.compose.foundation.lazy.LazyListScope.items(
                     expanded = expanded,
                     onExpandToggle = { expanded = !expanded },
                     onClick = { onSelect(node.path) },
+                    onLongClick = onRename?.let { { it(node.path) } },
                 )
                 if (expanded) {
                     Column {
                         node.children.forEach { child ->
-                            ChildRows(child, selected, onSelect, depth + 1)
+                            ChildRows(child, selected, onSelect, onRename, depth + 1)
                         }
                     }
                 }
@@ -136,7 +144,13 @@ private fun androidx.compose.foundation.lazy.LazyListScope.items(
  * segments, and a rule that only works to a fixed depth is not that rule.
  */
 @Composable
-private fun ChildRows(node: Tags.Node, selected: String?, onSelect: (String?) -> Unit, depth: Int) {
+private fun ChildRows(
+    node: Tags.Node,
+    selected: String?,
+    onSelect: (String?) -> Unit,
+    onRename: ((String) -> Unit)?,
+    depth: Int,
+) {
     var expanded by rememberSaveable(node.path) {
         mutableStateOf(selected != null && selected.startsWith("${node.path}/"))
     }
@@ -149,10 +163,12 @@ private fun ChildRows(node: Tags.Node, selected: String?, onSelect: (String?) ->
         expanded = expanded,
         onExpandToggle = { expanded = !expanded },
         onClick = { onSelect(node.path) },
+        onLongClick = onRename?.let { { it(node.path) } },
     )
-    if (expanded) node.children.forEach { ChildRows(it, selected, onSelect, depth + 1) }
+    if (expanded) node.children.forEach { ChildRows(it, selected, onSelect, onRename, depth + 1) }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun DrawerRow(
     label: String,
@@ -163,6 +179,8 @@ private fun DrawerRow(
     expandable: Boolean = false,
     expanded: Boolean = false,
     onExpandToggle: () -> Unit = {},
+    // The All notes row passes none: there is no such tag to rename.
+    onLongClick: (() -> Unit)? = null,
 ) {
     val background = if (selected) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent
     val content =
@@ -174,7 +192,13 @@ private fun DrawerRow(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable(onClick = onClick)
+                .then(
+                    if (onLongClick == null) {
+                        Modifier.clickable(onClick = onClick)
+                    } else {
+                        Modifier.combinedClickable(onClick = onClick, onLongClick = onLongClick)
+                    },
+                )
                 .padding(start = 12.dp + (depth * 18).dp, end = 12.dp, top = 12.dp, bottom = 12.dp),
         ) {
             if (expandable) {

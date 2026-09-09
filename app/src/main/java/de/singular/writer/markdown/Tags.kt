@@ -22,6 +22,34 @@ package de.singular.writer.markdown
 object Tags {
 
     /**
+     * [tags] with [from] renamed to [to], the rename reaching the tag's children.
+     *
+     * `album` -> `record` takes `album/debut` with it, because the tree is built from path segments
+     * and a parent that renamed without its children would split one branch into two. That is also
+     * why the match is on a path boundary and not on a prefix: renaming `album` must not touch
+     * `albumcover`.
+     *
+     * **Renaming onto a name that already exists is a merge**, and the `distinct()` here is what
+     * performs it — a note carrying both `album` and `record` ends with one `record`. Merging is not
+     * undone by renaming back, which is why the caller has to say so before it happens rather than
+     * after.
+     *
+     * Order is preserved: a renamed tag stays where it sat in the note's list rather than moving to
+     * the end, so the `tags:` block keeps the shape the author gave it and the diff is one line.
+     */
+    fun rename(tags: List<String>, from: String, to: String): List<String> =
+        tags.map { tag ->
+            when {
+                tag == from -> to
+                tag.startsWith("$from/") -> to + tag.removePrefix(from)
+                else -> tag
+            }
+        }.distinct()
+
+    /** Whether [tag] is [under] it, or is it — the rule the drawer and the filter both count by. */
+    fun isUnder(tag: String, under: String): Boolean = tag == under || tag.startsWith("$under/")
+
+    /**
      * Tags are lowercase, and new input is folded on entry.
      *
      * The archive was deliberately case-folded once already; letting a `Lyrics` in beside the
@@ -92,7 +120,7 @@ object Tags {
                 segment = segment,
                 path = path,
                 count = counts[path] ?: 0,
-                total = perNote.count { tags -> tags.any { it == path || it.startsWith("$path/") } },
+                total = perNote.count { tags -> tags.any { isUnder(it, path) } },
                 children = build(counts, perNote, path),
             )
         }.sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.segment })

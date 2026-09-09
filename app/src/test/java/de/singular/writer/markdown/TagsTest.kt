@@ -21,6 +21,59 @@ import org.junit.Test
 class TagsTest {
 
     @Test
+    fun `renaming a tag takes its children with it`() {
+        // `album` -> `record` has to move `album/debut` too. The tree is built from path segments,
+        // so a parent renamed alone would leave its children hanging under a name nothing carries —
+        // one branch of the drawer becoming two.
+        assertEquals(
+            listOf("record", "record/debut", "released"),
+            Tags.rename(listOf("album", "album/debut", "released"), "album", "record"),
+        )
+    }
+
+    @Test
+    fun `renaming matches on a path boundary, not on a prefix`() {
+        // `albumcover` is not under `album`, and a naive startsWith would have renamed it.
+        assertEquals(listOf("albumcover"), Tags.rename(listOf("albumcover"), "album", "record"))
+        assertEquals(listOf("record"), Tags.rename(listOf("album"), "album", "record"))
+    }
+
+    @Test
+    fun `renaming onto an existing tag merges, leaving one`() {
+        // The outcome renaming back does not undo, which is why the dialog says so before it runs.
+        assertEquals(
+            listOf("released"),
+            Tags.rename(listOf("album", "released"), "album", "released"),
+        )
+    }
+
+    @Test
+    fun `a renamed tag keeps its place in the note's list`() {
+        // The `tags:` block keeps the shape the author gave it, so the rename is a one-line diff
+        // rather than a reordering of every entry.
+        assertEquals(
+            listOf("busch", "record", "radio"),
+            Tags.rename(listOf("busch", "album", "radio"), "album", "record"),
+        )
+    }
+
+    @Test
+    fun `renaming a child leaves its parent and its siblings alone`() {
+        assertEquals(
+            listOf("album", "album/first", "album/bossanova"),
+            Tags.rename(listOf("album", "album/debut", "album/bossanova"), "album/debut", "album/first"),
+        )
+    }
+
+    @Test
+    fun `renaming is idempotent, which is what makes running it twice safe`() {
+        // The recovery offered after a partial rename. The second pass finds nothing under the old
+        // name and changes nothing — see RenameResult.Partial.
+        val once = Tags.rename(listOf("album", "album/debut"), "album", "record")
+        assertEquals(once, Tags.rename(once, "album", "record"))
+    }
+
+    @Test
     fun `input is folded to lowercase so the archive cannot re-split`() {
         assertEquals("lyrics", Tags.normalize("Lyrics"))
         assertEquals("lyrics/snippet", Tags.normalize("#Lyrics/Snippet"))

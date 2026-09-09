@@ -62,6 +62,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import de.singular.writer.ui.DrawerWidth
 import de.singular.writer.markdown.Segments
+import de.singular.writer.markdown.Tags
+import de.singular.writer.ui.RenameTagDialog
 import de.singular.writer.ui.EditorScreen
 import de.singular.writer.ui.NoteDocument
 import de.singular.writer.ui.ConflictDialog
@@ -78,6 +80,7 @@ import de.singular.writer.vault.IndexedNote
 import de.singular.writer.vault.IndexDump
 import de.singular.writer.vault.NoteIndex
 import de.singular.writer.vault.CreateResult
+import de.singular.writer.vault.RenameResult
 import de.singular.writer.vault.SaveResult
 import de.singular.writer.vault.Vault
 import de.singular.writer.vault.VaultFailure
@@ -164,6 +167,11 @@ private fun PocketProseApp(settings: Settings) {
     // whose tag is not in the index — which runs before the first list is drawn, so an impossible
     // start tag shows the whole library rather than an empty one.
     var selectedTag by remember { mutableStateOf(settings.startTag) }
+    // The tag a long-press in the drawer opened the rename dialog on, if any.
+    var renaming by remember { mutableStateOf<String?>(null) }
+    // True while a rename is writing. It only picks the words for the loading drift — `loading`
+    // itself is what puts the drift on screen.
+    var renameRunning by remember { mutableStateOf(false) }
     var showSettings by remember { mutableStateOf(false) }
     var showSupport by remember { mutableStateOf(false) }
 
@@ -238,7 +246,7 @@ private fun PocketProseApp(settings: Settings) {
             attachments.forget()
             // A tag that no longer exists after a sync would otherwise filter the list down to nothing
             // with no way to tell why.
-            if (selectedTag != null && index.allTags.none { it == selectedTag || it.startsWith("$selectedTag/") }) {
+            if (selectedTag != null && index.allTags.none { Tags.isUnder(it, selectedTag!!) }) {
                 selectedTag = null
             }
             // Debug builds only, and app-private — see IndexDump.
@@ -486,6 +494,66 @@ private fun PocketProseApp(settings: Settings) {
         return
     }
 
+    renaming?.let { tag ->
+        RenameTagDialog(
+            tag = tag,
+            known = index.allTags,
+            counting = { index.withTag(it).size },
+            onDismiss = { renaming = null },
+            onRename = { target ->
+                renaming = null
+                scope.launch {
+                    // Out of the drawer and onto the list before anything is written, so the drift
+                    // is what the user is looking at rather than something behind a panel.
+                    //
+                    // `loading` is the library's own "nothing to draw yet" flag and this borrows it:
+                    // renaming `lyrics` rewrites 154 notes and takes about five seconds, which is
+                    // long enough that a still list reads as an app that has died. The list is also
+                    // genuinely not drawable in that window — every row's tags are being rewritten
+                    // underneath it. `LoadingSheets` waits 220ms before it appears, so a rename over
+                    // two notes still finishes without a flash.
+                    drawerState.close()
+                    renameRunning = true
+                    loading = true
+                    message = when (val result = vault.renameTag(index, tag, target)) {
+                        is RenameResult.Renamed -> {
+                            // The list lands on the tag that was just renamed, whatever it was
+                            // showing before. The drawer is where filtering happens, so a row
+                            // touched there is the row the user is thinking about — and after a
+                            // rename it is the one thing they want to look at, to see that it
+                            // worked. Following only the tag already selected was the first
+                            // attempt, and it left the list sitting on some unrelated filter from
+                            // earlier in the session, which reads as the rename having gone
+                            // somewhere else entirely.
+                            selectedTag = target
+                            // The start view is a stored preference and not a place the user is
+                            // standing, so it moves only when it was pointing at this tag.
+                            settings.startTag?.let { start ->
+                                if (Tags.isUnder(start, tag)) {
+                                    settings.startTag = Tags.rename(listOf(start), tag, target).single()
+                                }
+                            }
+                            context.resources.getQuantityString(R.plurals.rename_tag_done, result.count, result.count)
+                        }
+                        is RenameResult.Stale ->
+                            context.getString(R.string.rename_tag_stale, result.notes.first())
+                        is RenameResult.Refused ->
+                            context.getString(R.string.rename_tag_refused, result.notes.first())
+                        is RenameResult.Partial ->
+                            context.getString(R.string.rename_tag_partial, result.renamed, result.remaining.size)
+                        // Nothing carried it, so nothing to say: the drawer will simply not show it.
+                        RenameResult.NoSuchTag -> null
+                    }
+                    // `refresh` puts `loading` back down when the folder has been re-read, so the
+                    // list returns already showing the rename rather than blinking through a stale
+                    // copy of itself.
+                    renameRunning = false
+                    refresh()
+                }
+            },
+        )
+    }
+
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
@@ -503,6 +571,7 @@ private fun PocketProseApp(settings: Settings) {
                             scope.launch { drawerState.close() }
                         },
                         modifier = Modifier.weight(1f, fill = false),
+                        onRename = { renaming = it },
                     )
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                     // Settings lives at the bottom of the drawer, where the folder button used to
@@ -536,6 +605,8 @@ private fun PocketProseApp(settings: Settings) {
             folderName = folderName,
             error = error,
             loading = loading,
+            loadingSays = if (renameRunning) R.string.rename_tag_working else R.string.library_loading,
+            loadingCaption = if (renameRunning) R.string.rename_tag_caption else null,
             query = query,
             onQueryChange = { query = it },
             searching = searching,

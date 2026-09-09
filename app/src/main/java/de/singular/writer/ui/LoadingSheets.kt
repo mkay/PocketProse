@@ -2,6 +2,7 @@
 
 package de.singular.writer.ui
 
+import androidx.annotation.StringRes
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.StartOffset
@@ -10,14 +11,18 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.geometry.Offset
@@ -32,9 +37,9 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import de.singular.writer.R
-import kotlinx.coroutines.delay
 import kotlin.math.PI
 import kotlin.math.sin
+import kotlinx.coroutines.delay
 
 /**
  * The app's own icon — three sheets of paper seen edge-on — drifting as a watermark, while the
@@ -85,8 +90,19 @@ import kotlin.math.sin
  * and only a read slow enough to notice gets an answer.
  */
 @Composable
-fun LoadingSheets(modifier: Modifier = Modifier) {
-    val description = stringResource(R.string.library_loading)
+fun LoadingSheets(
+    modifier: Modifier = Modifier,
+    // What the drift is standing in for. Reading the folder is the usual answer and the default;
+    // a tag rename borrows the same animation and is a write, so it says so rather than claiming
+    // to be reading.
+    @StringRes describedBy: Int = R.string.library_loading,
+    // A line under the drift, for a wait the user did not ask for and cannot predict the length of.
+    // Null at startup on purpose: opening an app is a wait everybody already understands, and the
+    // watermark says enough without the page introducing itself in words. A rename is different —
+    // the user pressed something, five seconds passed, and nothing on screen was theirs.
+    @StringRes caption: Int? = null,
+) {
+    val description = stringResource(describedBy)
     var visible by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
         delay(APPEARS_AFTER)
@@ -111,14 +127,30 @@ fun LoadingSheets(modifier: Modifier = Modifier) {
         )
     }
 
-    Canvas(
-        modifier
-            .size(width = ICON_WIDTH, height = ICON_HEIGHT)
-            .alpha(if (visible) 1f else 0f)
-            .semantics { contentDescription = description },
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = modifier.alpha(if (visible) 1f else 0f),
     ) {
-        val scale = size.width / VIEW_WIDTH
-        sheets.forEachIndexed { i, face -> sheet(face, ink, phases[i].value, scale) }
+        Canvas(
+            Modifier
+                .size(width = ICON_WIDTH, height = ICON_HEIGHT)
+                // The description sits on the drawing rather than on the column, so a caption below
+                // it is not read out twice.
+                .semantics { contentDescription = description },
+        ) {
+            val scale = size.width / VIEW_WIDTH
+            sheets.forEachIndexed { i, face -> sheet(face, ink, phases[i].value, scale) }
+        }
+        if (caption != null) {
+            Text(
+                text = stringResource(caption),
+                style = MaterialTheme.typography.bodyMedium,
+                // The same ink as the watermark, so the line belongs to the mark rather than
+                // captioning it from the page.
+                color = ink,
+                modifier = Modifier.padding(top = 20.dp),
+            )
+        }
     }
 }
 

@@ -8,6 +8,7 @@ import android.net.Uri
 import android.provider.DocumentsContract
 import de.singular.writer.markdown.Frontmatter
 import de.singular.writer.markdown.Note
+import de.singular.writer.markdown.Tags
 import java.security.MessageDigest
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -337,6 +338,79 @@ class Vault(context: Context) {
             }
             parseCache[sha256(text)] = updated
             SaveResult.Saved(swapped, text, sha256(text))
+        }
+
+    /**
+     * Rename [from] to [to] everywhere in the folder, or nowhere.
+     *
+     * The one edit that writes many files at once. `lyrics/snippet` sits on 131 of the archive's 168
+     * notes, so this is not a save with a loop around it — the failure modes are different in kind,
+     * and [RenameResult] is the type that says so.
+     *
+     * **Two passes, and the first one writes nothing.** Every affected note is re-read from disk and
+     * checked twice over: that it still hashes to what the index recorded, and that it round-trips.
+     * Only if all of them pass does anything get written.
+     *
+     * The reason is not corruption — [save] refuses a note that changed underneath it, so pushing
+     * through would skip that note rather than mangle it. The reason is what a half-renamed tag
+     * *looks* like. 130 notes saying `record` and one still saying `album` puts two tags in the
+     * drawer where the user asked for one, which reads as the app having lost their data even though
+     * every file on disk is intact, and finding the straggler means opening notes one at a time. An
+     * archive in one state or the other is worth an extra pass of reads.
+     *
+     * The extra pass is real work — it doubles the reads, since [save] re-reads each note for its own
+     * hash check — and it is the price of the all-or-nothing property. On 131 notes it is about a
+     * second.
+     *
+     * **It does not close the window entirely.** A sync client can land a file between the check and
+     * the write, and SAF offers no transaction to undo the writes already made. [RenameResult.Partial]
+     * reports exactly how far it got, and the recovery is to run it again: renaming is idempotent, so
+     * a second pass covers only what the first missed and writes nothing for the notes it already
+     * did.
+     *
+     * `updated` does not move on any of these notes — see `Note.withTags` and the file format
+     * contract in `CLAUDE.md`. Re-filing is not writing, and a rename that restamped 131 notes would
+     * destroy the dates this archive is kept for.
+     */
+    suspend fun renameTag(index: NoteIndex, from: String, to: String): RenameResult =
+        withContext(Dispatchers.IO) {
+            val affected = index.notes.filter { note -> note.tags.any { Tags.isUnder(it, from) } }
+            if (affected.isEmpty()) return@withContext RenameResult.NoSuchTag
+
+            // Pass one: read only. A note the parser cannot reproduce is a note this must not
+            // rewrite, and it is worth knowing before half the folder has been written.
+            val refused = affected.filterNot { it.roundTrips }.map { it.file.name }
+            if (refused.isNotEmpty()) return@withContext RenameResult.Refused(refused)
+
+            val stale = affected.filter { note ->
+                val current = read(note.file.uri)
+                current == null || sha256(current) != note.contentHash
+            }.map { it.file.name }
+            if (stale.isNotEmpty()) return@withContext RenameResult.Stale(stale)
+
+            // Pass two: write. Every note here passed the check a moment ago, so a failure now is a
+            // sync landing inside the window — rare, and reported rather than hidden.
+            var written = 0
+            for ((i, note) in affected.withIndex()) {
+                val renamed = Tags.rename(note.tags, from, to)
+                when (val result = save(note, note.note.body, renamed)) {
+                    is SaveResult.Saved -> written++
+                    // Nothing to write is a success: the note already says what it should. This is
+                    // what makes running the rename a second time safe.
+                    SaveResult.Unchanged -> written++
+                    else -> {
+                        val remaining = affected.drop(i).map { it.file.name }
+                        val reason = when (result) {
+                            is SaveResult.Conflict -> "a note changed while the rename was running"
+                            is SaveResult.Failed -> result.reason
+                            SaveResult.Refused -> "a note could not be reproduced byte for byte"
+                            else -> "the rename stopped"
+                        }
+                        return@withContext RenameResult.Partial(written, remaining, reason)
+                    }
+                }
+            }
+            RenameResult.Renamed(written)
         }
 
     /**

@@ -291,6 +291,43 @@
          one button in the app that sounds like it might move something. -->
     <string name="settings_folder_caption">Your notes stay where they are. Pocket Prose only reads the folder you point it at.</string>
 
+    <!-- ===== Renaming a tag ===== -->
+
+    <!-- Title of the rename dialog. %1$s is the tag's full path, e.g. "album/debut". -->
+    <string name="rename_tag_title">Rename %1$s</string>
+    <string name="rename_tag_label">New name</string>
+    <!-- Under the field: how much of the archive this rewrites. Children come with the tag, which is
+         why this counts notes rather than naming the tag again. -->
+    <plurals name="rename_tag_scope">
+        <item quantity="one">Rewrites the tag in 1 note. Nested tags are renamed too.</item>
+        <item quantity="other">Rewrites the tag in %1$d notes. Nested tags are renamed too.</item>
+    </plurals>
+    <!-- Shown instead when the new name is a tag that already exists. Its own sentence because a
+         merge is the one outcome here that renaming back does not undo. %1$s is the new name. -->
+    <string name="rename_tag_merges">%1$s already exists. The two tags will be merged, and renaming back will not separate them again.</string>
+    <string name="rename_tag_confirm">Rename</string>
+    <string name="rename_tag_confirm_merge">Merge</string>
+    <!-- Spoken while a rename is writing. The drift on screen is the same one the folder is read
+         with; this is the half that says which of the two is happening. -->
+    <string name="rename_tag_working">Renaming the tag across your notes</string>
+    <!-- Under the animation while a rename runs. Short by design: it is there to say the app is
+         alive during a wait of a few seconds, not to explain itself. -->
+    <string name="rename_tag_caption">Renaming…</string>
+
+    <!-- After a rename. %1$d is the number of notes rewritten. -->
+    <plurals name="rename_tag_done">
+        <item quantity="one">Renamed in 1 note</item>
+        <item quantity="other">Renamed in %1$d notes</item>
+    </plurals>
+    <!-- Nothing was written: the folder changed underneath the app, usually a sync landing. %1$s is
+         one file name. The archive is untouched, which is the part worth saying. -->
+    <string name="rename_tag_stale">Nothing was renamed: %1$s changed on disk. Pull to refresh and try again.</string>
+    <!-- Nothing was written because a note cannot be reproduced byte for byte. %1$s is a file name. -->
+    <string name="rename_tag_refused">Nothing was renamed: %1$s cannot be saved safely.</string>
+    <!-- The rename stopped part way. Both numbers matter, and so does the fact that running it again
+         is the fix. %1$d were written, %2$d were not. -->
+    <string name="rename_tag_partial">Renamed %1$d notes, %2$d left. Try the rename again to finish.</string>
+
     <!-- ===== About ===== -->
 
     <!-- The version line. %1$s is a version like "0.1 (1)". -->
