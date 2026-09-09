@@ -2,7 +2,14 @@
 
 package de.singular.writer.ui
 
+import androidx.compose.foundation.border
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalConfiguration
 import java.time.Instant
 import java.time.ZoneId
@@ -29,4 +36,40 @@ fun rememberDateFormatter(): (Instant) -> String {
         .withLocale(locale)
         .withZone(ZoneId.systemDefault())
     return { instant -> formatter.format(instant) }
+}
+
+/**
+ * The app's own snackbar, in the app's own colours.
+ *
+ * Material builds a snackbar from `inverseSurface` and `inverseOnSurface`, and `Theme.kt` states
+ * both schemes in full without ever setting those two — so until 2026-09-09 every message the app
+ * showed fell through to Material's defaults and arrived as a near-white bar with a violet cast, the
+ * one cool object in an entirely warm app.
+ *
+ * The fix could have been to define the inverse roles and keep Material's convention, where a
+ * transient message is deliberately the opposite of the page so it cannot be mistaken for content.
+ * That was considered and not taken. This palette's whole argument is against slabs — it is why the
+ * top bar refuses even a tint and why the tag-move banner is recessed rather than lifted — and a
+ * bright rectangle would be the loudest thing in the app, spent on the most incidental information
+ * it has. A snackbar already announces itself by sliding in and leaving again.
+ *
+ * So: a container off the same ramp as every other raised surface, ordinary ink, and an `outline`
+ * edge to hold it off the list underneath. It stays quiet in both schemes, which the inverted
+ * version does not — inverted, light mode gets a near-black bar.
+ *
+ * One definition, used by both hosts. Two snackbars styled separately would drift, and the whole
+ * reason this was worth fixing is that a message should look like it came from this app.
+ */
+@Composable
+fun NoticeHost(state: SnackbarHostState, modifier: Modifier = Modifier) {
+    SnackbarHost(state, modifier) { data ->
+        Snackbar(
+            snackbarData = data,
+            shape = ControlShape,
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            contentColor = MaterialTheme.colorScheme.onSurface,
+            actionContentColor = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.border(1.dp, MaterialTheme.colorScheme.outline, ControlShape),
+        )
+    }
 }

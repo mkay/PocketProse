@@ -164,6 +164,28 @@ class Settings(context: Context) {
             prefs.edit().putString(KEY_START_TAG, value).apply()
         }
 
+    /**
+     * Whether the user has waved away the offer to move their inline tags into their notes.
+     *
+     * Permanent, and it has to be: the offer is about the user's own filing, which is theirs. A
+     * banner that came back on every launch would be the app nagging about a decision it was already
+     * given. The way back is the row in Settings, which appears only while there is still something
+     * to move.
+     *
+     * Stored here rather than with the vault's folder preference even though it is a fact about one
+     * folder, because the settings screen is where it is undone. Pointing the app at a second folder
+     * that also has inline tags will therefore find this already set — the cost of the simpler
+     * store, and the settings row is the answer to it.
+     */
+    private var declinedMove by mutableStateOf(prefs.getBoolean(KEY_MOVE_TAGS_DECLINED, false))
+
+    var moveTagsDeclined: Boolean
+        get() = declinedMove
+        set(value) {
+            declinedMove = value
+            prefs.edit().putBoolean(KEY_MOVE_TAGS_DECLINED, value).apply()
+        }
+
     private companion object {
         const val PREFS = "settings"
         const val KEY_THEME_MODE = "theme_mode"
@@ -171,5 +193,6 @@ class Settings(context: Context) {
         const val KEY_PROSE_SIZE = "prose_size"
         const val KEY_PROSE_LEADING = "prose_leading"
         const val KEY_START_TAG = "start_tag"
+        const val KEY_MOVE_TAGS_DECLINED = "move_tags_declined"
     }
 }

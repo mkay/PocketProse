@@ -61,8 +61,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import de.singular.writer.ui.DrawerWidth
+import de.singular.writer.markdown.Migration
 import de.singular.writer.markdown.Segments
 import de.singular.writer.markdown.Tags
+import de.singular.writer.ui.MoveTagsDialog
 import de.singular.writer.ui.RenameTagDialog
 import de.singular.writer.ui.EditorScreen
 import de.singular.writer.ui.NoteDocument
@@ -80,6 +82,7 @@ import de.singular.writer.vault.IndexedNote
 import de.singular.writer.vault.IndexDump
 import de.singular.writer.vault.NoteIndex
 import de.singular.writer.vault.CreateResult
+import de.singular.writer.vault.MigrationResult
 import de.singular.writer.vault.RenameResult
 import de.singular.writer.vault.SaveResult
 import de.singular.writer.vault.Vault
@@ -172,6 +175,20 @@ private fun PocketProseApp(settings: Settings) {
     // True while a rename is writing. It only picks the words for the loading drift — `loading`
     // itself is what puts the drift on screen.
     var renameRunning by remember { mutableStateOf(false) }
+    // True while the inline-tag move is writing. Same job as `renameRunning`: it only picks the
+    // words for the drift.
+    var movingTags by remember { mutableStateOf(false) }
+    // Whether the confirm for that move is up.
+    var offeringMove by remember { mutableStateOf(false) }
+
+    // Whether this folder has tags written into its notes' text, and how many.
+    //
+    // Recomputed whenever the index is, which is once per folder read — one regex over text already
+    // parsed, and cheap enough that there is nothing to cache beyond this. It is what the banner,
+    // the confirm and the settings row all count by, so all three agree by construction.
+    val inlineTags = remember(index) {
+        Migration.survey(index.notes.map { it.note }).takeIf { it.worthOffering }
+    }
     var showSettings by remember { mutableStateOf(false) }
     var showSupport by remember { mutableStateOf(false) }
 
@@ -290,7 +307,9 @@ private fun PocketProseApp(settings: Settings) {
                 true
             }
             is SaveResult.Conflict -> { conflict = true; false }
-            is SaveResult.Failed -> { message = result.reason; false }
+            // Wrapped here rather than at the snackbar: this is the one message in the app that
+            // arrives as a bare fragment, and the screen showing it cannot know that.
+            is SaveResult.Failed -> { message = context.getString(R.string.save_failed, result.reason); false }
         }
     }
 
@@ -307,7 +326,7 @@ private fun PocketProseApp(settings: Settings) {
      */
     fun createNote(title: String) = scope.launch {
         when (val result = vault.create(title)) {
-            is CreateResult.Failed -> message = result.reason
+            is CreateResult.Failed -> message = context.getString(R.string.create_failed, result.reason)
             is CreateResult.Made -> {
                 refresh().join()
                 focusNewNote = true
@@ -404,6 +423,13 @@ private fun PocketProseApp(settings: Settings) {
             totalNotes = index.size,
             folderName = folderName,
             onChooseFolder = { pickFolder.launch(null) },
+            moveTagsNotes = inlineTags?.notes,
+            onMoveTags = {
+                // Out of the settings and onto the library, so the confirm is read in front of the
+                // notes it is about rather than on top of a preferences page.
+                showSettings = false
+                offeringMove = true
+            },
             onClose = { showSettings = false },
         )
         return
@@ -478,7 +504,9 @@ private fun PocketProseApp(settings: Settings) {
                             newTitle = document.title(),
                         )
                         conflict = false
-                        if (result is SaveResult.Failed) message = result.reason else {
+                        if (result is SaveResult.Failed) {
+                            message = context.getString(R.string.save_failed, result.reason)
+                        } else {
                             refresh()
                             openNoteUri = null
                         }
@@ -492,6 +520,62 @@ private fun PocketProseApp(settings: Settings) {
             )
         }
         return
+    }
+
+    if (offeringMove && inlineTags != null) {
+        MoveTagsDialog(
+            survey = inlineTags,
+            onDismiss = {
+                offeringMove = false
+                // Dismissing the confirm is not dismissing the offer. Somebody who opened it to read
+                // the count and thought better of it has said "not now", and the banner staying is
+                // what lets them come back to it; the banner's own × is where "no" lives.
+            },
+            onConfirm = {
+                offeringMove = false
+                scope.launch {
+                    // Same borrowing of `loading` as the rename, and for the same reason: this
+                    // rewrites more notes than a rename does, every row's excerpt is changing
+                    // underneath the list, and a still screen for that long reads as an app that has
+                    // died. `LoadingSheets` waits 220ms, so a small folder still finishes without a
+                    // flash.
+                    drawerState.close()
+                    movingTags = true
+                    loading = true
+                    message = when (val result = vault.migrateInlineTags(index)) {
+                        is MigrationResult.Moved -> {
+                            // Taken as answered either way. The folder now has nothing to move, so
+                            // the banner would go on its own — but a Partial leaves notes behind,
+                            // and that case wants the row in settings rather than the banner back
+                            // over the list unprompted.
+                            settings.moveTagsDeclined = true
+                            context.resources.getQuantityString(
+                                R.plurals.move_tags_done,
+                                result.notes,
+                                result.notes,
+                            )
+                        }
+                        is MigrationResult.Stale ->
+                            context.getString(R.string.move_tags_stale, result.notes.first())
+                        is MigrationResult.Refused ->
+                            context.getString(R.string.move_tags_refused, result.notes.first())
+                        is MigrationResult.Partial -> {
+                            settings.moveTagsDeclined = true
+                            context.getString(
+                                R.string.move_tags_partial,
+                                result.migrated,
+                                result.remaining.size,
+                            )
+                        }
+                        // Nothing carried one, so nothing to say. Only reachable if a sync cleared
+                        // the folder's hashtags between the survey and the tap.
+                        MigrationResult.NothingToMove -> null
+                    }
+                    movingTags = false
+                    refresh()
+                }
+            },
+        )
     }
 
     renaming?.let { tag ->
@@ -605,8 +689,16 @@ private fun PocketProseApp(settings: Settings) {
             folderName = folderName,
             error = error,
             loading = loading,
-            loadingSays = if (renameRunning) R.string.rename_tag_working else R.string.library_loading,
-            loadingCaption = if (renameRunning) R.string.rename_tag_caption else null,
+            loadingSays = when {
+                renameRunning -> R.string.rename_tag_working
+                movingTags -> R.string.move_tags_working
+                else -> R.string.library_loading
+            },
+            loadingCaption = when {
+                renameRunning -> R.string.rename_tag_caption
+                movingTags -> R.string.move_tags_caption
+                else -> null
+            },
             query = query,
             onQueryChange = { query = it },
             searching = searching,
@@ -615,10 +707,17 @@ private fun PocketProseApp(settings: Settings) {
                 if (!it) query = ""
             },
             selectedTag = selectedTag,
+            // Not while a search or a tag filter is on: the banner counts the whole folder, and a
+            // sentence about 165 notes over a list of three reads as being about the three.
+            moveTags = inlineTags?.takeIf { !settings.moveTagsDeclined && !searching && selectedTag == null },
+            onMoveTags = { offeringMove = true },
+            onDismissMoveTags = { settings.moveTagsDeclined = true },
             onOpenDrawer = { scope.launch { drawerState.open() } },
             onChooseFolder = { pickFolder.launch(null) },
             onOpenNote = { openNoteUri = it.file.uri.toString() },
             onNewNote = { naming = true },
+            message = message,
+            onMessageShown = { message = null },
         )
     }
 

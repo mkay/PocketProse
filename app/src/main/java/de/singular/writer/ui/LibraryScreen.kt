@@ -33,6 +33,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SmallFloatingActionButton
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -56,6 +57,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import de.singular.writer.R
+import de.singular.writer.markdown.Migration
 import de.singular.writer.vault.IndexedNote
 import de.singular.writer.vault.VaultFailure
 
@@ -83,10 +85,22 @@ fun LibraryScreen(
     searching: Boolean,
     onSearchingChange: (Boolean) -> Unit,
     selectedTag: String?,
+    // The offer to move a folder's inline tags into its notes, or null when there is nothing to
+    // move or the user has waved it away. It sits between the header and the list rather than over
+    // them: this is an offer about the notes below it, and it must be ignorable. See MoveTagsBanner.
+    moveTags: Migration.Survey?,
+    onMoveTags: () -> Unit,
+    onDismissMoveTags: () -> Unit,
     onOpenDrawer: () -> Unit,
     onChooseFolder: () -> Unit,
     onOpenNote: (IndexedNote) -> Unit,
     onNewNote: () -> Unit,
+    // A sentence to show once, or null. The library had no host of its own until 2026-09-09, so
+    // everything it had to say — a finished tag rename, a finished tag move, a note that could not
+    // be made — sat in the state unshown until an editor was opened and said it there, under a
+    // "Couldn't save:" that belonged to something else entirely.
+    message: String?,
+    onMessageShown: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     when (error) {
@@ -115,6 +129,13 @@ fun LibraryScreen(
         )
 
         null -> Box(modifier.fillMaxSize()) {
+            val snackbar = remember { SnackbarHostState() }
+            LaunchedEffect(message) {
+                if (message != null) {
+                    snackbar.showSnackbar(message)
+                    onMessageShown()
+                }
+            }
             Column(Modifier.fillMaxSize()) {
             // The header is one block — bar, strip, and the status bar above them — and it is the
             // **page's own colour**, with no tint at all. It takes the top inset itself so the page
@@ -174,6 +195,18 @@ fun LibraryScreen(
             }
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
+            // Under the divider, so it is part of the page rather than part of the header, and only
+            // once the folder has actually been read — an offer about notes nobody has seen yet is
+            // the thing this design exists to avoid.
+            if (moveTags != null && !loading) {
+                MoveTagsBanner(
+                    survey = moveTags,
+                    onOffer = onMoveTags,
+                    onDismiss = onDismissMoveTags,
+                )
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            }
+
             if (loading) {
                 // What must not happen here is the "nothing matches" line appearing before anything
                 // has been looked at, which is why this branch exists at all.
@@ -208,6 +241,17 @@ fun LibraryScreen(
                     .align(Alignment.BottomEnd)
                     .windowInsetsPadding(WindowInsets.navigationBars)
                     .padding(20.dp),
+            )
+
+            // Above the new-note button rather than beside it: a snackbar that shares the bottom
+            // edge with a floating button covers it, and the button is the one thing on this screen
+            // somebody might be reaching for while the message is still up.
+            NoticeHost(
+                snackbar,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .windowInsetsPadding(WindowInsets.navigationBars)
+                    .padding(bottom = 76.dp),
             )
         }
     }

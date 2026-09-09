@@ -149,6 +149,8 @@
 
     <!-- Shown briefly after something went wrong while saving. %1$s is a short reason. -->
     <string name="save_failed">Couldn\'t save: %1$s</string>
+    <!-- Shown when a new note could not be made. %1$s is a lowercase fragment from CreateResult. -->
+    <string name="create_failed">Couldn\'t make the note: %1$s</string>
 
     <!-- Spoken by a screen reader for a picture in a note that has no description of its own.
          Every image in the author's archive is a chord diagram with an empty alt text. -->
@@ -327,6 +329,62 @@
     <!-- The rename stopped part way. Both numbers matter, and so does the fact that running it again
          is the fix. %1$d were written, %2$d were not. -->
     <string name="rename_tag_partial">Renamed %1$d notes, %2$d left. Try the rename again to finish.</string>
+
+    <!-- ===== Moving inline tags into notes ===== -->
+
+    <!-- The banner above the library, for a folder written in an editor where a tag was a #hashtag
+         in the text. Deliberately says "inside your notes" rather than naming the format: the people
+         this is for write songs, not YAML. -->
+    <string name="move_tags_banner">Your tags are written inside your notes.</string>
+    <string name="move_tags_banner_action">Move them</string>
+    <string name="move_tags_banner_dismiss">Dismiss</string>
+
+    <!-- The dialog the banner opens. -->
+    <string name="move_tags_title">Move your tags</string>
+    <!-- The count, which is the thing that sizes the decision. %1$d notes have tags in the text,
+         %2$d notes in the folder altogether. -->
+    <plurals name="move_tags_scope">
+        <item quantity="one">1 of your %2$d notes has tags written into the text.</item>
+        <item quantity="other">%1$d of your %2$d notes have tags written into the text.</item>
+    </plurals>
+    <!-- What the move is for. "Kept with the note" is the honest description of a tag list the
+         reader never sees while writing. -->
+    <string name="move_tags_body">Pocket Prose keeps tags with the note instead of in the text, so they stay out of your writing. Moving them changes those files.</string>
+    <!-- Only when the tag list actually gains something. %1$d is how many tags are new. -->
+    <plurals name="move_tags_gained">
+        <item quantity="one">Your tag list gains 1 tag.</item>
+        <item quantity="other">Your tag list gains %1$d tags.</item>
+    </plurals>
+    <string name="move_tags_confirm">Move tags</string>
+    <string name="move_tags_cancel">Leave them as they are</string>
+
+    <!-- Spoken while the move is writing, in place of the folder-reading line. -->
+    <string name="move_tags_working">Moving your tags into your notes</string>
+    <string name="move_tags_caption">Moving…</string>
+
+    <!-- After the move. %1$d is the number of notes rewritten. -->
+    <plurals name="move_tags_done">
+        <item quantity="one">Moved the tags in 1 note</item>
+        <item quantity="other">Moved the tags in %1$d notes</item>
+    </plurals>
+    <!-- Nothing was written: the folder changed underneath the app, usually a sync landing. %1$s is
+         one file name. -->
+    <string name="move_tags_stale">Nothing was moved: %1$s changed on disk. Pull to refresh and try again.</string>
+    <!-- Nothing was written because a note cannot be reproduced byte for byte. %1$s is a file name.
+         The note being named is the point: it is the one to go and look at. -->
+    <string name="move_tags_refused">Nothing was moved: %1$s cannot be saved safely.</string>
+    <!-- The move stopped part way, so the folder is in two states at once. %1$d notes were done,
+         %2$d were not. -->
+    <string name="move_tags_partial">Moved the tags in %1$d notes, %2$d left. Try again to finish.</string>
+
+    <!-- The settings row that brings the offer back after it was dismissed. Shown only while there
+         is still something to move. -->
+    <string name="settings_move_tags">Tags in your notes</string>
+    <plurals name="settings_move_tags_subtitle">
+        <item quantity="one">1 note has tags written into the text</item>
+        <item quantity="other">%1$d notes have tags written into the text</item>
+    </plurals>
+    <string name="settings_move_tags_caption">Moving them puts the tags with the note, where the app can filter by them, and takes them out of your writing.</string>
 
     <!-- ===== About ===== -->
 

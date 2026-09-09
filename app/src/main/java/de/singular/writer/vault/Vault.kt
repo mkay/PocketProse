@@ -7,6 +7,7 @@ import android.content.Intent
 import android.net.Uri
 import android.provider.DocumentsContract
 import de.singular.writer.markdown.Frontmatter
+import de.singular.writer.markdown.Migration
 import de.singular.writer.markdown.Note
 import de.singular.writer.markdown.Tags
 import java.security.MessageDigest
@@ -302,6 +303,21 @@ class Vault(context: Context) {
 
             val updated = note.note.withTags(newBody, newTags, now, newTitle)
                 ?: return@withContext SaveResult.Unchanged
+            write(note, updated)
+        }
+
+    /**
+     * Put [updated] where [note] is, atomically, having checked that nothing moved underneath it.
+     *
+     * The write itself, with no opinion about what changed or whether `updated` should have moved —
+     * [save] decides that for an edit, [migrateInlineTags] decides it differently for a migration,
+     * and both arrive here with a finished [Note]. Splitting it out is what lets the migration reuse
+     * the temp-file-and-rename dance rather than grow a second copy of it: there is one piece of
+     * code in this app that can leave a note half-written, and it should stay one.
+     */
+    private suspend fun write(note: IndexedNote, updated: Note): SaveResult =
+        withContext(Dispatchers.IO) {
+            if (!note.roundTrips) return@withContext SaveResult.Refused
             val text = updated.render()
 
             val current = read(note.file.uri)
@@ -411,6 +427,85 @@ class Vault(context: Context) {
                 }
             }
             RenameResult.Renamed(written)
+        }
+
+    /**
+     * Move every inline tag in the folder into the frontmatter it belongs in — once, on consent.
+     *
+     * The migration a folder from another editor needs: a tag written as `#lyrics/snippet` in the
+     * body goes into the note's `tags:` list and the line it was on goes away. `Migration` holds all
+     * of the reasoning about *what* a move is; this holds the reasoning about writing it.
+     *
+     * **Two passes, and the first one writes nothing** — the same shape as [renameTag], for a
+     * stronger version of the same reason. A half-migrated folder is not merely untidy: some notes
+     * would show their tags as chips and the rest would still show them as text, in a library the
+     * user is looking at for the first time. That reads as the app having worked on some notes and
+     * broken others, and there is nothing on screen to say which is which.
+     *
+     * The precheck matters more here than anywhere else in the app, because this runs on a folder
+     * the app has just met. A note whose shape the parser has misunderstood is likelier now than it
+     * will ever be again, and the very first thing a new user must not experience is a mangled note.
+     * So a single note that does not round-trip stops the whole migration before a byte is written,
+     * and says which one.
+     *
+     * **`updated` does not move on any of these notes.** The bodies change and the timestamps stay:
+     * this is filing, not writing — see the file format contract in `CLAUDE.md`, and the class
+     * comment in `Migration`. It is why the notes are written through [write] with a note that
+     * `Migration.plan` built, rather than through [save], whose whole job is to decide that a
+     * changed body means a new stamp.
+     *
+     * Not called on folder adoption, and not called on its own. See `Migration`'s class comment for
+     * why the offer waits until the user has seen their notes.
+     */
+    suspend fun migrateInlineTags(index: NoteIndex): MigrationResult =
+        withContext(Dispatchers.IO) {
+            val planned = index.notes
+                .map { it to Migration.plan(it.note) }
+                .mapNotNull { (indexed, outcome) ->
+                    when (outcome) {
+                        is Migration.Outcome.Move -> indexed to outcome
+                        // A note the app declines to file is left exactly as it is, and does not
+                        // stop the folder — unlike a note it cannot reproduce, which does. The
+                        // difference is that one is a shape this app knows it should not touch and
+                        // the other is a shape it does not understand.
+                        is Migration.Outcome.Blocked -> null
+                        Migration.Outcome.Untouched -> null
+                    }
+                }
+            if (planned.isEmpty()) return@withContext MigrationResult.NothingToMove
+
+            // Pass one: read only.
+            val refused = planned.filterNot { (indexed, _) -> indexed.roundTrips }.map { it.first.file.name }
+            if (refused.isNotEmpty()) return@withContext MigrationResult.Refused(refused)
+
+            val stale = planned.filter { (indexed, _) ->
+                val current = read(indexed.file.uri)
+                current == null || sha256(current) != indexed.contentHash
+            }.map { it.first.file.name }
+            if (stale.isNotEmpty()) return@withContext MigrationResult.Stale(stale)
+
+            // Pass two: write. `write` rather than `save`, so no note is stamped.
+            var written = 0
+            for ((i, entry) in planned.withIndex()) {
+                val (indexed, move) = entry
+                when (val result = write(indexed, move.note)) {
+                    is SaveResult.Saved -> written++
+                    // Nothing to write is a success: the note already says what it should, which is
+                    // what makes running this a second time safe.
+                    SaveResult.Unchanged -> written++
+                    else -> {
+                        val remaining = planned.drop(i).map { it.first.file.name }
+                        val reason = when (result) {
+                            is SaveResult.Conflict -> "a note changed while the tags were moving"
+                            is SaveResult.Failed -> result.reason
+                            SaveResult.Refused -> "a note could not be reproduced byte for byte"
+                            else -> "the move stopped"
+                        }
+                        return@withContext MigrationResult.Partial(written, remaining, reason)
+                    }
+                }
+            }
+            MigrationResult.Moved(written, planned.flatMap { it.second.filed }.distinct().size)
         }
 
     /**

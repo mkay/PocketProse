@@ -151,6 +151,55 @@ class CorpusTest {
     }
 
     @Test
+    fun `the whole archive migrates, gains no tag, and loses no timestamp`() {
+        // What the first-run offer would do to this folder, run over all 168 real notes. The archive
+        // does not need it — its tags are already in the frontmatter — which is exactly what makes
+        // it the right test bed: the move must come out as a pure strip, changing bodies and nothing
+        // else, and any tag it claims to gain would be a tag it invented.
+        val corpus = corpus()
+        val notes = corpus.mapValues { (_, text) -> Note.parse(text) }
+        val survey = Migration.survey(notes.values)
+
+        assertEquals(168, survey.scanned)
+        assertEquals(165, survey.notes)
+        assertEquals(179, survey.lines)
+        assertEquals(25, survey.tags.size)
+        // Every hashtag in the archive is a tag the frontmatter already declares, so the drawer
+        // gains nothing and no `tags:` block is rewritten. CorpusTest's sibling test asserts the
+        // same property from the other side.
+        assertEquals(emptyList<String>(), survey.gained)
+        assertEquals(0, survey.blocked)
+
+        for ((name, note) in notes) {
+            val outcome = Migration.plan(note)
+            if (outcome is Migration.Outcome.Untouched) continue
+            val move = outcome as? Migration.Outcome.Move
+                ?: throw AssertionError("$name could not be migrated: $outcome")
+            assertEquals("$name had its frontmatter rewritten", note.frontmatter.raw, move.note.frontmatter.raw)
+            assertEquals("$name lost its created", note.frontmatter.created, move.note.frontmatter.created)
+            // Filing is not writing — this is `CLAUDE.md`'s ninth acceptance test, one operation over.
+            assertEquals("$name had its updated moved", note.frontmatter.updated, move.note.frontmatter.updated)
+            assertEquals("$name lost a tag", note.tags, move.note.tags)
+            assertTrue("$name gained bytes", move.note.body.length < note.body.length)
+            assertEquals("$name kept a hashtag", emptySet<String>(), hashtagsIn(move.note.body))
+        }
+    }
+
+    @Test
+    fun `the migration takes only tag lines, never a word out of a song`() {
+        // Every one of the archive's 179 hashtags sits on a line of its own, so a strict rule — a
+        // line must be nothing but tags — costs nothing here and is what keeps `Ein #Traum von einem
+        // Tag` intact if somebody ever writes one. Measured 2026-09-09.
+        val corpus = corpus()
+        val loose = corpus.filter { (_, text) ->
+            val body = Note.parse(text).body
+            val prose = body.lines().filterNot(Migration::isTagLine).joinToString("\n")
+            hashtagsIn(prose).isNotEmpty()
+        }.keys
+        assertEquals(emptySet<String>(), loose)
+    }
+
+    @Test
     fun `no tag anywhere still carries a percent sign`() {
         // `100%`, `50%` and `75%` were renamed to `100`, `50` and `75` on 2026-09-07 — see
         // tools/rename-percent-tags.py. `%` could not be written as a hashtag, which is what made

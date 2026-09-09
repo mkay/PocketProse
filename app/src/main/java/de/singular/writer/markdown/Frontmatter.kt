@@ -141,7 +141,17 @@ class Frontmatter private constructor(
     fun withTags(newTags: List<String>): Frontmatter {
         if (!present) return this
         val at = lines.indexOfFirst { it.startsWith("tags:") }
-        if (at < 0) return this
+        // A block with no `tags:` key at all gets one, appended after the last line — the same
+        // placement, and the same reasoning, as a new key in [withKey]: it is the only spot that
+        // cannot disturb the order of what is already there. Every note in the archive has the key
+        // already, so this fires for a file that came from somewhere else; returning the block
+        // unchanged instead, which is what this did until the migration needed it, silently
+        // swallowed the tags the caller asked to write.
+        if (at < 0) {
+            val written = if (newTags.isEmpty()) listOf("tags: []") else listOf("tags:") +
+                newTags.map { "  - " + quoteLike(lines.firstOrNull { l -> l.startsWith("title:") }, it) }
+            return of(lines + written)
+        }
         val existing = lines.drop(at + 1)
             .takeWhile { it.startsWith(" ") || it.startsWith("\t") }
         val indent = existing.firstOrNull()?.takeWhile { it == ' ' || it == '\t' } ?: "  "
@@ -283,5 +293,23 @@ class Frontmatter private constructor(
 
         /** [value] as a double-quoted frontmatter value, escaped so [unquote] gives it back. */
         fun quoted(value: String): String = "\"" + escape(value) + "\""
+
+        /**
+         * A block for a note that has none, carrying nothing but a `tags:` list.
+         *
+         * **The only place in the app that creates frontmatter**, and it exists for exactly one
+         * caller: [Migration], moving tags out of the body of a note that arrived from an editor
+         * with no frontmatter at all. It is not the function this file's comment warns about — it
+         * does not rebuild an existing block out of parsed values, it writes a new one where there
+         * was nothing, with only what the user asked to be filed in it. Nothing app-owned goes in:
+         * no id, no `created`, no `updated`. If you are tempted to add one, read the prime directive.
+         *
+         * LF, because the note that gets one had no block to take a line ending from and the archive
+         * is LF throughout.
+         */
+        fun forTags(tags: List<String>): Frontmatter {
+            val inner = if (tags.isEmpty()) listOf("tags: []") else listOf("tags:") + tags.map { "  - " + quoted(it) }
+            return Frontmatter((listOf("---") + inner + listOf("---")).joinToString("\n") + "\n")
+        }
     }
 }

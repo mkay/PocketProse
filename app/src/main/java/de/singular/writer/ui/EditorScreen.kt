@@ -32,7 +32,6 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -202,10 +201,15 @@ fun EditorScreen(
     modifier: Modifier = Modifier,
 ) {
     val snackbar = remember { SnackbarHostState() }
-    val failed = stringResource(R.string.save_failed, message.orEmpty())
+    // Shown as given. It used to be wrapped in "Couldn't save: …" here, which was right for the one
+    // caller that hands over a bare reason and wrong for every other: a failed delete came out as
+    // "Couldn't save: the note could not be deleted", and a message the *library* had set — a
+    // finished tag rename, a finished tag move — sat in the state until a note was opened and then
+    // appeared here as "Couldn't save: Moved the tags in 165 notes". The sentence is now built where
+    // the failure is known, and this only shows it.
     LaunchedEffect(message) {
         if (message != null) {
-            snackbar.showSnackbar(failed)
+            snackbar.showSnackbar(message)
             onMessageShown()
         }
     }
@@ -370,7 +374,7 @@ fun EditorScreen(
 
         AttachmentStrip(links = links, missing = missingLinks, onOpen = onOpenLink)
 
-        SnackbarHost(snackbar)
+        NoticeHost(snackbar)
 
         // Formatting exists only while something is selected. A collapsed cursor is someone
         // writing; a selection is someone looking at a piece of text and considering it.

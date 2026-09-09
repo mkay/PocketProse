@@ -57,6 +57,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import de.singular.writer.ProseFont
@@ -115,6 +116,11 @@ fun SettingsScreen(
     totalNotes: Int,
     folderName: String?,
     onChooseFolder: () -> Unit,
+    // How many notes still have tags written into their text, or null when none do. The way back to
+    // an offer the user dismissed — and it disappears once there is nothing left to move, so it is
+    // never a row that does nothing.
+    moveTagsNotes: Int?,
+    onMoveTags: () -> Unit,
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -171,6 +177,8 @@ fun SettingsScreen(
                     totalNotes = totalNotes,
                     folderName = folderName,
                     onChooseFolder = onChooseFolder,
+                    moveTagsNotes = moveTagsNotes,
+                    onMoveTags = onMoveTags,
                 )
             }
 
@@ -368,6 +376,8 @@ private fun SystemSettings(
     totalNotes: Int,
     folderName: String?,
     onChooseFolder: () -> Unit,
+    moveTagsNotes: Int?,
+    onMoveTags: () -> Unit,
 ) {
     SettingsSectionLabel(R.string.settings_section_appearance)
     ThemeModeChips(
@@ -417,6 +427,19 @@ private fun SystemSettings(
         onClick = onChooseFolder,
     )
     SettingsCaption(R.string.settings_folder_caption)
+
+    // Under the folder, because it is a fact about the folder rather than a preference — and it is
+    // here at all only so that dismissing the banner is not a door that locks behind you. It shows
+    // while notes still carry tags in their text and vanishes for good once none do.
+    if (moveTagsNotes != null) {
+        SettingActionRow(
+            label = R.string.settings_move_tags,
+            subtitle = pluralStringResource(R.plurals.settings_move_tags_subtitle, moveTagsNotes, moveTagsNotes),
+            icon = Icons.Default.Label,
+            onClick = onMoveTags,
+        )
+        SettingsCaption(R.string.settings_move_tags_caption)
+    }
 }
 
 /**
