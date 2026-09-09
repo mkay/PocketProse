@@ -90,13 +90,40 @@ import de.singular.writer.vault.Attachments
  * [body] reassembles the note. Segments that are not text hand back their original bytes untouched,
  * so an image line survives being scrolled past exactly as it was written.
  *
+ * The one thing the editor does not show is the blank line under the frontmatter — see
+ * [opensOnBlankLine].
+ *
  * [name] is the file this document was built from, and it is checked before every write. A document
  * is an editor's worth of unsaved state; writing one into a different note's file would put one
  * song into another's, and the only way to be sure that cannot happen is to carry the identity
  * around with the state rather than to reason about which composition holds what.
  */
 class NoteDocument(val name: String, body: String, tags: List<String>, title: String) {
-    val segments: List<Segment> = Segments.split(body)
+
+    /**
+     * Whether the note's body opens on the blank line that separates it from the frontmatter.
+     *
+     * 167 of the archive's 168 notes do, because a note's body begins immediately after the closing
+     * `---` and every note in the folder has a gap there. Shown as written, that gap is an empty
+     * first line sitting in the text field above the words — and the editor keeps the title in a
+     * field of its own, so it is not separating anything from anything. It made sense while a note's
+     * name was a heading in the body; with the name lifted out it is a blank line at the top of a
+     * song.
+     *
+     * So exactly one leading newline is hidden here and exactly one is put back in [body]. The
+     * symmetry is the whole of it, and it is the same bargain `Note.keepTrailingNewline` strikes at
+     * the other end of the file: a property the file already had is restored, never imposed. A note
+     * that arrived without the gap is shown and saved without it, and a blank line the author
+     * actually types is a *second* one, kept as typed — they see one, the file holds two, and
+     * opening a note and closing it still writes nothing.
+     *
+     * This hides no writing. The frontmatter's own separator is the only line it can ever take, and
+     * it is a byte of structure rather than a byte of the song — unlike the tag lines the app used
+     * to hide, which were somebody's text.
+     */
+    private val opensOnBlankLine: Boolean = body.startsWith("\n")
+
+    val segments: List<Segment> = Segments.split(if (opensOnBlankLine) body.substring(1) else body)
 
     /**
      * The note's title, live, as the field at the top of the page holds it.
@@ -150,10 +177,11 @@ class NoteDocument(val name: String, body: String, tags: List<String>, title: St
 
     fun bufferAt(index: Int): TextFieldState = buffers.getValue(index)
 
-    /** The whole note again, as bytes to be written. */
-    fun body(): String = segments.withIndex().joinToString("") { (i, segment) ->
-        if (segment is Segment.Prose) buffers.getValue(i).text.toString() else segment.raw
-    }
+    /** The whole note again, as bytes to be written — including the gap [opensOnBlankLine] hid. */
+    fun body(): String = (if (opensOnBlankLine) "\n" else "") +
+        segments.withIndex().joinToString("") { (i, segment) ->
+            if (segment is Segment.Prose) buffers.getValue(i).text.toString() else segment.raw
+        }
 
     /** The index of the note's first editable stretch, which is where a placeholder belongs. */
     val firstProseIndex: Int = segments.indexOfFirst { it is Segment.Prose }
