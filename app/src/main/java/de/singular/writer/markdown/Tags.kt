@@ -59,6 +59,46 @@ object Tags {
     fun normalize(tag: String): String = tag.trim().trimStart('#').lowercase()
 
     /**
+     * The same folding, applied to a field while somebody is still typing in it.
+     *
+     * [normalize] runs when a tag is committed, which meant the fold happened *after* the user had
+     * looked away: they typed `Lyrics`, saw `Lyrics`, saved, and found `lyrics`. Small, and exactly
+     * the kind of quiet correction that reads as the app having its own ideas. Folding the field as
+     * it is typed makes the rule visible at the moment it applies — what is on screen is what will
+     * be stored.
+     *
+     * **[normalize] minus the trailing trim**, and that is the whole difference. Trimming the end on
+     * every keystroke would eat the space in `song ideas` before the second word could be typed, so
+     * a tag with a space in it would become unwriteable — which is a restriction nobody asked for.
+     * The archive has no such tag and the rename dialog refuses one, but the tag sheet accepts them
+     * today and this is not the place to change that. The trailing space goes on commit, where
+     * [normalize] still has the last word.
+     */
+    fun typed(tag: String): String = tag.trimStart().trimStart('#').lowercase()
+
+    /**
+     * Whether the app will accept [tag] as a *new* name — typed into the tag sheet, or typed into
+     * the rename dialog.
+     *
+     * **A tag with a space in it cannot survive the planned export.** `CLAUDE.md` describes that
+     * export as this migration's inverse — the frontmatter tags written back into bodies as
+     * hashtags — and it is the whole of the app's undo story. `#man go` is not a tag called
+     * `man go`; by [Migration]'s own grammar it is the tag `man` followed by the word `go`. So a
+     * spaced tag is one the app can store and can never give back, which is a worse promise than
+     * refusing it at the door. A `#` is refused for the same reason, one step more obviously.
+     *
+     * **This governs entry and nothing else.** A tag that is already in a file stays: it is listed,
+     * filtered by, counted, and written back exactly as it was found. Rewriting somebody's
+     * frontmatter to enforce a rule the app invented after the fact is the prime directive's first
+     * prohibition, and `man go` sitting in the drawer, selectable but not re-creatable, is the
+     * correct outcome rather than an inconsistency to tidy away.
+     *
+     * The tag sheet accepted spaces and the rename dialog refused them, silently, until 2026-09-10 —
+     * so a tag could be made and then never renamed, with nothing on screen saying why.
+     */
+    fun accepts(tag: String): Boolean = tag.isNotEmpty() && ' ' !in tag && '#' !in tag
+
+    /**
      * A node in the tag tree the drawer shows.
      *
      * [count] is how many notes carry this exact tag, which is not the same as how many carry

@@ -14,6 +14,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
@@ -156,41 +157,72 @@ fun TagSheet(
 /**
  * The field for a tag the folder does not have yet.
  *
- * Lowercased on entry by [Tags.normalize], and a leading `#` is quietly dropped for anyone who types
- * one out of habit. The archive was deliberately case-folded once already and a `Lyrics` beside the
- * existing `lyrics` would split a tag in the drawer with no UI that makes it look like anything but
- * a bug.
+ * Lowercased in the field as it is typed, not on the way out, and a leading `#` is quietly dropped
+ * for anyone who types one out of habit. The archive was deliberately case-folded once already and a
+ * `Lyrics` beside the existing `lyrics` would split a tag in the drawer with no UI that makes it
+ * look like anything but a bug.
+ *
+ * **The fold is visible while it happens.** It ran only on commit until 2026-09-10, so somebody who
+ * typed a capital saw their capital, saved, and found it lowered afterwards — the app correcting
+ * them behind their back over something it had never mentioned. `Tags.typed` folds the field
+ * instead, and the keyboard is told not to capitalise in the first place, which is where most of
+ * those capitals came from: a phone IME capitalises the first letter of a text field by default,
+ * so the user was not even the one who typed it.
  */
 @Composable
 private fun NewTagField(onAdd: (String) -> Unit) {
     var typed by remember { mutableStateOf("") }
     val tag = Tags.normalize(typed)
+    val accepted = Tags.accepts(tag)
+    // Why it is being refused, or null while there is nothing to refuse. Said out loud rather than
+    // greying the button and leaving the reader to guess, and *not* fixed silently: swallowing the
+    // space as it is typed would be the same quiet correction the lowercasing above stopped doing.
+    val refusal = when {
+        tag.isEmpty() || accepted -> null
+        ' ' in tag -> R.string.tag_no_spaces
+        else -> R.string.tag_no_hash
+    }
     val submit = {
-        if (tag.isNotEmpty()) {
+        if (accepted) {
             onAdd(tag)
             typed = ""
         }
     }
 
+    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(4.dp),
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+        modifier = Modifier.fillMaxWidth(),
     ) {
         OutlinedTextField(
             value = typed,
-            onValueChange = { typed = it },
+            onValueChange = { typed = Tags.typed(it) },
             label = { Text(text = stringResource(R.string.tag_sheet_new)) },
             singleLine = true,
             shape = ControlShape,
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+            keyboardOptions = KeyboardOptions(
+                capitalization = KeyboardCapitalization.None,
+                autoCorrectEnabled = false,
+                imeAction = ImeAction.Done,
+            ),
             keyboardActions = KeyboardActions(onDone = { submit() }),
+            isError = refusal != null,
             modifier = Modifier.weight(1f),
         )
-        IconButton(onClick = submit, enabled = tag.isNotEmpty()) {
+        IconButton(onClick = submit, enabled = accepted) {
             Icon(
                 imageVector = Icons.Filled.Add,
                 contentDescription = stringResource(R.string.tag_sheet_add),
+            )
+        }
+    }
+        refusal?.let {
+            Text(
+                text = stringResource(it),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.padding(top = 4.dp, bottom = 4.dp),
             )
         }
     }

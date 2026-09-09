@@ -134,6 +134,13 @@
     <string name="tag_sheet_new">New tag</string>
     <!-- Button beside that field. A verb: it puts the typed tag on this note. -->
     <string name="tag_sheet_add">Add</string>
+    <!-- Why a tag is being refused. Shown under the field in the tag sheet and under the field in
+         the rename dialog, which used to grey its button out and say nothing at all. The example is
+         one of the archive's own tags, so the suggestion is a shape the reader has already seen.
+         The real reason is the planned export — a space cannot be written back as a hashtag — but
+         that is a sentence about a feature nobody has met yet, so the message says what to do. -->
+    <string name="tag_no_spaces">A tag can\'t have a space in it — try a hyphen, like meta-info.</string>
+    <string name="tag_no_hash">A tag can\'t have a # in it.</string>
     <!-- Closes the sheet and writes the change. -->
     <string name="tag_sheet_done">Done</string>
 

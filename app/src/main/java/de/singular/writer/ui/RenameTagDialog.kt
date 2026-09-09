@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -71,7 +72,16 @@ fun RenameTagDialog(
     // A name already in use, and not this tag's own name. `album` -> `album/debut` is also a merge in
     // effect, since the children move under the new path; the check is on the path, not on the leaf.
     val merges = target.isNotEmpty() && target != tag && known.any { Tags.isUnder(it, target) }
-    val valid = target.isNotEmpty() && target != tag && ' ' !in target && '#' !in target
+    val accepted = Tags.accepts(target)
+    val valid = accepted && target != tag
+    // Why it is being refused, or null while there is nothing to refuse. This dialog greyed its
+    // button out and said nothing at all until 2026-09-10 — the same rule as the tag sheet, applied
+    // in silence, which is how a tag with a space in it could be made and then never renamed.
+    val refusal = when {
+        target.isEmpty() || accepted -> null
+        ' ' in target -> R.string.tag_no_spaces
+        else -> R.string.tag_no_hash
+    }
 
     LaunchedEffect(Unit) {
         focus.requestFocus()
@@ -85,10 +95,16 @@ fun RenameTagDialog(
             Column {
                 OutlinedTextField(
                     value = typed,
-                    onValueChange = { typed = it },
+                    // Folded in the field, not on the way out — see `Tags.typed` and the tag sheet.
+                    onValueChange = { typed = Tags.typed(it) },
                     singleLine = true,
                     label = { Text(stringResource(R.string.rename_tag_label)) },
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                    isError = refusal != null,
+                    keyboardOptions = KeyboardOptions(
+                        capitalization = KeyboardCapitalization.None,
+                        autoCorrectEnabled = false,
+                        imeAction = ImeAction.Done,
+                    ),
                     keyboardActions = KeyboardActions(onDone = { if (valid) onRename(target) }),
                     modifier = Modifier
                         .fillMaxWidth()
@@ -96,11 +112,16 @@ fun RenameTagDialog(
                 )
                 Text(
                     text = when {
+                        refusal != null -> stringResource(refusal)
                         merges -> stringResource(R.string.rename_tag_merges, target)
                         else -> pluralStringResource(R.plurals.rename_tag_scope, notes, notes)
                     },
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = if (refusal != null) {
+                        MaterialTheme.colorScheme.error
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
                     modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
                 )
             }

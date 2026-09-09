@@ -5,6 +5,7 @@ package de.singular.writer.markdown
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
+import java.time.Instant
 import org.junit.Test
 
 /**
@@ -127,5 +128,74 @@ class TagsTest {
         assertEquals(163, tree.first { it.path == "lyrics" }.total)
         assertEquals(0, tree.first { it.path == "lyrics" }.count)
         assertEquals(listOf("snippet", "titel"), tree.first { it.path == "lyrics" }.children.map { it.segment })
+    }
+
+    // --- folding a field while it is being typed in -----------------------------------------------
+
+    @Test
+    fun `a field is folded as it is typed, so the rule is visible when it applies`() {
+        // It ran only on commit until 2026-09-10: you typed a capital, saw your capital, saved, and
+        // found it lowered afterwards. Most of those capitals were the keyboard's doing rather than
+        // the user's, which made it read as the app having its own ideas about your filing.
+        assertEquals("lyrics", Tags.typed("Lyrics"))
+        assertEquals("lyrics/snippet", Tags.typed("Lyrics/Snippet"))
+    }
+
+    @Test
+    fun `a hash typed out of habit never appears`() {
+        assertEquals("busch", Tags.typed("#busch"))
+        assertEquals("busch", Tags.typed("  #Busch"))
+    }
+
+    @Test
+    fun `a space can still be typed into the middle of a tag`() {
+        // The whole reason this is not just `normalize`. Trimming the end on every keystroke eats
+        // the space before the second word can be typed, and a tag with a space in it becomes
+        // unwriteable — a restriction nobody asked for.
+        assertEquals("song ", Tags.typed("Song "))
+        assertEquals("song ideas", Tags.typed("Song Ideas"))
+        // And the trailing space still goes when it is committed.
+        assertEquals("song ideas", Tags.normalize(Tags.typed("Song Ideas ")))
+    }
+
+    @Test
+    fun `typing then committing agrees with committing alone`() {
+        // The two must not drift: whatever the field shows is what gets stored.
+        for (raw in listOf("Lyrics", "#Busch", "  Album/Debut  ", "100", "RADIO/Website")) {
+            assertEquals(Tags.normalize(raw), Tags.normalize(Tags.typed(raw)))
+        }
+    }
+
+    // --- what the app accepts as a new name ------------------------------------------------------
+
+    @Test
+    fun `a tag with a space in it is refused as new input`() {
+        // Not a style rule. `CLAUDE.md`'s planned export writes the frontmatter tags back into
+        // bodies as hashtags and is the whole of the app's undo story — and `#man go` is not a tag
+        // called "man go", it is the tag `man` followed by the word `go`. A tag the app can store
+        // and never give back is a worse promise than one it refuses at the door.
+        assertFalse(Tags.accepts("man go"))
+        assertFalse(Tags.accepts("man#go"))
+        assertFalse(Tags.accepts(""))
+    }
+
+    @Test
+    fun `every shape the archive actually uses is accepted`() {
+        for (tag in listOf("lyrics", "lyrics/snippet", "album/debut", "meta-info", "100", "50")) {
+            assertTrue(tag, Tags.accepts(tag))
+        }
+    }
+
+    @Test
+    fun `a tag that is already in a file is not refused, only re-entry is`() {
+        // The rule governs the door, not the archive. A note carrying `man go` keeps it: listed,
+        // filtered by, counted, written back as found. Rewriting somebody's frontmatter to enforce
+        // a rule the app invented afterwards is the prime directive's first prohibition.
+        val note = Note.parse("---\ntags:\n  - \"man go\"\n---\n\nDu\n")
+        assertEquals(listOf("man go"), note.tags)
+        assertEquals(listOf("man go"), Tags.tree(listOf(note.tags)).map { it.path })
+        // And an unrelated edit writes it back untouched.
+        val saved = note.withBody("Du erreichst mich nicht\n", Instant.parse("2026-09-10T00:00:00Z"))!!
+        assertTrue(saved.render().contains("  - \"man go\""))
     }
 }
