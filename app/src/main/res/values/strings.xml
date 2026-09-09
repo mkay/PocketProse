@@ -225,6 +225,7 @@
     <string name="settings_section_writing">Writing</string>
     <string name="settings_section_appearance">Appearance</string>
     <string name="settings_section_folder">Folder</string>
+    <string name="settings_section_start">Start view</string>
     <string name="settings_section_size">Size and spacing</string>
 
     <!-- The faces a note can be set in. "System" is whatever the phone uses everywhere else; the
@@ -275,6 +276,14 @@
     <string name="theme_system">System</string>
     <string name="theme_light">Light</string>
     <string name="theme_dark">Dark</string>
+
+    <!-- The row that chooses which tag the library opens filtered by. -->
+    <string name="settings_start_tag">Open filtered by</string>
+    <!-- Under that row when no tag is set, and the name of the option that clears it. -->
+    <string name="settings_start_tag_all">All notes</string>
+    <!-- Under the start-view row. Says what happens when the tag is gone, because that is the one
+         behaviour a user cannot discover by trying it. -->
+    <string name="settings_start_tag_caption">The library opens showing only this tag. If the tag is missing when the app starts, it opens showing everything.</string>
 
     <!-- Under the folder row, before any folder has been chosen. -->
     <string name="settings_folder_none">No folder chosen yet</string>

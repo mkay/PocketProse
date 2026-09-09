@@ -138,11 +138,38 @@ class Settings(context: Context) {
             prefs.edit().putString(KEY_PROSE_LEADING, value.name).apply()
         }
 
+    /**
+     * The tag the library opens filtered by, or null for all notes.
+     *
+     * The odd one out here: the other four are enums, where an unreadable stored value is simply
+     * wrong and falls back to a default. A tag is free text whose validity lives in the vault, not
+     * in this file, and it can stop being valid without anybody touching this setting — a tag
+     * renamed on the desktop, or a folder that has not finished syncing. So nothing is validated
+     * here. `MainActivity` already drops a filter whose tag is not in the index, and that check
+     * covers this one for free.
+     *
+     * The stored string deliberately survives that. A tag missing at this moment is not the same as
+     * a tag the user is done with, and silently rewriting the preference because a sync was slow
+     * would lose a choice they made on purpose.
+     *
+     * Stores the full path — `album/debut`, not `debut` — because that is what filtering matches
+     * on: a path selects its own notes and everything nested under it.
+     */
+    private var start by mutableStateOf(prefs.getString(KEY_START_TAG, null))
+
+    var startTag: String?
+        get() = start
+        set(value) {
+            start = value
+            prefs.edit().putString(KEY_START_TAG, value).apply()
+        }
+
     private companion object {
         const val PREFS = "settings"
         const val KEY_THEME_MODE = "theme_mode"
         const val KEY_PROSE_FONT = "prose_font"
         const val KEY_PROSE_SIZE = "prose_size"
         const val KEY_PROSE_LEADING = "prose_leading"
+        const val KEY_START_TAG = "start_tag"
     }
 }

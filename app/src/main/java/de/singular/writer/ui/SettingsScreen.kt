@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
@@ -28,6 +29,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.FolderOpen
+import androidx.compose.material.icons.filled.Label
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
@@ -37,6 +40,7 @@ import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -58,6 +62,7 @@ import androidx.compose.ui.unit.dp
 import de.singular.writer.ProseFont
 import de.singular.writer.ProseLeading
 import de.singular.writer.ProseSize
+import de.singular.writer.markdown.Tags
 import de.singular.writer.R
 import de.singular.writer.ThemeMode
 
@@ -104,6 +109,10 @@ fun SettingsScreen(
     onProseSizeChange: (ProseSize) -> Unit,
     proseLeading: ProseLeading,
     onProseLeadingChange: (ProseLeading) -> Unit,
+    startTag: String?,
+    onStartTagChange: (String?) -> Unit,
+    tagTree: List<Tags.Node>,
+    totalNotes: Int,
     folderName: String?,
     onChooseFolder: () -> Unit,
     onClose: () -> Unit,
@@ -156,6 +165,10 @@ fun SettingsScreen(
                 SystemSettings(
                     themeMode = themeMode,
                     onThemeModeChange = onThemeModeChange,
+                    startTag = startTag,
+                    onStartTagChange = onStartTagChange,
+                    tagTree = tagTree,
+                    totalNotes = totalNotes,
                     folderName = folderName,
                     onChooseFolder = onChooseFolder,
                 )
@@ -349,6 +362,10 @@ private fun ProseLeadingChips(
 private fun SystemSettings(
     themeMode: ThemeMode,
     onThemeModeChange: (ThemeMode) -> Unit,
+    startTag: String?,
+    onStartTagChange: (String?) -> Unit,
+    tagTree: List<Tags.Node>,
+    totalNotes: Int,
     folderName: String?,
     onChooseFolder: () -> Unit,
 ) {
@@ -358,6 +375,34 @@ private fun SystemSettings(
         onSelect = onThemeModeChange,
         modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
     )
+
+    SettingsSectionLabel(R.string.settings_section_start)
+    // A row that opens the tag tree rather than a row of chips. 24 tags with one of them covering
+    // 131 of the 168 notes is a long tail, not a set of options — chips would wrap to half a screen
+    // and still put `album/debut` and `lyrics` on the same footing. The tree is also the control
+    // the user already picks tags with, one screen away.
+    var picking by rememberSaveable { mutableStateOf(false) }
+    SettingActionRow(
+        label = R.string.settings_start_tag,
+        // The tag's full path, which is what the filter actually matches on — `album` and
+        // `album/debut` are different start views and the row has to say which one this is.
+        subtitle = startTag ?: stringResource(R.string.settings_start_tag_all),
+        icon = Icons.Default.Label,
+        onClick = { picking = true },
+    )
+    SettingsCaption(R.string.settings_start_tag_caption)
+    if (picking) {
+        StartTagDialog(
+            selected = startTag,
+            tree = tagTree,
+            totalNotes = totalNotes,
+            onSelect = {
+                onStartTagChange(it)
+                picking = false
+            },
+            onDismiss = { picking = false },
+        )
+    }
 
     SettingsSectionLabel(R.string.settings_section_folder)
     // Moved here from the foot of the tag drawer, where it sat beneath the tags as the only thing
@@ -372,6 +417,47 @@ private fun SystemSettings(
         onClick = onChooseFolder,
     )
     SettingsCaption(R.string.settings_folder_caption)
+}
+
+/**
+ * The tag tree in a dialog, for choosing what the library opens on.
+ *
+ * [TagDrawer] itself, not a copy of it — same rows, same counts, same expand-a-parent gesture, so
+ * choosing a start tag is the gesture the user already knows from filtering. Its "All notes" row
+ * doubles as the way to clear the setting, which is why there is no third button here.
+ *
+ * A dialog rather than a page inside the settings tab because the tab scrolls: a `LazyColumn` inside
+ * a `verticalScroll` column has no bounded height to measure against. [heightIn] gives the tree a
+ * ceiling and lets a short tree stay short.
+ *
+ * The tree comes from the loaded index, so before a folder is chosen — or while the first read is
+ * still running — it is empty and this offers only All notes. That is honest: there is nothing to
+ * pick from yet.
+ */
+@Composable
+private fun StartTagDialog(
+    selected: String?,
+    tree: List<Tags.Node>,
+    totalNotes: Int,
+    onSelect: (String?) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.settings_start_tag)) },
+        text = {
+            TagDrawer(
+                tree = tree,
+                totalNotes = totalNotes,
+                selected = selected,
+                onSelect = onSelect,
+                modifier = Modifier.heightIn(max = 400.dp),
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
+        },
+    )
 }
 
 @Composable

@@ -159,7 +159,11 @@ private fun PocketProseApp(settings: Settings) {
     var loading by remember { mutableStateOf(vault.rootWasSet) }
     var query by remember { mutableStateOf("") }
     var searching by remember { mutableStateOf(false) }
-    var selectedTag by remember { mutableStateOf<String?>(null) }
+    // Seeded from the start-view setting rather than from null. Nothing validates it here: the tag
+    // may have been renamed or may not have synced yet, and `refresh` below already drops a filter
+    // whose tag is not in the index — which runs before the first list is drawn, so an impossible
+    // start tag shows the whole library rather than an empty one.
+    var selectedTag by remember { mutableStateOf(settings.startTag) }
     var showSettings by remember { mutableStateOf(false) }
     var showSupport by remember { mutableStateOf(false) }
 
@@ -386,6 +390,10 @@ private fun PocketProseApp(settings: Settings) {
             onProseSizeChange = { settings.proseSize = it },
             proseLeading = settings.proseLeading,
             onProseLeadingChange = { settings.proseLeading = it },
+            startTag = settings.startTag,
+            onStartTagChange = { settings.startTag = it },
+            tagTree = index.tagTree,
+            totalNotes = index.size,
             folderName = folderName,
             onChooseFolder = { pickFolder.launch(null) },
             onClose = { showSettings = false },
