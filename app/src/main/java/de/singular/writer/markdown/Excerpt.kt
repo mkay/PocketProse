@@ -34,7 +34,7 @@ object Excerpt {
                     is Block.Paragraph -> Inline.strip(block.text)
                     is Block.Heading -> Inline.strip(block.text)
                     is Block.Bullets -> block.items.joinToString(" ") { Inline.strip(it) }
-                    is Block.TagLine, Block.Rule -> null
+                    Block.Rule -> null
                 }
             }
             .filter { it.isNotBlank() }

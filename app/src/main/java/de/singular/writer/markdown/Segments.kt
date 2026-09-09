@@ -46,23 +46,6 @@ sealed interface Segment {
         val trailing: String,
     ) : Segment
 
-    /**
-     * A run of lines that are nothing but hashtags, taken out of the editable text.
-     *
-     * The editor draws these as chips at the foot of the note rather than as `#` text, so the
-     * characters must leave the text buffer — and *leaving* is the point. Hiding them in place, the
-     * way `**` is hidden, would put a stretch of invisible characters inside a field somebody is
-     * typing in, where a backspace at the edge silently eats a tag. A segment cannot be reached by
-     * the cursor at all.
-     *
-     * [raw] carries the run's own bytes plus the blank lines absorbed with it (see `Segments.split`),
-     * so the file is unchanged by being displayed. [tags] is every tag on the run, in order, without
-     * the `#`.
-     */
-    data class Tags(
-        override val raw: String,
-        val tags: List<String>,
-    ) : Segment
 }
 
 /**
@@ -130,88 +113,12 @@ object Segments {
                     )
                 }
 
-                Tags.isTagLine(line) -> {
-                    val previous = out.lastOrNull()
-                    if (text.isEmpty() && previous is Segment.Tags) {
-                        // A run: fold this line into the run already open rather than starting a
-                        // second chip row for the same group of tags.
-                        out[out.size - 1] = previous.copy(
-                            raw = previous.raw + raw,
-                            tags = previous.tags + tagsOn(line),
-                        )
-                    } else {
-                        flush()
-                        out += Segment.Tags(raw = raw, tags = tagsOn(line))
-                    }
-                }
-
                 else -> text.append(raw)
             }
             i = end
         }
         if (text.isNotEmpty() || out.isEmpty()) out += Segment.Prose(text.toString())
-        return absorbBlankLines(out)
-    }
-
-    /** Every tag on one tag line, in order, without the `#`. */
-    private fun tagsOn(line: String): List<String> =
-        line.trim().split(Regex("""\s+"""))
-            .filter(Tags::isTagWord)
-            .map { it.removePrefix("#") }
-
-    /**
-     * Move the blank lines that belong to a tag run out of the prose around it.
-     *
-     * Without this a note whose tags sit at the head — 66 of the runs in the archive — opens with an
-     * empty first line where the hashtags used to be, and one whose tags sit at the foot ends with a
-     * stray blank. The blank line is scaffolding around a thing that is no longer drawn, so it goes
-     * with it.
-     *
-     * **Bytes only ever move between adjacent segments**, never disappear, which is what keeps
-     * `join(split(x)) == x` true — and that property is asserted over all 168 notes, because losing
-     * a byte here rewrites every note in the archive the moment it is opened.
-     *
-     * Blank lines *before* a run are always absorbed; blank lines *after* it only when the run
-     * begins the body. A run sitting between two paragraphs therefore keeps the paragraph break that
-     * follows it, rather than welding the two paragraphs together on screen.
-     *
-     * Blank means [String.isBlank], not empty: `Selbst Schuld an deinem Glück.md` separates its
-     * tags from its song with a line holding a single space, and to a reader that is a blank line.
-     */
-    private fun absorbBlankLines(segments: List<Segment>): List<Segment> {
-        val out = segments.toMutableList()
-        for (i in out.indices) {
-            val run = out[i] as? Segment.Tags ?: continue
-
-            val before = out.getOrNull(i - 1) as? Segment.Prose
-            if (before != null) {
-                val lines = physicalLines(before.raw)
-                val moved = lines.takeLastWhile { it.isBlank() }.joinToString("")
-                if (moved.isNotEmpty()) {
-                    out[i - 1] = before.copy(raw = before.raw.dropLast(moved.length))
-                    out[i] = run.copy(raw = moved + run.raw)
-                }
-            }
-
-            val startsBody = out.take(i).all { it is Segment.Prose && it.raw.isBlank() }
-            val after = out.getOrNull(i + 1) as? Segment.Prose
-            if (startsBody && after != null) {
-                val moved = physicalLines(after.raw).takeWhile { it.isBlank() }.joinToString("")
-                if (moved.isNotEmpty()) {
-                    out[i] = (out[i] as Segment.Tags).let { it.copy(raw = it.raw + moved) }
-                    out[i + 1] = after.copy(raw = after.raw.drop(moved.length))
-                }
-            }
-        }
-        // A prose segment emptied by the move is not a place to type, it is a gap in the layout.
-        val kept = out.filterNot { it is Segment.Prose && it.raw.isEmpty() }
-        // A note whose whole body is its tags — 40 of them — still needs a field. A note that is
-        // nothing but an image does not gain one it never had.
-        return when {
-            kept.any { it is Segment.Prose } -> kept
-            kept.any { it is Segment.Tags } -> kept + Segment.Prose("")
-            else -> kept
-        }
+        return out
     }
 
     /**

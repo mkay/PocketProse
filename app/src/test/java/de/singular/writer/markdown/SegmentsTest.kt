@@ -72,76 +72,27 @@ class SegmentsTest {
     }
 
     @Test
-    fun `a tag line at the head of a note leaves the text, and its blank lines go with it`() {
-        // The shape 66 runs in the archive have: blank, tags, blank, then the song.
-        val body = "\n#lyrics/snippet\n\nDu erreichst mich nicht\n"
-        val segments = Segments.split(body)
-        assertEquals(2, segments.size)
-        val tags = segments[0] as Segment.Tags
-        assertEquals(listOf("lyrics/snippet"), tags.tags)
-        assertEquals("\n#lyrics/snippet\n\n", tags.raw)
-        // The editor opens on the words, not on an empty first line.
-        assertEquals("Du erreichst mich nicht\n", segments[1].raw)
-        assertEquals(body, Segments.join(segments))
+    fun `a line of hashtags is text in the editor like any other line`() {
+        // Until 2026-09-09 a run of hashtag lines was lifted out of the editable text and drawn as
+        // chips, absorbing the blank lines around it so the note did not open on an empty first
+        // line. Tags come from the frontmatter now, so these are words on a page: one prose
+        // segment, nothing hoisted, nothing hidden. 165 notes in the archive still carry such a
+        // line and will show it until the author clears them — see the Tag rules in `CLAUDE.md`.
+        val head = "\n#lyrics/snippet\n\nDu erreichst mich nicht\n"
+        assertEquals(listOf(Segment.Prose(head)), Segments.split(head))
+
+        // Die Eule.md in full — 40 notes look like this, and the field is the whole note.
+        val alone = "\n#lyrics/titel\n"
+        assertEquals(listOf(Segment.Prose(alone)), Segments.split(alone))
+
+        // Helen weiss das auch.md's foot, trailing spaces included: three lines, still one segment.
+        val run = "und weiter\n\n#album/debut \n#100\n#album/entsetzlich #busch \n"
+        assertEquals(listOf(Segment.Prose(run)), Segments.split(run))
+        assertEquals(run, Segments.join(Segments.split(run)))
     }
 
     @Test
-    fun `a tag line at the foot takes the blank line before it`() {
-        val body = "Du erreichst mich nicht\n\n#lyrics/snippet\n"
-        val segments = Segments.split(body)
-        assertEquals(2, segments.size)
-        assertEquals("Du erreichst mich nicht\n", segments[0].raw)
-        assertEquals("\n#lyrics/snippet\n", segments[1].raw)
-        assertEquals(body, Segments.join(segments))
-    }
-
-    @Test
-    fun `consecutive tag lines are one run, not three chip rows`() {
-        // Helen weiss das auch.md ends with exactly this, trailing spaces included.
-        val body = "und weiter\n\n#album/debut \n#100\n#album/entsetzlich #busch \n"
-        val segments = Segments.split(body)
-        assertEquals(2, segments.size)
-        val tags = segments[1] as Segment.Tags
-        assertEquals(listOf("album/debut", "100", "album/entsetzlich", "busch"), tags.tags)
-        assertEquals(body, Segments.join(segments))
-    }
-
-    @Test
-    fun `a tag line directly under prose keeps the line break above it`() {
-        // Nein, T wie taub.md and Wer nicht will 3.md: no blank line between the two.
-        val body = "Hanse statt Gertrud \n#lyrics/snippet\n"
-        val segments = Segments.split(body)
-        assertEquals("Hanse statt Gertrud \n", segments[0].raw)
-        assertEquals("#lyrics/snippet\n", segments[1].raw)
-        assertEquals(body, Segments.join(segments))
-    }
-
-    @Test
-    fun `a tag run between two paragraphs keeps the break that follows it`() {
-        // Themen.md has tags at the head and again at the foot with prose between.
-        val body = "A\n\n#lyrics/themen\n\nB\n"
-        val segments = Segments.split(body)
-        assertEquals(3, segments.size)
-        assertEquals("A\n", segments[0].raw)
-        assertEquals("\n#lyrics/themen\n", segments[1].raw)
-        // Welding A and B together on screen would misrepresent the note.
-        assertEquals("\nB\n", segments[2].raw)
-        assertEquals(body, Segments.join(segments))
-    }
-
-    @Test
-    fun `a note that is nothing but its tag line still gives somewhere to type`() {
-        // Die Eule.md in full: 40 notes in the archive look like this.
-        val body = "\n#lyrics/titel\n"
-        val segments = Segments.split(body)
-        assertEquals(2, segments.size)
-        assertEquals("\n#lyrics/titel\n", segments[0].raw)
-        assertEquals(Segment.Prose(""), segments[1])
-        assertEquals(body, Segments.join(segments))
-    }
-
-    @Test
-    fun `a heading is not a tag line and a sharp does not make one`() {
+    fun `a heading and a sharp are text, as everything in a body now is`() {
         val body = "## Strophe\nTarantino für zwei in F# Moll\n"
         val segments = Segments.split(body)
         assertEquals(listOf(Segment.Prose(body)), segments)
@@ -151,12 +102,6 @@ class SegmentsTest {
     fun `a hashtag inside a sentence leaves the sentence visible`() {
         val body = "das ist #lyrics/snippet und mehr\n"
         assertEquals(listOf(Segment.Prose(body)), Segments.split(body))
-    }
-
-    @Test
-    fun `a numeric tag is a tag line like any other`() {
-        val tags = Segments.split("\n#100\n").first() as Segment.Tags
-        assertEquals(listOf("100"), tags.tags)
     }
 
     @Test

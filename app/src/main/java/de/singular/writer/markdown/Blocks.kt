@@ -28,26 +28,13 @@ sealed interface Block {
     /** A run of `- ` items. */
     data class Bullets(val items: List<String>) : Block
 
-    /**
-     * A line that is nothing but hashtags.
-     *
-     * Its own kind of block because the app hoists tags out of the body and shows them as chips, so
-     * these lines are never rendered as text. Their placement is worth knowing about: measured
-     * across the archive, 85 notes end with one, 60 begin with one, one has it in the middle, and 8
-     * carry them in more than one place. Writing a tag change back therefore means editing whichever
-     * of these lines the note actually has, in place — not appending a new one.
-     *
-     * A line mixing hashtags with prose is a [Paragraph], not one of these. Only a line that is
-     * entirely tags is hidden, because hiding words the user wrote would be unforgivable.
-     */
-    data class TagLine(val tags: List<String>) : Block
 }
 
 /**
  * Splits a note's body into [Block]s.
  *
- * Deliberately small. The supported vocabulary is headings, rules, bullets, tag lines and
- * paragraphs, and that is the whole of it — this is a lyrics app, and a Markdown feature nobody in
+ * Deliberately small. The supported vocabulary is headings, rules, bullets and paragraphs, and that
+ * is the whole of it — this is a lyrics app, and a Markdown feature nobody in
  * the archive uses is a feature that can only misfire on text that meant something else. Anything
  * unrecognised stays a paragraph and reaches the screen as the words the user typed.
  *
@@ -99,11 +86,6 @@ object Blocks {
                 RULE.matches(line) -> {
                     flush()
                     out += Block.Rule
-                }
-
-                Tags.isTagLine(line) -> {
-                    flush()
-                    out += Block.TagLine(Tags.inBody(line))
                 }
 
                 HEADING.matches(line) -> {

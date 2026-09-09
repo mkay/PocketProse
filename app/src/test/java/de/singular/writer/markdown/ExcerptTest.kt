@@ -9,16 +9,19 @@ import org.junit.Test
 class ExcerptTest {
 
     @Test
-    fun `a note that is only a tag line has no excerpt, and that is a normal answer`() {
-        // Die Eule.md, and 35 others: 15 bytes of body, all of it the tag.
+    fun `a leftover hashtag line is quoted as the text it is`() {
+        // Die Eule.md, and 39 others: 15 bytes of body, all of it the old inline tag. It excerpted
+        // to nothing while the app hid such lines; since tags left the body on 2026-09-09 it is a
+        // line of text like any other and the row shows it. The archive's hygiene is the author's,
+        // not the app's — see the Tag rules in `CLAUDE.md`.
         val note = Note.parse("---\ntitle: \"Die Eule\"\ntags:\n  - \"lyrics/titel\"\n---\n\n#lyrics/titel\n")
-        assertEquals("", Excerpt.of(note))
+        assertEquals("#lyrics/titel", Excerpt.of(note))
     }
 
     @Test
-    fun `tags and rules are dropped but headings are kept`() {
+    fun `rules are dropped, headings are kept, and a hashtag is just a word`() {
         val note = Note.parse("---\ntitle: \"x\"\ntags: []\n---\n\n#chords\n\n## Strophe\n\n- - -\n\nDu erreichst mich nicht\n")
-        assertEquals("Strophe Du erreichst mich nicht", Excerpt.of(note))
+        assertEquals("#chords Strophe Du erreichst mich nicht", Excerpt.of(note))
     }
 
     @Test
@@ -44,11 +47,13 @@ class ExcerptTest {
     }
 
     @Test
-    fun `a note whose first line is tags plus a numeric tag excerpts to its song`() {
+    fun `a note opening on a leftover hashtag line leads with it`() {
+        // Müde.md's shape, and 59 others open this way. The excerpt is the first words of the body,
+        // and while that line is still in the file those are the first words.
         val note = Note.parse(
             "---\ntitle: \"Müde\"\ntags:\n  - \"busch\"\n---\n\n#album/debut #100 #busch\n\nDu wirst nicht zurück kommen\n",
         )
-        assertEquals("Du wirst nicht zurück kommen", Excerpt.of(note))
+        assertEquals("#album/debut #100 #busch Du wirst nicht zurück kommen", Excerpt.of(note))
     }
 
     @Test

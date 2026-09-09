@@ -8,54 +8,17 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * `CLAUDE.md` calls the hashtag rule load-bearing and says to test it explicitly. Each case below
- * corresponds to something that actually exists in the archive.
+ * What is left of tags once the frontmatter is the only place they live: folding names, and building
+ * the tree the drawer shows.
+ *
+ * The hashtag grammar that used to be tested here — `F#` in a chord, `## Strophe` as a heading, a
+ * tag opening with a digit, a `#` that must start a word — went with the inline representation on
+ * 2026-09-09. None of it needs a guard now: nothing reads a `#` out of a body at all, so the failure
+ * those cases protected against (a tag in the drawer that is really a chord name) cannot occur. See
+ * `Tags` and the Tag rules in `CLAUDE.md`. `BlocksTest` asserts the other half — that such a line is
+ * now ordinary prose rather than something hidden.
  */
 class TagsTest {
-
-    @Test
-    fun `a sharp in a chord is not a tag`() {
-        // Radio (Song Notes).md: "Tarantino für zwei in F# Moll." — the only sharp in 168 notes.
-        assertEquals(emptyList<String>(), Tags.inBody("Tarantino für zwei in F# Moll."))
-        // The same rule covers the chord sheet spellings, should any ever be typed as text.
-        assertEquals(emptyList<String>(), Tags.inBody("F#m C# G#7"))
-    }
-
-    @Test
-    fun `a heading is not a tag`() {
-        assertEquals(emptyList<String>(), Tags.inBody("## Strophe"))
-        assertEquals(emptyList<String>(), Tags.inBody("# Title"))
-    }
-
-    @Test
-    fun `a tag may open with a digit`() {
-        // `100%`, `50%` and `75%` were renamed to `100`, `50` and `75` on 2026-09-07, `%` being a
-        // character no hashtag can hold. Once renamed they are ordinary tags in every respect.
-        assertEquals(listOf("100"), Tags.inBody("#100"))
-        assertEquals(listOf("100", "50", "75"), Tags.inBody("#100 #50 #75"))
-        assertTrue(Tags.isInlineWritable("100"))
-        // Names that still could not be written into a body, which is what the guard is for.
-        assertFalse(Tags.isInlineWritable("100%"))
-        assertFalse(Tags.isInlineWritable("zwei worte"))
-        assertTrue(Tags.isInlineWritable("lyrics/snippet"))
-        assertTrue(Tags.isInlineWritable("meta-info"))
-    }
-
-    @Test
-    fun `a hashtag must start a word`() {
-        assertEquals(emptyList<String>(), Tags.inBody("nothash#tag"))
-        assertEquals(listOf("tag"), Tags.inBody("start #tag"))
-        assertEquals(listOf("tag"), Tags.inBody("#tag"))
-        assertEquals(listOf("tag"), Tags.inBody("line one\n#tag"))
-    }
-
-    @Test
-    fun `nesting and the punctuation the archive uses are accepted`() {
-        assertEquals(
-            listOf("lyrics/snippet", "radio/meta-titles", "album/bossanova"),
-            Tags.inBody("#lyrics/snippet #radio/meta-titles #album/bossanova"),
-        )
-    }
 
     @Test
     fun `input is folded to lowercase so the archive cannot re-split`() {

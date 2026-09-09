@@ -25,19 +25,20 @@ data class Note(
     val title: String? get() = frontmatter.title
 
     /**
-     * Every tag on this note, frontmatter first.
+     * Every tag on this note.
      *
-     * Inline hashtags are folded in behind the frontmatter for the case of a note edited on a
-     * desktop where a hashtag was typed into the body and the frontmatter not updated — which does
-     * not occur in the archive today for ordinary tags, and costs one `distinct()` to be right
-     * about anyway.
+     * The frontmatter list, and nothing else. Body hashtags were folded in behind it until
+     * 2026-09-09, when the frontmatter became the single source of truth — see the Tag rules in
+     * `CLAUDE.md` for why the two-way sync was right while the notes were shared with an editor
+     * that read hashtags, and wrong once they were not.
      *
-     * Since the `%` names were renamed on 2026-09-07 there is no tag the two representations cannot
-     * both hold, so this and [editableTags] differ only when a note is edited elsewhere and left
-     * disagreeing with itself. See `Tags`.
+     * On the archive as it stands this is not a change of answer: all 168 notes agree on their tags
+     * in both spellings, so the union and the frontmatter alone return the same list for every one
+     * of them. What changes is what happens next — a hashtag typed into a body from here on is a
+     * word in a song, not a filing instruction.
      */
     val tags: List<String>
-        get() = (frontmatter.tags + Tags.inBody(body)).map(Tags::normalize).distinct()
+        get() = frontmatter.tags.map(Tags::normalize).distinct()
 
     /** The body as blocks, for rendering. */
     val blocks: List<Block> get() = Blocks.parse(body)
@@ -66,18 +67,18 @@ data class Note(
     fun withBody(newBody: String, now: Instant): Note? = withTags(newBody, tags, now)
 
     /**
-     * This note with a different tag set, written to both places at once.
+     * This note with a different tag set.
      *
-     * The two representations move together or not at all — that is the whole of the two-way sync,
-     * and it is why this exists rather than the caller writing frontmatter and body separately and
-     * hoping. `updated` is stamped once, for both.
+     * Tags and body change through one function because this is where "nothing changed, write
+     * nothing" is decided, and two write paths would be two chances to get that wrong.
      *
      * **Only the difference is written, and the difference is measured against [tags].** [newTags] is
-     * what the note has after the edit; what it had before is everything on it by either spelling.
-     * So a tag the user did not touch is not rewritten, reordered or requoted — and in particular a
-     * tag written in the body but absent from the `tags:` list is left in exactly that state, being
-     * neither added nor removed, rather than quietly filed on the author's behalf. Touch it and it
-     * moves in both places, which is what touching it means.
+     * what the note has after the edit. So a tag the user did not touch is not rewritten, reordered
+     * or requoted.
+     *
+     * Tags live in the frontmatter and only there. Bodies are never scanned for hashtags and never
+     * written with them — see the Tag rules in `CLAUDE.md`. A `#` somebody types into a song stays
+     * a `#` somebody typed into a song.
      *
      * The frontmatter keeps its own order, new tags going on the end. Sorting it would rewrite every
      * line of a list the user only added to.
@@ -106,14 +107,18 @@ data class Note(
         // which file it is — every note in the archive has a title. Blank means "leave it alone".
         val retitled = newTitle?.trim()?.takeIf { it.isNotBlank() && it != title }
 
-        val kept = keepTrailingNewline(TagEdit.apply(keepTrailingNewline(newBody), added, removed))
-        if (kept == body && added.isEmpty() && removed.isEmpty() && retitled == null) return null
+        val kept = keepTrailingNewline(newBody)
+        val rewritten = kept != body
+        if (!rewritten && added.isEmpty() && removed.isEmpty() && retitled == null) return null
 
-        val declared = frontmatter.tags.map(Tags::normalize).distinct()
-        val ordered = declared.filterNot { it in removed } + added
+        val ordered = current.filterNot { it in removed } + added
         val tagged = if (added.isEmpty() && removed.isEmpty()) frontmatter else frontmatter.withTags(ordered)
         val titled = if (retitled == null) tagged else tagged.withKey("title", retitled)
-        return copy(frontmatter = titled.withKey("updated", stamp(now)), body = kept)
+        // `updated` tracks the writing, not the filing — see the file format contract in `CLAUDE.md`.
+        // A note re-filed under a different tag, or given a better title, is not a note somebody
+        // rewrote this morning, and the archive's dates are the thing it is kept for.
+        val stamped = if (rewritten) titled.withKey("updated", stamp(now)) else titled
+        return copy(frontmatter = stamped, body = kept)
     }
 
     /**

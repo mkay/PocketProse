@@ -33,11 +33,12 @@ class SaveTest {
     """.trimIndent() + "\n"
 
     @Test
-    fun `a tag a body carries and the frontmatter does not is neither promoted nor deleted`() {
-        // The archive has no note in this state — the percent rename was what emptied the category —
-        // so it has to be built on purpose. It is the case that decides whether the app is allowed
-        // to reconcile the two representations behind the author's back, and the answer is no: it
-        // may only add the tag just added and remove the tag just removed.
+    fun `a hashtag left in a body is words, not a tag, and no edit touches it`() {
+        // This note used to be the hard case: two representations, disagreeing, and the app forbidden
+        // to reconcile them behind the author's back. Since 2026-09-09 there is only one
+        // representation and the question dissolves — `#busch` in a body is a word in a song. It is
+        // still worth a test, because 165 notes in the archive carry such a line and the app must
+        // leave every one of them exactly as it found it.
         val text = """
             ---
             title: "Atlantik"
@@ -53,19 +54,15 @@ class SaveTest {
         """.trimIndent() + "\n"
         val note = Note.parse(text)
 
-        // Both representations are one list to a reader, and that is what the sheet shows.
-        assertEquals(listOf("lyrics/snippet", "busch"), note.tags)
-        // The `tags:` list is the narrower thing, and stays narrower unless the user says otherwise.
-        assertEquals(listOf("lyrics/snippet"), note.frontmatter.tags)
+        // The frontmatter is the whole answer. `busch` is not a tag on this note.
+        assertEquals(listOf("lyrics/snippet"), note.tags)
 
         val saved = note.withTags(note.body, note.tags + "radio", now)!!
-        // Not promoted into the `tags:` list the author never wrote it into...
-        assertTrue("busch" !in saved.frontmatter.tags)
-        // ...and not struck from the text the author did write it into.
-        assertTrue("#busch" in saved.body)
-        // The tag actually asked for reaches both places.
+        // The tag asked for reaches the frontmatter...
         assertTrue("radio" in saved.frontmatter.tags)
-        assertTrue("#radio" in saved.body)
+        // ...and the body is not touched at all — not the leftover line, not a byte of it.
+        assertEquals(note.body, saved.body)
+        assertTrue("#lyrics/snippet #busch" in saved.body)
     }
 
     @Test
@@ -167,14 +164,16 @@ class SaveTest {
     }
 
     @Test
-    fun `a new title moves updated and leaves created alone`() {
+    fun `a new title leaves both dates alone`() {
         val note = Note.parse(text)
         val saved = note.withTags(note.body, note.tags, now, "Atlantik II")!!
 
         assertEquals("Atlantik II", saved.title)
         assertEquals(note.body, saved.body)
         assertTrue(saved.render().contains("created: 2025-04-25T16:56:15.332Z"))
-        assertTrue(saved.render().contains("updated: 2026-09-07T14:30:00.123Z"))
+        // `updated` tracks the writing, not the filing — see the file format contract in
+        // `CLAUDE.md`. Retitling a note is not a claim that its words were rewritten today.
+        assertTrue(saved.render().contains("updated: 2025-04-26T15:04:16.978Z"))
         // The tags are untouched: a title is not a reason to rewrite a list.
         assertTrue(saved.render().contains("  - \"lyrics/snippet\""))
     }

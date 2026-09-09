@@ -45,6 +45,19 @@ class CorpusTest {
         }
     }
 
+    /**
+     * The hashtags still written in the archive's bodies.
+     *
+     * The rule the app used to index by, kept here and only here. The app no longer reads a `#` out
+     * of a body at all — see the Tag rules in `CLAUDE.md` — but the leftover lines are a fact about
+     * the files, and a couple of tests below are about that fact rather than about the app.
+     */
+    private fun hashtagsIn(body: String): Set<String> =
+        Regex("""(?<=^|\s)#([\p{L}\d][\w/-]*)""", RegexOption.MULTILINE)
+            .findAll(body)
+            .map { it.groupValues[1] }
+            .toSet()
+
     private fun corpus(): Map<String, String> {
         assumeTrue("archive not present — see the class comment", folder.isDirectory)
         return notes
@@ -122,18 +135,19 @@ class CorpusTest {
     }
 
     @Test
-    fun `frontmatter and inline hashtags agree, for the tags that can be written inline`() {
-        // They agree in all 168 notes. Note the qualifier: this says nothing about percent tags,
-        // which the parser cannot see as hashtags at all — that blind spot is what made an earlier
-        // version of this test read as a clean bill of health for the whole archive. The percent
-        // situation is measured separately below, and it is not clean.
+    fun `every leftover body hashtag has a frontmatter entry, so clearing the bodies loses nothing`() {
+        // The app stopped reading body hashtags on 2026-09-09 — see the Tag rules in `CLAUDE.md`.
+        // The bodies still hold them, and the author intends to clear them out by script one day.
+        // This is the property that makes that safe: every hashtag written in a body is also in that
+        // note's `tags:` list, so deleting the lines deletes no tag the app would then be missing.
+        // The reverse does not have to hold, and this says nothing about it.
         val corpus = corpus()
-        val disagreeing = corpus.filter { (_, text) ->
+        val orphaned = corpus.filter { (_, text) ->
             val note = Note.parse(text)
-            val writable = note.frontmatter.tags.filter(Tags::isInlineWritable).toSet()
-            Tags.inBody(note.body).toSet() != writable
+            val declared = note.frontmatter.tags.map(Tags::normalize).toSet()
+            (hashtagsIn(note.body) - declared).isNotEmpty()
         }.keys
-        assertEquals(emptySet<String>(), disagreeing)
+        assertEquals(emptySet<String>(), orphaned)
     }
 
     @Test
@@ -157,39 +171,6 @@ class CorpusTest {
         assertEquals(2, counts["50"])
         assertEquals(1, counts["75"])
 
-        // The point of the rename: no note is left declaring one representation and not the other.
-        val numeric = { tags: List<String> -> tags.filter { tag -> tag.all(Char::isDigit) }.toSet() }
-        val disagreeing = corpus.filter { (_, text) ->
-            val note = Note.parse(text)
-            numeric(note.frontmatter.tags) != numeric(Tags.inBody(note.body))
-        }.keys
-        assertEquals(emptySet<String>(), disagreeing)
-    }
-
-    @Test
-    fun `a digit may open a tag, and nothing else in the archive is caught by that`() {
-        // Widening the rule from "then a letter" to "then a letter or digit" is safe because the 33
-        // renamed hashtags are the only `#digit` sequences in all 168 notes. If a note ever grew a
-        // `#2` in prose this would say so.
-        val corpus = corpus()
-        val digitTags = corpus.values
-            .flatMap { Tags.inBody(Note.parse(it).body) }
-            .filter { it.first().isDigit() }
-        assertEquals(setOf("100", "50", "75"), digitTags.toSet())
-        assertEquals(33, digitTags.size)
-    }
-
-    @Test
-    fun `no numeric tag is embedded in prose, so hiding its line hides no words`() {
-        // All 33 sit on a line with other tags, or alone. If one were mid-sentence, the editor would
-        // have to choose between showing a `#` and hiding a word.
-        val corpus = corpus()
-        val embedded = corpus.filterValues { text ->
-            Note.parse(text).blocks.any { block ->
-                block is Block.Paragraph && Tags.inBody(block.text).any { it.first().isDigit() }
-            }
-        }.keys
-        assertEquals(emptySet<String>(), embedded)
     }
 
     @Test
@@ -233,22 +214,32 @@ class CorpusTest {
     }
 
     @Test
-    fun `the notes that are nothing but a tag line excerpt to nothing`() {
-        // 40 of 168 — very nearly a quarter of the archive. This is why the library row carries a
-        // placeholder rather than leaving an empty gap, and it is the single fact that most shapes
-        // the main screen.
+    fun `the notes with no prose are 39 hashtag lines and one blank body`() {
+        // `CLAUDE.md` has said 40 since the corpus was measured, and 40 is the number of notes whose
+        // excerpt is empty — but it is two facts, not one, and the old assertion could not tell them
+        // apart: it checked that every block was a tag line, which is vacuously true of a note with
+        // no blocks at all. `Es ist kein Verdienst, sich hier gut einzufinden.md` is that note, two
+        // newlines and nothing else.
         //
-        // An earlier count said 36. That was reached by grouping byte-identical bodies, which finds
-        // only the notes whose tag line is shared with another note and misses the four whose tag
-        // combination is unique. Counting the excerpts themselves is the measure that matches what
-        // the screen will actually show.
+        // The other 39 are a title filed under a tag. Their bodies are the hashtag line the old
+        // inline representation wrote, which the app no longer reads as tags — so the excerpt now
+        // quotes it as the text it is, and these rows lead with `#lyrics/titel` until the author
+        // clears the lines from the files. That is the archive's hygiene, not the app's.
         val corpus = corpus()
-        val empty = corpus.filterValues { Excerpt.of(Note.parse(it)).isEmpty() }
-        assertEquals(40, empty.size)
-        assertTrue("Die Eule.md" in empty.keys)
-        // Every one of them is a title filed under a tag, with no prose at all — not a note whose
-        // text happened to be images or rules.
-        assertTrue(empty.values.all { Note.parse(it).blocks.all { b -> b is Block.TagLine } })
+        val hashtagOnly = corpus.filterValues { text ->
+            val body = Note.parse(text).body
+            body.isNotBlank() && body.lines().filter(String::isNotBlank).all { line ->
+                line.trim().split(Regex("""\s+""")).all { word -> word.startsWith("#") }
+            }
+        }
+        assertEquals(39, hashtagOnly.size)
+        assertTrue("Die Eule.md" in hashtagOnly.keys)
+        assertEquals("#lyrics/titel", Excerpt.of(Note.parse(hashtagOnly.getValue("Die Eule.md"))))
+        assertTrue(hashtagOnly.values.all { Note.parse(it).blocks.all { b -> b is Block.Paragraph } })
+
+        val blank = corpus.filterValues { Note.parse(it).body.isBlank() }
+        assertEquals(setOf("Es ist kein Verdienst, sich hier gut einzufinden.md"), blank.keys)
+        assertEquals("", Excerpt.of(Note.parse(blank.values.single())))
     }
 
     @Test
@@ -312,97 +303,19 @@ class CorpusTest {
     }
 
     @Test
-    fun `no hashtag line is left in the editable text of any note`() {
-        // The editor's half of "the user never sees a #". Every tag line in the archive has to leave
-        // the text buffer, or the promise holds for the list and the drawer and breaks on the one
-        // screen where the writing happens.
-        val corpus = corpus()
-        val leaked = corpus.filter { (_, text) ->
-            Segments.split(Note.parse(text).body)
-                .filterIsInstance<Segment.Prose>()
-                .any { prose -> prose.raw.lines().any(Tags::isTagLine) }
-        }.keys
-        assertEquals(emptySet<String>(), leaked)
-    }
-
-    @Test
-    fun `the notes with no tag line are the three with no tags`() {
-        val corpus = corpus()
-        val untagged = corpus.filterValues { text ->
-            Segments.split(Note.parse(text).body).none { it is Segment.Tags }
-        }
-        assertEquals(3, untagged.size)
-        assertTrue(untagged.values.all { Note.parse(it).tags.isEmpty() })
-    }
-
-    @Test
-    fun `every tag the frontmatter declares reaches a chip`() {
-        // The chip row is built from the runs, so a tag that ended up in no run would be a tag the
-        // author cannot see or remove. Percent tags go the other way and are allowed to appear in a
-        // run without a frontmatter entry — 21 of them do, the export having lost them.
-        val corpus = corpus()
-        for ((name, text) in corpus) {
-            val note = Note.parse(text)
-            val chipped = Segments.split(note.body).filterIsInstance<Segment.Tags>().flatMap { it.tags }
-            val declared = note.frontmatter.tags.filter(Tags::isInlineWritable)
-            assertEquals(name, emptyList<String>(), declared - chipped.toSet())
-        }
-    }
-
-    @Test
-    fun `adding a tag to every note and taking it away again changes not one byte`() {
-        // The strictest thing a tag edit can be asked to promise, over the whole archive rather than
-        // over fixtures chosen to be kind. If this fails, some note is being reflowed by a round trip
-        // the user would think of as doing nothing at all.
-        val corpus = corpus()
-        val changed = corpus.filter { (_, text) ->
-            val body = Note.parse(text).body
-            val added = TagEdit.apply(body, listOf("probe"), emptyList())
-            TagEdit.apply(added, emptyList(), listOf("probe")) != body
-        }.keys
-        assertEquals(emptySet<String>(), changed)
-    }
-
-    @Test
-    fun `an added tag lands where the note already keeps its tags`() {
-        val corpus = corpus()
-        for ((name, text) in corpus) {
-            val note = Note.parse(text)
-            val added = TagEdit.apply(note.body, listOf("probe"), emptyList())
-            // Written once, onto a line that is a tag line — never into the middle of a lyric.
-            assertEquals(name, 1, Regex("""(?<=^|\s)#probe(?=\s|$)""", RegexOption.MULTILINE).findAll(added).count())
-            val on = Segments.physicalLines(added).single { "#probe" in it }.removeSuffix("\n")
-            assertTrue(name, Tags.isTagLine(on))
-            // And every other line of the note is untouched.
-            assertEquals(name, note.body, TagEdit.apply(added, emptyList(), listOf("probe")))
-        }
-    }
-
-    @Test
-    fun `removing every tag from a note leaves the words alone`() {
-        // The most destructive edit the chip sheet can ask for. What must survive is the writing:
-        // hashtag lines go, and nothing else does.
-        val corpus = corpus()
-        for ((name, text) in corpus) {
-            val note = Note.parse(text)
-            val stripped = TagEdit.apply(note.body, emptyList(), note.tags)
-            val words = { body: String ->
-                Segments.physicalLines(body).filterNot { Tags.isTagLine(it.removeSuffix("\n")) }
-            }
-            assertEquals(name, words(note.body).filterNot { it.isBlank() }, words(stripped).filterNot { it.isBlank() })
-        }
-    }
-
-    @Test
-    fun `a tag edit writes the frontmatter and the body together, and stamps updated once`() {
+    fun `a tag edit writes the frontmatter, leaves the body alone, and does not stamp updated`() {
         val corpus = corpus()
         val now = java.time.Instant.parse("2026-09-07T12:00:00Z")
         for ((name, text) in corpus) {
             val note = Note.parse(text)
             val edited = note.withTags(note.body, note.tags + "probe", now)!!
             assertTrue(name, "probe" in edited.frontmatter.tags)
-            assertTrue(name, "#probe" in edited.body)
-            assertEquals(name, Note.stamp(now), edited.frontmatter.updated)
+            // Not one byte of the writing moves for a re-filing.
+            assertEquals(name, note.body, edited.body)
+            // And neither does the date. `updated` tracks the writing, not the filing — see the file
+            // format contract in `CLAUDE.md`. Stamping here would have restamped the whole archive
+            // the first time a tag was renamed across it.
+            assertEquals(name, note.frontmatter.updated, edited.frontmatter.updated)
             // created is the archive's value and is never the app's to move.
             assertEquals(name, note.frontmatter.created, edited.frontmatter.created)
             // And the tags the user did not touch keep the order and the quoting the file had.

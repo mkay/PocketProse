@@ -53,11 +53,12 @@ class NoteDocumentTest {
 
         val saved = note.withTags(document.body(), document.tags, NOW)!!
         assertEquals(listOf("lyrics/snippet", "100"), saved.frontmatter.tags)
-        assertTrue("#lyrics/snippet #100" in saved.body)
+        // The frontmatter is the only place a tag is written. The body is the song.
+        assertEquals(note.body, saved.body)
     }
 
     @Test
-    fun `a tag is taken off both places, and only that tag`() {
+    fun `a tag added and taken off again is nothing to write`() {
         val note = Note.parse(text)
         val document = documentFor(note)
         document.toggleTag("100")
@@ -75,13 +76,13 @@ class NoteDocumentTest {
     }
 
     @Test
-    fun `a tag written in the body but not declared is an ordinary tag on the note`() {
-        // It shows as on, because to a reader it is on: it is written in the note. What the app must
-        // not do is *file* it — see the paired test in SaveTest, which proves an unrelated edit
-        // leaves it in the body and out of the `tags:` list.
+    fun `a hashtag written in the body is not a tag on the note`() {
+        // It used to show as on, because to a reader it was written in the note. Since the
+        // frontmatter became the only source of truth it is what it looks like: text. The chip sheet
+        // shows `lyrics/snippet` and nothing else, and toggling tags will not disturb that line.
         val strayText = text.replace("#lyrics/snippet\n", "#lyrics/snippet #busch\n")
         val document = documentFor(Note.parse(strayText))
-        assertEquals(listOf("lyrics/snippet", "busch"), document.tags)
+        assertEquals(listOf("lyrics/snippet"), document.tags)
     }
 
     @Test
@@ -94,11 +95,17 @@ class NoteDocumentTest {
 
     @Test
     fun `a note can open with something other than text`() {
-        // 66 tag runs in the archive sit at the head of their note, so segment 0 is a run of tags
-        // with no buffer behind it. Anything reaching for "the first buffer" by index rather than by
-        // kind crashes on those, which the format bar once did.
-        val document = documentFor(Note.parse(text))
-        assertTrue(document.segments.first() is Segment.Tags)
+        // A chord sheet opening on a diagram: segment 0 is an image with no buffer behind it, so
+        // anything reaching for "the first buffer" by index rather than by kind crashes on it — as
+        // the format bar once did. Tag runs used to be the common case here, 66 of them at the head
+        // of their note; since tags left the body it is the images that carry this.
+        val document = NoteDocument(
+            "Casablanca (chords).md",
+            "![](attachments/a.png)\nAm\n",
+            emptyList(),
+            "Casablanca",
+        )
+        assertTrue(document.segments.first() is Segment.Images)
         assertEquals(1, document.firstProseIndex)
     }
 

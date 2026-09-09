@@ -33,8 +33,11 @@ class BlocksTest {
     }
 
     @Test
-    fun `a line of only hashtags is a tag line and never shown as text`() {
-        assertEquals(listOf(Block.TagLine(listOf("chords", "radio"))), Blocks.parse("#chords #radio"))
+    fun `a line of only hashtags is prose like any other line`() {
+        // It was its own hidden block kind until 2026-09-09. Tags come from the frontmatter now, so
+        // there is nothing special about a line that happens to start with a `#` — and 165 notes in
+        // the archive carry one, which is why this is asserted rather than assumed.
+        assertEquals(listOf(Block.Paragraph("#chords #radio")), Blocks.parse("#chords #radio"))
     }
 
     @Test
@@ -45,17 +48,6 @@ class BlocksTest {
         )
     }
 
-    @Test
-    fun `a numeric tag counts towards a tag line`() {
-        // Müde.md reads exactly this. The middle tag was `#100%` until the rename on 2026-09-07, and
-        // being unreadable it made the whole line prose — so the library row for Müde led with the
-        // note's own tags instead of with the song. Now it is simply one of the three.
-        assertEquals(
-            listOf(Block.TagLine(listOf("album/debut", "100", "busch"))),
-            Blocks.parse("#album/debut #100 #busch"),
-        )
-        assertEquals(listOf(Block.TagLine(listOf("75"))), Blocks.parse("#75"))
-    }
 
     @Test
     fun `a numeric tag inside a sentence leaves the sentence visible`() {
@@ -74,9 +66,9 @@ class BlocksTest {
     }
 
     @Test
-    fun `headings need their space, so a tag is not a heading`() {
+    fun `headings need their space, so a hashtag is not a heading`() {
         assertEquals(listOf(Block.Heading(2, "Strophe")), Blocks.parse("## Strophe"))
-        assertEquals(listOf(Block.TagLine(listOf("lyrics"))), Blocks.parse("#lyrics"))
+        assertEquals(listOf(Block.Paragraph("#lyrics")), Blocks.parse("#lyrics"))
     }
 
     @Test
