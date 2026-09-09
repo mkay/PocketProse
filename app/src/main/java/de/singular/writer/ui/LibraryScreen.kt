@@ -2,15 +2,6 @@
 
 package de.singular.writer.ui
 
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.StartOffset
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.keyframes
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.foundation.background
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -24,7 +15,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.width
@@ -51,19 +41,12 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -71,7 +54,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.delay
 import de.singular.writer.R
 import de.singular.writer.vault.IndexedNote
 import de.singular.writer.vault.VaultFailure
@@ -190,7 +172,7 @@ fun LibraryScreen(
                 // What must not happen here is the "nothing matches" line appearing before anything
                 // has been looked at, which is why this branch exists at all.
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    LoadingDots(Modifier.padding(bottom = 48.dp))
+                    LoadingSheets(Modifier.padding(bottom = 48.dp))
                 }
             } else if (notes.isEmpty()) {
                 Empty(query, onChooseFolder)
@@ -442,71 +424,3 @@ private fun Invitation(
     }
 }
 
-/**
- * Three dots, while the folder is being read.
- *
- * There was nothing here before, on the argument that a read off the phone's own storage is a
- * moment rather than a wait and a spinner for that long is a flicker. That was right about
- * spinners and wrong about the blank: 168 notes take a second or two through the storage-access
- * framework, and a page that is simply empty for that long reads as an empty folder — the one
- * conclusion this screen must never let someone draw before it has looked.
- *
- * Deliberately not a `CircularProgressIndicator`. That is a system part with a system's manners:
- * it spins at its own speed in the accent colour and says *something is working*. Three dots
- * breathing in the muted ink say *reading* and nothing else, which is what is happening and all
- * that needs saying on a page that is about to be full of writing.
- *
- * The dots wait [APPEARS_AFTER] before showing. A folder already warm in the provider's cache
- * comes back faster than that, and a spinner that appears and vanishes inside a fifth of a second
- * is worse than no spinner: it reads as a fault. So the fast path stays blank, exactly as it was,
- * and only a read that is actually slow enough to notice gets an answer.
- */
-@Composable
-private fun LoadingDots(modifier: Modifier = Modifier) {
-    val description = stringResource(R.string.library_loading)
-    var visible by remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) {
-        delay(APPEARS_AFTER)
-        visible = true
-    }
-
-    val transition = rememberInfiniteTransition(label = "loading")
-    Row(
-        modifier
-            .alpha(if (visible) 1f else 0f)
-            .semantics { contentDescription = description },
-        horizontalArrangement = Arrangement.spacedBy(7.dp),
-    ) {
-        repeat(3) { i ->
-            // One wave passing along the row rather than three dots pulsing together: the offset is
-            // what makes it read as movement in a direction, which is what tells a waiting eye that
-            // this is alive and not a decoration that happens to be drawn faintly.
-            val alpha by transition.animateFloat(
-                initialValue = DOT_DIM,
-                targetValue = DOT_DIM,
-                animationSpec = infiniteRepeatable(
-                    animation = keyframes {
-                        durationMillis = CYCLE
-                        DOT_DIM at 0 using LinearEasing
-                        DOT_BRIGHT at CYCLE / 3
-                        DOT_DIM at CYCLE * 2 / 3
-                    },
-                    repeatMode = RepeatMode.Restart,
-                    initialStartOffset = StartOffset(i * CYCLE / 6),
-                ),
-                label = "dot",
-            )
-            Box(
-                Modifier
-                    .size(6.dp)
-                    .graphicsLayer { this.alpha = alpha }
-                    .background(MaterialTheme.colorScheme.onSurfaceVariant, CircleShape),
-            )
-        }
-    }
-}
-
-private const val CYCLE = 1_200
-private const val DOT_DIM = 0.18f
-private const val DOT_BRIGHT = 0.75f
-private const val APPEARS_AFTER = 220L
