@@ -325,7 +325,10 @@ private fun NoteRow(note: IndexedNote, onClick: () -> Unit) {
                 Text(
                     text = date(it),
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    // A step quieter than the excerpt above it. The date is the least useful thing
+                    // in the row for finding a note, so it reads as a footnote to the tags beside
+                    // it rather than as a peer of the writing.
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                     maxLines = 1,
                 )
             }
