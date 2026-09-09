@@ -308,6 +308,10 @@ class MigrationTest {
         assertEquals(3, survey.scanned)
         assertEquals(2, survey.notes)
         assertEquals(2, survey.lines)
+        assertEquals(2, survey.tagged)
+        // Every note here is titled already, so the offer this folder gets says "tags" and not a
+        // word about titles.
+        assertEquals(0, survey.titled)
         assertEquals(listOf("busch", "lyrics/snippet", "radio"), survey.tags)
         // `lyrics/snippet` is already declared by the note that carries it, so the drawer does not
         // gain it — it gains the two that live only in a body today.
@@ -320,6 +324,167 @@ class MigrationTest {
     fun `a folder with nothing to move is not worth offering`() {
         val notes = listOf(note("---\ntitle: \"X\"\ntags:\n  - \"song\"\n---\n\nIch singe\n"))
         assertFalse(Migration.survey(notes).worthOffering)
+    }
+
+    // --- the title -----------------------------------------------------------------------------
+
+    @Test
+    fun `a note that opens with a heading and has no title gets one, and the heading goes`() {
+        val move = moved("---\ntags: []\n---\n\n# Adlerohr\n\nDu erreichst mich nicht\n")
+        assertEquals("Adlerohr", move.titled)
+        assertEquals("Adlerohr", move.note.title)
+        assertEquals("\nDu erreichst mich nicht\n", move.note.body)
+    }
+
+    @Test
+    fun `the title is the words the filename could not hold`() {
+        // The whole reason this half exists. 24 of the 168 notes in the folder this was built
+        // against have a heading their filename cannot spell, 11 of them because of a `?`; without
+        // the move the library shows the filename and the question mark is simply gone.
+        assertEquals("Wer geht vor?", moved("# Wer geht vor?\n\nWer geht vor\n").titled)
+    }
+
+    @Test
+    fun `a note that already has a title keeps its heading and its title`() {
+        // The note has answered the question. The heading may agree, may be a variant spelling, may
+        // be a section that happens to sit at the top — the app cannot tell, and guessing would
+        // overwrite a title the user wrote with a line out of their words.
+        val text = "---\ntitle: \"Atlantik\"\ntags: []\n---\n\n# Atlantik am Morgen\n\nDu\n"
+        assertEquals(Migration.Outcome.Untouched, Migration.plan(note(text)))
+    }
+
+    @Test
+    fun `a heading further down is a section, not a title`() {
+        // `Radio (Song Notes).md` runs on headings for its sections. A rule that took any heading
+        // would title that note after whichever section came first.
+        val text = "---\ntags: []\n---\n\nDu erreichst mich nicht\n\n# Refrain\n\nOh\n"
+        assertEquals(Migration.Outcome.Untouched, Migration.plan(note(text)))
+    }
+
+    @Test
+    fun `a second-level heading is not a title`() {
+        val text = "---\ntags: []\n---\n\n## Strophe\n\nDu erreichst mich nicht\n"
+        assertEquals(Migration.Outcome.Untouched, Migration.plan(note(text)))
+    }
+
+    @Test
+    fun `a heading with no words in it is not a title`() {
+        assertEquals(Migration.Outcome.Untouched, Migration.plan(note("---\ntags: []\n---\n\n# \n\nDu\n")))
+    }
+
+    @Test
+    fun `a hash with no space is a hashtag and not a heading`() {
+        // `#Adlerohr` is not a heading in any Markdown this app renders, and it *is* a tag line by
+        // the grammar above. It must go to the tag half and nowhere near the title.
+        val move = moved("---\ntags: []\n---\n\n#Adlerohr\n\nDu\n")
+        assertNull(move.titled)
+        assertEquals(listOf("adlerohr"), move.filed)
+    }
+
+    @Test
+    fun `the title keeps whatever the heading showed, closing hashes and all`() {
+        // Blocks renders `# Adlerohr #` as "Adlerohr #" — CommonMark would strip the closing
+        // sequence and this app's renderer does not. The title that lands is what the reader was
+        // looking at, because the promise is that the words move, not that they are also tidied.
+        assertEquals("Adlerohr #", moved("# Adlerohr #\n\nDu\n").titled)
+    }
+
+    @Test
+    fun `a note that is nothing but its heading comes out empty`() {
+        val move = moved("# Die Eule\n")
+        assertEquals("Die Eule", move.note.title)
+        assertEquals("", move.note.body)
+        assertEquals("---\ntitle: \"Die Eule\"\n---\n", move.note.render())
+    }
+
+    @Test
+    fun `a note with no frontmatter gets a block with its title in it, and no tag list it never had`() {
+        // `Frontmatter.forNote` writes only what is being filed. A note with a title and no tags
+        // must not also gain a `tags: []` the app invented for it.
+        val move = moved("# Adlerohr\n\nDu erreichst mich nicht\n")
+        assertTrue(move.addedBlock)
+        assertEquals("---\ntitle: \"Adlerohr\"\n---\n", move.note.frontmatter.raw)
+        assertEquals("\nDu erreichst mich nicht\n", move.note.body)
+    }
+
+    @Test
+    fun `a note with no frontmatter and both gets both, title first`() {
+        val move = moved("# Adlerohr\n\n#lyrics/titel\n\nDu\n")
+        assertEquals("Adlerohr", move.titled)
+        assertEquals(listOf("lyrics/titel"), move.filed)
+        assertEquals(
+            "---\ntitle: \"Adlerohr\"\ntags:\n  - \"lyrics/titel\"\n---\n",
+            move.note.frontmatter.raw,
+        )
+    }
+
+    @Test
+    fun `a tag line above the heading goes first, so the heading is what the note opens with`() {
+        // The export wrote the tag line at the head of 60 notes, above the words. Planning the title
+        // before the tags would see the tag line as the note's first line and leave every one of
+        // those titles behind.
+        val move = moved("---\ntags: []\n---\n\n#lyrics/titel\n\n# Adlerohr\n\nDu\n")
+        assertEquals("Adlerohr", move.titled)
+        assertEquals(listOf("lyrics/titel"), move.filed)
+        assertEquals("\nDu\n", move.note.body)
+    }
+
+    @Test
+    fun `an added title goes after the keys already there, disturbing none of them`() {
+        // `withKey` appends, because appending is the only placement that cannot reorder what the
+        // file already had. The archive writes `title` first and this writes it last, and the file
+        // the user has is worth more than the shape the app would have chosen.
+        val move = moved("---\ntags:\n  - \"lyrics/titel\"\n---\n\n# Die Eule\n")
+        assertEquals(
+            "---\ntags:\n  - \"lyrics/titel\"\ntitle: \"Die Eule\"\n---\n",
+            move.note.frontmatter.raw,
+        )
+        assertEquals(listOf("lyrics/titel"), move.note.tags)
+    }
+
+    @Test
+    fun `a title lands before its heading is removed`() {
+        // The same gate as the tags: plan writes the key, reads it back, and only then drops the
+        // line. A note whose title could not be written keeps the heading it had.
+        for (title in listOf("Wer geht vor?", "#100", "- Anfang", "Er sagte: \"nein\"", "Ja: doch")) {
+            val move = moved("# $title\n\nDu\n")
+            assertEquals("the title did not survive the block it was written into", title, move.note.title)
+        }
+    }
+
+    @Test
+    fun `the space around a heading is not part of the title`() {
+        // Blocks trims it before rendering, so it was never on screen and has no business in the
+        // frontmatter either.
+        assertEquals("Rand", moved("#   Rand  \n\nDu\n").titled)
+    }
+
+    @Test
+    fun `titling is filing, so updated does not move`() {
+        val text = "---\ncreated: 2015-03-01T10:00:00.000Z\nupdated: 2015-03-02T10:00:00.000Z\n---\n\n# Müde\n\nDu\n"
+        val move = moved(text)
+        assertEquals("2015-03-02T10:00:00.000Z", move.note.frontmatter.updated)
+        assertEquals("2015-03-01T10:00:00.000Z", move.note.frontmatter.created)
+    }
+
+    @Test
+    fun `the survey counts the titles separately from the tags`() {
+        val notes = listOf(
+            note("# Adlerohr\n\nDu\n"),
+            note("---\ntitle: \"X\"\ntags: []\n---\n\n#busch\n\nWörter\n"),
+            note("---\ntitle: \"Y\"\ntags: []\n---\n\nNur Wörter\n"),
+        )
+        val survey = Migration.survey(notes)
+        assertEquals(2, survey.notes)
+        assertEquals(1, survey.tagged)
+        assertEquals(1, survey.titled)
+        // One heading and one tag line: the lines the two notes lose between them.
+        assertEquals(2, survey.lines)
+    }
+
+    @Test
+    fun `planning twice is planning once for a title too`() {
+        assertEquals(Migration.Outcome.Untouched, Migration.plan(moved("# Adlerohr\n\nDu\n").note))
     }
 
     // --- the bytes ------------------------------------------------------------------------------

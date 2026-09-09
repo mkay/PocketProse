@@ -65,6 +65,7 @@ import de.singular.writer.ProseLeading
 import de.singular.writer.ProseSize
 import de.singular.writer.markdown.Tags
 import de.singular.writer.R
+import de.singular.writer.markdown.Migration
 import de.singular.writer.ThemeMode
 
 /**
@@ -116,10 +117,11 @@ fun SettingsScreen(
     totalNotes: Int,
     folderName: String?,
     onChooseFolder: () -> Unit,
-    // How many notes still have tags written into their text, or null when none do. The way back to
-    // an offer the user dismissed — and it disappears once there is nothing left to move, so it is
-    // never a row that does nothing.
-    moveTagsNotes: Int?,
+    // What this folder still has written into its text, or null when it has nothing left. The way
+    // back to an offer the user dismissed — and it disappears once there is nothing left to move, so
+    // it is never a row that does nothing. The whole survey rather than a count, because the row has
+    // to name what it would move as well as how much of it.
+    moveTags: Migration.Survey?,
     onMoveTags: () -> Unit,
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
@@ -177,7 +179,7 @@ fun SettingsScreen(
                     totalNotes = totalNotes,
                     folderName = folderName,
                     onChooseFolder = onChooseFolder,
-                    moveTagsNotes = moveTagsNotes,
+                    moveTags = moveTags,
                     onMoveTags = onMoveTags,
                 )
             }
@@ -376,7 +378,7 @@ private fun SystemSettings(
     totalNotes: Int,
     folderName: String?,
     onChooseFolder: () -> Unit,
-    moveTagsNotes: Int?,
+    moveTags: Migration.Survey?,
     onMoveTags: () -> Unit,
 ) {
     SettingsSectionLabel(R.string.settings_section_appearance)
@@ -430,15 +432,21 @@ private fun SystemSettings(
 
     // Under the folder, because it is a fact about the folder rather than a preference — and it is
     // here at all only so that dismissing the banner is not a door that locks behind you. It shows
-    // while notes still carry tags in their text and vanishes for good once none do.
-    if (moveTagsNotes != null) {
+    // while notes still carry their filing in their text and vanishes for good once none do.
+    if (moveTags != null) {
+        val what = stringResource(moveTagsWhat(moveTags))
         SettingActionRow(
-            label = R.string.settings_move_tags,
-            subtitle = pluralStringResource(R.plurals.settings_move_tags_subtitle, moveTagsNotes, moveTagsNotes),
+            label = stringResource(R.string.settings_move_tags, what),
+            subtitle = pluralStringResource(
+                R.plurals.settings_move_tags_subtitle,
+                moveTags.notes,
+                moveTags.notes,
+                what,
+            ),
             icon = Icons.Default.Label,
             onClick = onMoveTags,
         )
-        SettingsCaption(R.string.settings_move_tags_caption)
+        SettingsCaption(stringResource(R.string.settings_move_tags_caption, what))
     }
 }
 
@@ -506,9 +514,18 @@ private fun SettingsChoiceLabel(@StringRes text: Int) {
 
 /** The line under a setting that says what it means, where the label alone is not enough. */
 @Composable
-private fun SettingsCaption(@StringRes text: Int) {
+private fun SettingsCaption(@StringRes text: Int) = SettingsCaption(stringResource(text))
+
+/**
+ * The same line, already resolved.
+ *
+ * For the one caption whose sentence names what it would move — see the move-tags row, where the
+ * noun is picked from a survey rather than fixed in the string table.
+ */
+@Composable
+private fun SettingsCaption(text: String) {
     Text(
-        stringResource(text),
+        text,
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier.padding(start = 28.dp, end = 16.dp, bottom = 4.dp),
@@ -609,6 +626,15 @@ private fun SettingActionRow(
     subtitle: String,
     icon: ImageVector,
     onClick: () -> Unit,
+) = SettingActionRow(stringResource(label), subtitle, icon, onClick)
+
+/** The same row with its label already resolved. See [SettingsCaption] for why the overload. */
+@Composable
+private fun SettingActionRow(
+    label: String,
+    subtitle: String,
+    icon: ImageVector,
+    onClick: () -> Unit,
 ) {
     Row(
         Modifier
@@ -621,7 +647,7 @@ private fun SettingActionRow(
         Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.width(16.dp))
         Column(Modifier.weight(1f)) {
-            Text(stringResource(label), style = MaterialTheme.typography.bodyLarge)
+            Text(label, style = MaterialTheme.typography.bodyLarge)
             Text(
                 subtitle,
                 style = MaterialTheme.typography.bodySmall,

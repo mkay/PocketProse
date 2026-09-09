@@ -64,6 +64,7 @@ import de.singular.writer.ui.DrawerWidth
 import de.singular.writer.markdown.Migration
 import de.singular.writer.markdown.Segments
 import de.singular.writer.markdown.Tags
+import de.singular.writer.ui.moveTagsWhat
 import de.singular.writer.ui.MoveTagsDialog
 import de.singular.writer.ui.RenameTagDialog
 import de.singular.writer.ui.EditorScreen
@@ -181,7 +182,7 @@ private fun PocketProseApp(settings: Settings) {
     // Whether the confirm for that move is up.
     var offeringMove by remember { mutableStateOf(false) }
 
-    // Whether this folder has tags written into its notes' text, and how many.
+    // What this folder still has written into its notes' text — tags, titles or both — and how much.
     //
     // Recomputed whenever the index is, which is once per folder read — one regex over text already
     // parsed, and cheap enough that there is nothing to cache beyond this. It is what the banner,
@@ -423,7 +424,7 @@ private fun PocketProseApp(settings: Settings) {
             totalNotes = index.size,
             folderName = folderName,
             onChooseFolder = { pickFolder.launch(null) },
-            moveTagsNotes = inlineTags?.notes,
+            moveTags = inlineTags,
             onMoveTags = {
                 // Out of the settings and onto the library, so the confirm is read in front of the
                 // notes it is about rather than on top of a preferences page.
@@ -542,7 +543,7 @@ private fun PocketProseApp(settings: Settings) {
                     drawerState.close()
                     movingTags = true
                     loading = true
-                    message = when (val result = vault.migrateInlineTags(index)) {
+                    message = when (val result = vault.migrateInline(index)) {
                         is MigrationResult.Moved -> {
                             // Taken as answered either way. The folder now has nothing to move, so
                             // the banner would go on its own — but a Partial leaves notes behind,
@@ -553,6 +554,9 @@ private fun PocketProseApp(settings: Settings) {
                                 R.plurals.move_tags_done,
                                 result.notes,
                                 result.notes,
+                                // The survey the offer was made from, so the sentence afterwards
+                                // names what the sentence before it promised.
+                                context.getString(moveTagsWhat(inlineTags)),
                             )
                         }
                         is MigrationResult.Stale ->

@@ -2,6 +2,7 @@
 
 package de.singular.writer.ui
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -26,7 +27,7 @@ import de.singular.writer.R
 import de.singular.writer.markdown.Migration
 
 /**
- * The offer to move a folder's inline tags into its notes — the one-time migration's whole surface.
+ * The offer to move a folder's tags and titles into its notes — the migration's whole surface.
  *
  * ## Why it is a banner and not a first-run dialog
  *
@@ -43,8 +44,17 @@ import de.singular.writer.markdown.Migration
  * ## Why it says "inside your notes"
  *
  * Nowhere here says "frontmatter", "YAML" or "metadata". The people this is for write songs. What
- * they can see is that a `#lyrics/snippet` is sitting in the middle of their words, and what they
- * are being offered is to have it moved out of them. That is the whole sentence.
+ * they can see is that a `#lyrics/snippet` is sitting in the middle of their words, and that the
+ * first line of every note repeats the name at the top of the list. What they are being offered is
+ * to have both moved out of the way. That is the whole sentence.
+ *
+ * ## Why the noun is a variable
+ *
+ * A folder needs one half of this move, or the other, or both, and all three cases are real: the
+ * author's own archive has tags in its bodies and titles in its frontmatter, the folder this was
+ * built against had the reverse, and a folder straight out of the old editor has both. So every
+ * sentence here takes [what] rather than saying "tags", because an offer that announces it will
+ * move titles in a folder with no titles to move is an offer that has not looked.
  *
  * ## What the dialog has to say out loud
  *
@@ -53,6 +63,9 @@ import de.singular.writer.markdown.Migration
  *   the user did not type.
  * - **What the tag list gains**, when it gains anything. On an archive whose tags already agree it
  *   gains nothing, and claiming otherwise would be a lie the drawer would then contradict.
+ * - **How many notes gain a title**, when any do. Until they land, the editor's title field is empty
+ *   for every one of them and the library is showing the file name in its place — which is not the
+ *   same string for the 24 notes whose heading the file name cannot hold.
  *
  * What it deliberately does *not* promise is an undo, because there is none: the honest inverse is
  * the planned export, and offering a button that does not exist would be worse than the silence.
@@ -64,6 +77,7 @@ fun MoveTagsBanner(
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val what = stringResource(moveTagsWhat(survey))
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = modifier
@@ -79,7 +93,7 @@ fun MoveTagsBanner(
     ) {
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(
-                text = stringResource(R.string.move_tags_banner),
+                text = stringResource(R.string.move_tags_banner, what),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurface,
             )
@@ -88,6 +102,7 @@ fun MoveTagsBanner(
                     R.plurals.settings_move_tags_subtitle,
                     survey.notes,
                     survey.notes,
+                    what,
                 ),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -108,6 +123,19 @@ fun MoveTagsBanner(
     }
 }
 
+/**
+ * "tags", "titles" or "tags and titles" — what this folder actually has written into its text.
+ *
+ * Every sentence in this file takes it, and so does the line the library says afterwards, so the
+ * banner, the confirm, the settings row and the result cannot disagree about what was offered.
+ */
+@StringRes
+fun moveTagsWhat(survey: Migration.Survey): Int = when {
+    survey.tagged > 0 && survey.titled > 0 -> R.string.move_tags_what_both
+    survey.titled > 0 -> R.string.move_tags_what_titles
+    else -> R.string.move_tags_what_tags
+}
+
 /** The confirm. See [MoveTagsBanner] for what it has to say and what it must not promise. */
 @Composable
 fun MoveTagsDialog(
@@ -115,9 +143,10 @@ fun MoveTagsDialog(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
 ) {
+    val what = stringResource(moveTagsWhat(survey))
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.move_tags_title)) },
+        title = { Text(stringResource(R.string.move_tags_title, what)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text(
@@ -126,9 +155,10 @@ fun MoveTagsDialog(
                         survey.notes,
                         survey.notes,
                         survey.scanned,
+                        what,
                     ),
                 )
-                Text(stringResource(R.string.move_tags_body))
+                Text(stringResource(R.string.move_tags_body, what))
                 // Only when there is something to gain. On this author's own archive the tags
                 // already agree with the bodies, so the move is a pure tidy and this line would be
                 // a promise the drawer immediately contradicts.
@@ -138,6 +168,20 @@ fun MoveTagsDialog(
                             R.plurals.move_tags_gained,
                             survey.gained.size,
                             survey.gained.size,
+                        ),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                // The title half's equivalent of the line above: what the note gains, rather than
+                // what it loses. Until it lands the title field is empty for every one of these
+                // notes and the library is showing the file name in its place.
+                if (survey.titled > 0) {
+                    Text(
+                        text = pluralStringResource(
+                            R.plurals.move_tags_titled,
+                            survey.titled,
+                            survey.titled,
                         ),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,

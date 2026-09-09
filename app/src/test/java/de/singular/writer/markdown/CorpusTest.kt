@@ -2,6 +2,8 @@
 
 package de.singular.writer.markdown
 
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeTrue
@@ -35,9 +37,27 @@ class CorpusTest {
         private val folder = File("src/test/corpus/Lyrics")
         private lateinit var notes: Map<String, String>
 
+        /**
+         * The same 168 notes as the export left them: no frontmatter at all, a `# Heading` opening
+         * every one, the tags written into the words, and no `created` or `updated` anywhere.
+         *
+         * The archive proves the migration harms a folder that does not need it. This folder is the
+         * one that does, and it is the only place the title half can be tested against real writing
+         * rather than against fixtures written to pass. Populate it the same way:
+         *
+         *     adb pull /sdcard/Recordings/Lyrics_Inline app/src/test/corpus/
+         */
+        private val inlineFolder = File("src/test/corpus/Lyrics_Inline")
+        private lateinit var inlineNotes: Map<String, String>
+
         @BeforeClass
         @JvmStatic
         fun load() {
+            if (inlineFolder.isDirectory) {
+                inlineNotes = inlineFolder.listFiles { f: File -> f.name.endsWith(".md") }
+                    .orEmpty()
+                    .associate { it.name to it.readText() }
+            }
             if (!folder.isDirectory) return
             notes = folder.listFiles { f: File -> f.name.endsWith(".md") }
                 .orEmpty()
@@ -61,6 +81,11 @@ class CorpusTest {
     private fun corpus(): Map<String, String> {
         assumeTrue("archive not present — see the class comment", folder.isDirectory)
         return notes
+    }
+
+    private fun inlineCorpus(): Map<String, String> {
+        assumeTrue("inline folder not present — see the class comment", inlineFolder.isDirectory)
+        return inlineNotes
     }
 
     @Test
@@ -183,6 +208,83 @@ class CorpusTest {
             assertTrue("$name gained bytes", move.note.body.length < note.body.length)
             assertEquals("$name kept a hashtag", emptySet<String>(), hashtagsIn(move.note.body))
         }
+    }
+
+    @Test
+    fun `the folder from the export migrates whole, in one pass`() {
+        // The other side of the archive test above, on the folder the migration actually exists for.
+        // Nothing here is in the frontmatter yet: no note has a title, so the library falls back to
+        // the file name for all 168 and the editor's title field is empty for all 168, and no note
+        // has a tag, so the drawer is empty while a hashtag sits in the words of 165 of them.
+        val corpus = inlineCorpus()
+        val notes = corpus.mapValues { (_, text) -> Note.parse(text) }
+        assertEquals(168, notes.size)
+        assertEquals("a note already carried a title", emptyList<String>(), notes.filterValues { it.title != null }.keys.toList())
+        assertEquals("a note already carried a tag", emptyList<String>(), notes.filterValues { it.tags.isNotEmpty() }.keys.toList())
+
+        val survey = Migration.survey(notes.values)
+        assertEquals(168, survey.scanned)
+        assertEquals(168, survey.notes)
+        assertEquals(168, survey.titled)
+        // Both halves at once, which is the case the offer's wording has to cover: 165 notes carry a
+        // tag line, all 168 carry a heading, and the sentence has to say "tags and titles".
+        assertEquals(165, survey.tagged)
+        // Every tag in the drawer is one this move puts there, because there is no other source.
+        assertEquals(25, survey.tags.size)
+        assertEquals(25, survey.gained.size)
+        assertEquals(0, survey.blocked)
+
+        for ((name, note) in notes) {
+            val move = Migration.plan(note) as? Migration.Outcome.Move
+                ?: throw AssertionError("$name could not be migrated: ${Migration.plan(note)}")
+            val title = move.note.title ?: throw AssertionError("$name gained no title")
+            // The heading is gone from the body and its words are in the frontmatter — the move,
+            // not a copy. A note that kept both would show its name twice, which is what sent the
+            // author looking at this in the first place.
+            assertEquals(
+                "$name kept its heading",
+                emptyList<Block>(),
+                Blocks.parse(move.note.body).filterIsInstance<Block.Heading>().filter { it.level == 1 },
+            )
+            assertEquals("$name lost its title's words", title, (note.blocks.first() as Block.Heading).text)
+            // What was in the words is now in the list, and nothing is left behind in either place.
+            assertEquals("$name kept a hashtag", emptySet<String>(), hashtagsIn(move.note.body))
+            assertEquals("$name lost a tag", hashtagsIn(note.body).map(Tags::normalize).toSet(), move.note.tags.toSet())
+            // Nothing app-owned goes into a block the app created — no id, no timestamps. The export
+            // carried no dates and the migration does not invent any.
+            assertNull("$name was given a created", move.note.frontmatter.created)
+            assertNull("$name was given an updated", move.note.frontmatter.updated)
+        }
+
+        // The 24 whose heading their file name cannot spell — the reason the title half is worth
+        // making rather than leaving the library's file-name fallback to stand in. Measured
+        // 2026-09-09.
+        val differing = notes.count { (name, note) ->
+            (Migration.plan(note) as Migration.Outcome.Move).note.title != name.removeSuffix(".md")
+        }
+        assertEquals(24, differing)
+    }
+
+    @Test
+    fun `migrating the export twice changes nothing the second time`() {
+        // The offer can be made again after a sync brings notes in, and the settings row can be
+        // tapped by somebody who has already run it. A second pass over a migrated folder must be a
+        // no-op rather than a second edit.
+        val corpus = inlineCorpus()
+        val once = corpus.values.map { Migration.plan(Note.parse(it)) }
+            .filterIsInstance<Migration.Outcome.Move>()
+            .map { it.note }
+        assertEquals(168, once.size)
+        assertFalse(Migration.survey(once).worthOffering)
+    }
+
+    @Test
+    fun `the folder from the export renders back byte for byte before anything is moved`() {
+        // The precheck the migration refuses on. A folder the app has just met is where an
+        // unfamiliar note shape is likeliest, and this is the folder it has just met.
+        val corpus = inlineCorpus()
+        val broken = corpus.filterNot { (_, text) -> Note.parse(text).render() == text }.keys
+        assertEquals("notes that did not survive a round trip", emptySet<String>(), broken)
     }
 
     @Test

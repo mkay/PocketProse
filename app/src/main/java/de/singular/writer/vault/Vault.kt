@@ -310,7 +310,7 @@ class Vault(context: Context) {
      * Put [updated] where [note] is, atomically, having checked that nothing moved underneath it.
      *
      * The write itself, with no opinion about what changed or whether `updated` should have moved —
-     * [save] decides that for an edit, [migrateInlineTags] decides it differently for a migration,
+     * [save] decides that for an edit, [migrateInline] decides it differently for a migration,
      * and both arrive here with a finished [Note]. Splitting it out is what lets the migration reuse
      * the temp-file-and-rename dance rather than grow a second copy of it: there is one piece of
      * code in this app that can leave a note half-written, and it should stay one.
@@ -430,11 +430,12 @@ class Vault(context: Context) {
         }
 
     /**
-     * Move every inline tag in the folder into the frontmatter it belongs in — once, on consent.
+     * Move every note's filing out of the folder's text and into its frontmatter — once, on consent.
      *
      * The migration a folder from another editor needs: a tag written as `#lyrics/snippet` in the
-     * body goes into the note's `tags:` list and the line it was on goes away. `Migration` holds all
-     * of the reasoning about *what* a move is; this holds the reasoning about writing it.
+     * body goes into the note's `tags:` list, an `# Adlerohr` heading opening the note goes into its
+     * `title:`, and the lines they were on go away. `Migration` holds all of the reasoning about
+     * *what* a move is; this holds the reasoning about writing it.
      *
      * **Two passes, and the first one writes nothing** — the same shape as [renameTag], for a
      * stronger version of the same reason. A half-migrated folder is not merely untidy: some notes
@@ -457,7 +458,7 @@ class Vault(context: Context) {
      * Not called on folder adoption, and not called on its own. See `Migration`'s class comment for
      * why the offer waits until the user has seen their notes.
      */
-    suspend fun migrateInlineTags(index: NoteIndex): MigrationResult =
+    suspend fun migrateInline(index: NoteIndex): MigrationResult =
         withContext(Dispatchers.IO) {
             val planned = index.notes
                 .map { it to Migration.plan(it.note) }
@@ -496,7 +497,7 @@ class Vault(context: Context) {
                     else -> {
                         val remaining = planned.drop(i).map { it.first.file.name }
                         val reason = when (result) {
-                            is SaveResult.Conflict -> "a note changed while the tags were moving"
+                            is SaveResult.Conflict -> "a note changed while the move was running"
                             is SaveResult.Failed -> result.reason
                             SaveResult.Refused -> "a note could not be reproduced byte for byte"
                             else -> "the move stopped"
@@ -505,7 +506,11 @@ class Vault(context: Context) {
                     }
                 }
             }
-            MigrationResult.Moved(written, planned.flatMap { it.second.filed }.distinct().size)
+            MigrationResult.Moved(
+                notes = written,
+                tags = planned.flatMap { it.second.filed }.distinct().size,
+                titles = planned.count { it.second.titled != null },
+            )
         }
 
     /**

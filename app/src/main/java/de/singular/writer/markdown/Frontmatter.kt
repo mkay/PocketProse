@@ -295,20 +295,35 @@ class Frontmatter private constructor(
         fun quoted(value: String): String = "\"" + escape(value) + "\""
 
         /**
-         * A block for a note that has none, carrying nothing but a `tags:` list.
+         * A block for a note that has none, carrying nothing but what is being filed into it.
          *
          * **The only place in the app that creates frontmatter**, and it exists for exactly one
-         * caller: [Migration], moving tags out of the body of a note that arrived from an editor
-         * with no frontmatter at all. It is not the function this file's comment warns about — it
-         * does not rebuild an existing block out of parsed values, it writes a new one where there
-         * was nothing, with only what the user asked to be filed in it. Nothing app-owned goes in:
-         * no id, no `created`, no `updated`. If you are tempted to add one, read the prime directive.
+         * caller: [Migration], moving a note's tags and its title out of its body when it arrived
+         * from an editor with no frontmatter at all. It is not the function this file's comment
+         * warns about — it does not rebuild an existing block out of parsed values, it writes a new
+         * one where there was nothing, with only what the user asked to be filed in it. Nothing
+         * app-owned goes in: no id, no `created`, no `updated`. If you are tempted to add one, read
+         * the prime directive.
+         *
+         * **Only what was asked for gets a line.** A note being given a title and no tags does not
+         * also gain a `tags: []` it never had — that is a key the app invented, and the next thing
+         * to invent one is the thing every editor before this was thrown out for. The one exception
+         * is a caller with nothing at all to file, which gets the empty list the archive's own three
+         * untagged notes carry; [Migration] never makes that call.
+         *
+         * `title` goes first, then `tags`, which is the order all 168 notes in the archive use.
          *
          * LF, because the note that gets one had no block to take a line ending from and the archive
          * is LF throughout.
          */
-        fun forTags(tags: List<String>): Frontmatter {
-            val inner = if (tags.isEmpty()) listOf("tags: []") else listOf("tags:") + tags.map { "  - " + quoted(it) }
+        fun forNote(title: String?, tags: List<String>): Frontmatter {
+            val titled = title?.let { listOf("title: " + quoted(it)) }.orEmpty()
+            val tagged = when {
+                tags.isNotEmpty() -> listOf("tags:") + tags.map { "  - " + quoted(it) }
+                titled.isEmpty() -> listOf("tags: []")
+                else -> emptyList()
+            }
+            val inner = titled + tagged
             return Frontmatter((listOf("---") + inner + listOf("---")).joinToString("\n") + "\n")
         }
     }

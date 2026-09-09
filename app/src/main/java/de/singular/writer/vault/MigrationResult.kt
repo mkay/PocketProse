@@ -3,26 +3,27 @@
 package de.singular.writer.vault
 
 /**
- * What happened when the app moved a folder's inline tags into its frontmatter.
+ * What happened when the app moved a folder's tags and titles out of its text and into its notes.
  *
  * The second edit in this app that writes many files at once, and the larger of the two: a rename
  * touches the notes carrying one tag, this touches every note carrying any. It shares [RenameResult]'s
  * shape for the same reason — "it worked" and "it failed" are not the only two answers — and differs
  * in one place, [Partial], because this operation is *not* idempotent in the way a rename is. See
- * [Vault.migrateInlineTags].
+ * [Vault.migrateInline].
  */
 sealed interface MigrationResult {
 
-    /** No note had a tag written in its body, so there was nothing to move. */
+    /** No note had a tag or a title written in its body, so there was nothing to move. */
     data object NothingToMove : MigrationResult
 
     /**
      * Every affected note was rewritten.
      *
      * [notes] is files, [tags] is how many tags the drawer gained — usually far fewer, and on an
-     * archive whose frontmatter already agreed with its bodies, zero.
+     * archive whose frontmatter already agreed with its bodies, zero. [titles] is how many notes
+     * were given the title they were already showing at the top of their text.
      */
-    data class Moved(val notes: Int, val tags: Int) : MigrationResult
+    data class Moved(val notes: Int, val tags: Int, val titles: Int) : MigrationResult
 
     /**
      * Nothing was written: the precheck found the folder had moved underneath us.
