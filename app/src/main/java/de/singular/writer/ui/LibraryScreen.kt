@@ -3,6 +3,7 @@
 package de.singular.writer.ui
 
 import androidx.annotation.StringRes
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -110,6 +111,11 @@ fun LibraryScreen(
             action = stringResource(R.string.welcome_choose),
             onAction = onChooseFolder,
             modifier = modifier,
+            // Only here. This is the first screen of the app and there is nothing else on it to say
+            // what has been opened — the other two invitations are a folder that went missing and a
+            // folder with nothing in it, both of which are things that happened to somebody already
+            // using the app, and neither wants to be introduced to it again.
+            mark = true,
         )
 
         VaultFailure.FOLDER_UNREACHABLE, VaultFailure.FOLDER_UNREADABLE -> Invitation(
@@ -446,6 +452,33 @@ private fun SearchField(query: String, onQueryChange: (String) -> Unit) {
     )
 }
 
+/**
+ * The app's mark, above the welcome screen's first sentence.
+ *
+ * **No tile and no clip**, unlike the launcher, because the artwork carries its own ground now —
+ * `ic_mark.xml` is mk6, whose pale disc sits under the whole notebook. That disc is the reason this
+ * composable is three lines instead of a tile, a crop and a corner radius.
+ *
+ * It replaced exactly that. `AboutScreen` had already found that this artwork cannot go bare on a
+ * themed page: its ink runs from near-black to near-white and every contrast ratio it was drawn to
+ * assumed the launcher's tile, so on the dark page its lower edges dissolved at 1.1:1 and on the
+ * light page the paper's outer edge went at 1.05:1 — a different piece of the silhouette missing on
+ * each theme. Reassembling the adaptive icon here worked, and cost a dark rounded square on a page
+ * that has no other box on it. The disc does the tile's job at 6.87:1 and is not a box.
+ *
+ * The drawable's own 84dp is the size; see `ic_mark.xml` for what that makes the disc.
+ */
+@Composable
+private fun AppMark() {
+    Image(
+        painter = painterResource(R.drawable.ic_mark),
+        // Named by the title beside it, which is the actual sentence on the screen. A reader
+        // hearing "Pocket Prose, Your notes live in a folder" is being told the app's name twice
+        // before the sentence that matters.
+        contentDescription = null,
+    )
+}
+
 /** A centred title, a sentence, and one button — the shape every "nothing to show yet" state takes. */
 @Composable
 private fun Invitation(
@@ -454,6 +487,8 @@ private fun Invitation(
     action: String,
     onAction: () -> Unit,
     modifier: Modifier = Modifier,
+    /** Whether to introduce the app above the title. See the call site for why only one state does. */
+    mark: Boolean = false,
 ) {
     Box(
         modifier.fillMaxSize().windowInsetsPadding(WindowInsets.statusBars),
@@ -464,6 +499,13 @@ private fun Invitation(
             verticalArrangement = Arrangement.spacedBy(12.dp),
             modifier = Modifier.padding(32.dp),
         ) {
+            if (mark) {
+                AppMark()
+                // A step more air under the icon than the 12dp the column spaces everything by: the
+                // icon and the title are two different kinds of thing, and run together at 12dp the
+                // title reads as a caption on the picture.
+                Spacer(Modifier.height(8.dp))
+            }
             Text(
                 text = title,
                 style = MaterialTheme.typography.headlineSmall,

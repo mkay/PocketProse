@@ -32,5 +32,5 @@
       not go darkening the tile to try to recover them — that makes it worse. If they ever need to
       show again, the tile is what changes, not the artwork.
     -->
-    <color name="ic_launcher_background">#1C1917</color>
+    <color name="ic_launcher_background">#0C0B0B</color>
 </resources>
