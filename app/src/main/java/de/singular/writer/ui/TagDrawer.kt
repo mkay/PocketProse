@@ -4,6 +4,7 @@ package de.singular.writer.ui
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
@@ -21,6 +22,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -29,8 +31,10 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -47,6 +51,9 @@ import de.singular.writer.markdown.Tags
  *
  * Alphabetical at every level — see [Tags.tree] for why frequency order was rejected. Counts sit on
  * the right and carry the weight instead.
+ *
+ * **An empty tree says why it is empty.** It showed the heading and then nothing until 2026-09-09,
+ * which explains itself to nobody for any reason — and there are two reasons. See [EmptyTags].
  */
 @Composable
 fun TagDrawer(
@@ -59,6 +66,11 @@ fun TagDrawer(
     // start view, and renaming the archive from inside a preference is not what that gesture means
     // there.
     onRename: ((String) -> Unit)? = null,
+    // How many notes still have tags written into their text — the reason the tree is empty, when it
+    // is empty for that reason. Null in the settings screen's borrowed copy, which is a picker and
+    // has no business offering to rewrite the folder from inside a preference.
+    tagsInText: Int? = null,
+    onMoveTags: (() -> Unit)? = null,
 ) {
     Surface(
         color = MaterialTheme.colorScheme.surfaceContainerLow,
@@ -87,6 +99,94 @@ fun TagDrawer(
                 )
             }
             items(tree, selected, onSelect, onRename)
+            // Under the tags, not instead of them. Keying this on an empty tree was wrong for a day:
+            // one tag added by hand — or by a sync landing a single note — filled the tree and took
+            // the notice with it, leaving a drawer that showed one tag out of 25 and nothing to say
+            // the other 24 were sitting in the words. A folder with one tag showing looks like the
+            // truth in a way a blank panel never does, so that was the worse of the two states.
+            //
+            // The condition is now the one the sentence itself makes: tags are still written in the
+            // text. Empty tree or full, the panel reads "here are your tags, and here are the ones
+            // that are not here yet" — and it goes for good when there is nothing left to move.
+            if (tree.isEmpty() || (tagsInText != null && tagsInText > 0)) {
+                item { EmptyTags(tagsInText, onMoveTags) }
+            }
+        }
+    }
+}
+
+/**
+ * What the drawer says when tags are missing from it.
+ *
+ * Two different facts wear the same empty list, and the difference is the whole point of this
+ * existing. A folder genuinely without tags is a folder someone has not filed yet. A folder from an
+ * editor that kept tags as `#hashtags` in the body has tags — 25 of them, on 165 of its 168 notes —
+ * and every one of them is invisible here. Shown the same blank panel, both look like the app not
+ * working.
+ *
+ * The second case does not need the list to be empty, only incomplete, so this appears under a tree
+ * with tags in it too. See the call site.
+ *
+ * **The offer belongs here as well as in the banner, and this one does not expire.** The banner is
+ * an interruption and is dismissed for good, because re-asking to rewrite somebody's whole folder is
+ * the one nag that cannot be shrugged off. This is not an interruption: the user opened the drawer
+ * to filter by a tag and found none, and this is the answer to the question they just asked. It
+ * costs nothing to anyone who is reading rather than filtering, and it disappears on its own the
+ * moment there is nothing left to move.
+ */
+@Composable
+private fun EmptyTags(tagsInText: Int?, onMoveTags: (() -> Unit)?) {
+    val offering = tagsInText != null && tagsInText > 0
+    // The library's banner, worn by the drawer: the same sentence, the same count beneath it in the
+    // same quieter style, the same single action right-aligned on a row of its own — so somebody
+    // who has met one recognises the other rather than reading them as two different offers.
+    //
+    // The ground had to be found rather than copied. The banner is `surfaceContainerLow` because
+    // that is a step *down* from the library's page; the drawer is already that exact colour, so
+    // the same token here is no block at all. `surfaceContainer` is the one step that moves away
+    // from `surfaceContainerLow` in both schemes — lighter in dark (2F2A2A to 3E3739), darker in
+    // light (F7F4F4 to F2EEEE) — because the two ramps run in opposite directions and there is no
+    // token that means "darker" in both.
+    //
+    // Inset and cornered rather than a full-bleed band. A band across a 300dp panel reads as a
+    // section of the drawer, which is what the tag tree will be when there is one; a block that
+    // stops short of the edges reads as a notice sitting in an empty panel, which is what it is.
+    Column(
+        verticalArrangement = Arrangement.spacedBy(2.dp),
+        modifier = Modifier
+            .padding(horizontal = 12.dp, vertical = 4.dp)
+            .fillMaxWidth()
+            .clip(ControlShape)
+            .background(MaterialTheme.colorScheme.surfaceContainer)
+            .padding(start = 16.dp, end = 8.dp, top = 12.dp, bottom = 6.dp),
+    ) {
+        Text(
+            text = if (offering) {
+                pluralStringResource(R.plurals.drawer_tags_in_text, tagsInText, tagsInText)
+            } else {
+                stringResource(R.string.drawer_no_tags)
+            },
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+        if (offering) {
+            // The count is in the sentence above, so what follows is the reason and the remedy —
+            // quieter, because the fact is the thing being answered and this is the footnote to it.
+            Text(
+                text = stringResource(R.string.drawer_tags_in_text_why),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            // No "No thanks" beside it, unlike the banner. There is nothing here to dismiss: this
+            // is the answer to a question the user asked by opening the drawer, and it goes when
+            // the folder no longer needs it.
+            if (onMoveTags != null) {
+                Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
+                    TextButton(onClick = onMoveTags) {
+                        Text(stringResource(R.string.move_tags_banner_action))
+                    }
+                }
+            }
         }
     }
 }

@@ -185,6 +185,31 @@
     <string name="drawer_tags">Tags</string>
     <!-- Expands or collapses a tag that has sub-tags. -->
     <string name="drawer_expand">Show sub-tags</string>
+    <!-- The drawer with nothing in it. Until 2026-09-09 it showed the "Tags" heading and then
+         nothing at all, which explains itself to nobody whatever the reason. -->
+    <string name="drawer_no_tags">No tags on these notes yet.</string>
+    <!-- The drawer when tags are still in the words — the folder from an editor that kept them
+         there. Three sentences, and each one earns its place: what is true of the files and how much
+         of them, why that leaves the panel short, and what tapping the button does about it.
+
+         The count moved into the first sentence on 2026-09-10. It had been a quieter line of its own
+         underneath, which made the reader assemble the two halves; "still written in 165 of your
+         notes" is the whole fact in one go, and "still" is what says this is leftover state rather
+         than how things are.
+
+         "Keeps tags with the note" is the dialog's own phrasing, deliberately. Nowhere here says
+         frontmatter, metadata or YAML: the people this is for write songs. And it says the app keeps
+         them elsewhere rather than that it cannot read them where they are — it could, it did until
+         2026-09-09, and it stopped because a # in a song is part of the song.
+
+         The last sentence opens with the button's own words so the two are read together, but does
+         not quote it: a label in quotation marks beside the button it names is the same thing said
+         twice, and "click" is not what anybody does to a phone. -->
+    <plurals name="drawer_tags_in_text">
+        <item quantity="one">Your tags are still written in one of your notes.</item>
+        <item quantity="other">Your tags are still written in %1$d of your notes.</item>
+    </plurals>
+    <string name="drawer_tags_in_text_why">Pocket Prose keeps tags with the note instead. Move them, and they all show up here.</string>
     <string name="drawer_collapse">Hide sub-tags</string>
 
     <!-- ===== Search ===== -->
@@ -351,8 +376,20 @@
          #hashtag and a title as a heading. Deliberately says "inside your notes" rather than naming
          the format: the people this is for write songs, not YAML. %1$s is one of the three above. -->
     <string name="move_tags_banner">Your %1$s are written inside your notes.</string>
+    <!-- The count under it, and nothing else. It said "%1$d notes have tags and titles written into
+         the text" until 2026-09-09, which repeated the line above it inside a column half the screen
+         wide and wrapped the banner to four lines. The sentence is the sentence; this is the size. -->
+    <plurals name="move_tags_banner_count">
+        <item quantity="one">In 1 note.</item>
+        <item quantity="other">In %1$d notes.</item>
+    </plurals>
     <string name="move_tags_banner_action">Move them</string>
-    <string name="move_tags_banner_dismiss">Dismiss</string>
+    <!-- Declining. Not "Not now", which promises the banner comes back, and it does not — the way
+         back is the row in Settings. "No thanks" answers the offer without dating it. -->
+    <string name="move_tags_banner_dismiss">No thanks</string>
+    <!-- Said once, the moment the banner is dismissed, because dismissing it is permanent and the
+         way back is somewhere the user has no reason to look yet. -->
+    <string name="move_tags_dismissed">You can still move them later, in Settings.</string>
 
     <!-- The dialog the banner opens. %1$s is what is being moved. -->
     <string name="move_tags_title">Move your %1$s</string>
@@ -377,7 +414,10 @@
         <item quantity="other">%1$d notes keep the titles they show, as their own.</item>
     </plurals>
     <string name="move_tags_confirm">Move them</string>
-    <string name="move_tags_cancel">Leave them as they are</string>
+    <!-- Cancelling the confirm, which is genuinely temporary: the dialog closes and the banner is
+         still there. So "Not now" is the accurate word here, and deliberately not the banner's own
+         "No thanks" — that one is final, and the two buttons are not doing the same thing. -->
+    <string name="move_tags_cancel">Not now</string>
 
     <!-- Spoken while the move is writing, in place of the folder-reading line. No noun: "them" is
          the button that was just tapped, one tap ago, and the loading line takes no arguments. -->
@@ -402,9 +442,10 @@
     <!-- The settings row that brings the offer back after it was dismissed. Shown only while there
          is still something to move. %1$s is what. -->
     <string name="settings_move_tags">Your %1$s are still in your text</string>
+    <!-- The row's label already names what is in the text, so the subtitle is only the count. -->
     <plurals name="settings_move_tags_subtitle">
-        <item quantity="one">1 note has %2$s written into the text</item>
-        <item quantity="other">%1$d notes have %2$s written into the text</item>
+        <item quantity="one">1 note</item>
+        <item quantity="other">%1$d notes</item>
     </plurals>
     <string name="settings_move_tags_caption">Moving them puts your %1$s with the note, out of your writing and where the app can use them.</string>
 

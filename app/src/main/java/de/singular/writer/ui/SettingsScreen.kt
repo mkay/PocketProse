@@ -441,7 +441,6 @@ private fun SystemSettings(
                 R.plurals.settings_move_tags_subtitle,
                 moveTags.notes,
                 moveTags.notes,
-                what,
             ),
             icon = Icons.Default.Label,
             onClick = onMoveTags,

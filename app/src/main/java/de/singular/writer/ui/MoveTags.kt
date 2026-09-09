@@ -9,11 +9,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -48,6 +44,30 @@ import de.singular.writer.markdown.Migration
  * first line of every note repeats the name at the top of the list. What they are being offered is
  * to have both moved out of the way. That is the whole sentence.
  *
+ * ## Why the sentence gets the whole width
+ *
+ * The first build put the text in a column beside the action and the dismiss, which left it about
+ * 197dp of the screen's 372 — so both lines wrapped, and the banner stood four lines tall in a
+ * layout meant to be quieter than the list under it. The sentence now runs the full width and the
+ * two answers sit on a row of their own beneath it, which is Material's own banner shape and takes
+ * the same words to two lines.
+ *
+ * The count line shrank with it. It read "165 notes have tags and titles written into the text",
+ * which is the line above it said again; its job is the size of the thing, so it is now "In 165
+ * notes." and nothing more.
+ *
+ * ## Both answers are buttons, and dismissing is still permanent
+ *
+ * The dismiss was an × in the corner until 2026-09-09. The × carried the meaning well — a small,
+ * unlabelled no — but it is the harder target of the two and it made the row lopsided once the
+ * actions moved to their own line. Two text buttons read better and hit better.
+ *
+ * What that costs is clarity about consequence: a labelled button next to "Move them" looks like
+ * the reversible half of a pair, and this one is not — [Settings.moveTagsDeclined] is permanent and
+ * the way back is a row in Settings the user has no reason to have found yet. So the label is "No
+ * thanks" rather than "Not now", which would promise a return that never comes, and dismissing says
+ * where the way back is, once, in a snackbar. See `MainActivity`.
+ *
  * ## Why the noun is a variable
  *
  * A folder needs one half of this move, or the other, or both, and all three cases are real: the
@@ -78,8 +98,7 @@ fun MoveTagsBanner(
     modifier: Modifier = Modifier,
 ) {
     val what = stringResource(moveTagsWhat(survey))
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
+    Column(
         modifier = modifier
             .fillMaxWidth()
             // A step *down* the ramp — `surfaceContainerLow` is below the page in both schemes —
@@ -89,36 +108,41 @@ fun MoveTagsBanner(
             // The recess is quieter, and quiet is right. It is an offer, not an alarm, and a folder
             // that never takes it must not feel nagged.
             .background(MaterialTheme.colorScheme.surfaceContainerLow)
-            .padding(start = 20.dp, end = 8.dp, top = 10.dp, bottom = 10.dp),
+            .padding(start = 20.dp, end = 12.dp, top = 12.dp, bottom = 6.dp),
+        verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(
-                text = stringResource(R.string.move_tags_banner, what),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-            Text(
-                text = pluralStringResource(
-                    R.plurals.settings_move_tags_subtitle,
-                    survey.notes,
-                    survey.notes,
-                    what,
-                ),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        TextButton(onClick = onOffer) {
-            Text(stringResource(R.string.move_tags_banner_action))
-        }
-        // Dismissing is permanent and the settings row is how it comes back — see MainActivity.
-        // A banner that returned on every launch would be the app nagging about the user's own
-        // filing, which is theirs and not its business.
-        IconButton(onClick = onDismiss) {
-            Icon(
-                imageVector = Icons.Filled.Close,
-                contentDescription = stringResource(R.string.move_tags_banner_dismiss),
-            )
+        Text(
+            text = stringResource(R.string.move_tags_banner, what),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+        Text(
+            text = pluralStringResource(
+                R.plurals.move_tags_banner_count,
+                survey.notes,
+                survey.notes,
+            ),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Row(
+            horizontalArrangement = Arrangement.End,
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            // Dismissing is permanent and the settings row is how it comes back — see MainActivity,
+            // which says so in a snackbar at the moment it happens. A banner that returned on every
+            // launch would be the app nagging about the user's own filing, which is theirs and not
+            // its business.
+            TextButton(onClick = onDismiss) {
+                Text(
+                    text = stringResource(R.string.move_tags_banner_dismiss),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            TextButton(onClick = onOffer) {
+                Text(stringResource(R.string.move_tags_banner_action))
+            }
         }
     }
 }

@@ -528,9 +528,10 @@ private fun PocketProseApp(settings: Settings) {
             survey = inlineTags,
             onDismiss = {
                 offeringMove = false
-                // Dismissing the confirm is not dismissing the offer. Somebody who opened it to read
-                // the count and thought better of it has said "not now", and the banner staying is
-                // what lets them come back to it; the banner's own × is where "no" lives.
+                // Dismissing the confirm is not dismissing the offer. Somebody who opened it to
+                // read the count and thought better of it has said "not now" — which is what the
+                // button says — and the banner staying is what lets them come back to it. The
+                // banner's own "No thanks" is where the final no lives.
             },
             onConfirm = {
                 offeringMove = false
@@ -660,6 +661,14 @@ private fun PocketProseApp(settings: Settings) {
                         },
                         modifier = Modifier.weight(1f, fill = false),
                         onRename = { renaming = it },
+                        // Only the tag half. A folder whose titles are in its bodies still fills
+                        // this drawer perfectly well; it is body *tags* that leave it blank, and
+                        // this line is here to explain a blank drawer rather than to advertise.
+                        tagsInText = inlineTags?.tagged,
+                        onMoveTags = {
+                            scope.launch { drawerState.close() }
+                            offeringMove = true
+                        },
                     )
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                     // Settings lives at the bottom of the drawer, where the folder button used to
@@ -715,7 +724,14 @@ private fun PocketProseApp(settings: Settings) {
             // sentence about 165 notes over a list of three reads as being about the three.
             moveTags = inlineTags?.takeIf { !settings.moveTagsDeclined && !searching && selectedTag == null },
             onMoveTags = { offeringMove = true },
-            onDismissMoveTags = { settings.moveTagsDeclined = true },
+            onDismissMoveTags = {
+                settings.moveTagsDeclined = true
+                // Said once, here. Dismissing is permanent — the banner does not come back on the
+                // next launch — and the way back is a row in Settings the user has had no reason to
+                // go looking for. The × this replaced was self-evidently final in a way a button
+                // labelled next to "Move them" is not, so the consequence is spoken instead.
+                message = context.getString(R.string.move_tags_dismissed)
+            },
             onOpenDrawer = { scope.launch { drawerState.open() } },
             onChooseFolder = { pickFolder.launch(null) },
             onOpenNote = { openNoteUri = it.file.uri.toString() },
