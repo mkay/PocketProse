@@ -20,6 +20,8 @@ class SaveTest {
 
     private val now = Instant.parse("2026-09-07T14:30:00.123Z")
 
+    private fun stampOf(at: Instant) = Note.stamp(at)
+
     private val text = """
         ---
         title: "Atlantik"
@@ -148,6 +150,56 @@ class SaveTest {
         assertEquals("more words\n", saved.render())
         assertTrue("no frontmatter may be added", !saved.render().startsWith("---"))
     }
+    @Test
+    fun `a tag added to a note with no frontmatter lands in one`() {
+        // Reported 2026-09-09 from a folder in export shape, where every note is blockless: adding a
+        // tag in the editor looked like it worked and was gone the moment the note was re-read.
+        // Frontmatter.withTags returns the block untouched when there is none, so the tag was
+        // dropped on the way to disk — and withTags returned a note regardless, so the save path
+        // wrote the file back unchanged and called it a success.
+        val plain = "# Adlerohr\n\nDu erreichst mich nicht\n"
+        val saved = Note.parse(plain).withTags(plain, listOf("busch"), now)!!
+        assertEquals(listOf("busch"), saved.tags)
+        assertEquals(
+            "---\ntags:\n  - \"busch\"\n---\n\n# Adlerohr\n\nDu erreichst mich nicht\n",
+            saved.render(),
+        )
+        // And it is still there when the note is read back, which is what the user was watching.
+        assertEquals(listOf("busch"), Note.parse(saved.render()).tags)
+    }
+
+    @Test
+    fun `a title given to a note with no frontmatter lands in one`() {
+        val plain = "Du erreichst mich nicht\n"
+        val saved = Note.parse(plain).withTags(plain, emptyList(), now, newTitle = "Atlantik")!!
+        assertEquals("Atlantik", saved.title)
+        // Only what was asked for: a note given a title does not also gain a tags: [] it never had.
+        assertEquals("---\ntitle: \"Atlantik\"\n---\n\nDu erreichst mich nicht\n", saved.render())
+        assertEquals("Atlantik", Note.parse(saved.render()).title)
+    }
+
+    @Test
+    fun `a created block takes the stamp only because the words changed`() {
+        val plain = "Du\n"
+        val edited = Note.parse(plain).withTags("Du erreichst mich nicht\n", listOf("busch"), now)!!
+        assertEquals(stampOf(now), edited.frontmatter.updated)
+        // Whereas filing alone creates the block and leaves the timestamp out of it entirely.
+        val filed = Note.parse(plain).withTags(plain, listOf("busch"), now)!!
+        assertNull("filing is not writing", filed.frontmatter.updated)
+        assertNull("nothing app-owned goes in", filed.frontmatter.created)
+    }
+
+    @Test
+    fun `a created block still cannot be conjured by a stamp alone`() {
+        // The other half of "a note with no frontmatter is saved without one being invented" above.
+        // The block appears to hold what the user asked to store, never to hold a timestamp nobody
+        // asked for — so editing the words of a blockless note leaves it blockless.
+        val plain = "just some words\n"
+        val saved = Note.parse(plain).withBody("more words\n", now)!!
+        assertTrue(!saved.frontmatter.present)
+        assertNull(saved.frontmatter.updated)
+    }
+
     @Test
     fun `retyping the same title writes nothing`() {
         val note = Note.parse(text)

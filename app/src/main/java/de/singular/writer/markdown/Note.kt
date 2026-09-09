@@ -112,13 +112,41 @@ data class Note(
         if (!rewritten && added.isEmpty() && removed.isEmpty() && retitled == null) return null
 
         val ordered = current.filterNot { it in removed } + added
-        val tagged = if (added.isEmpty() && removed.isEmpty()) frontmatter else frontmatter.withTags(ordered)
-        val titled = if (retitled == null) tagged else tagged.withKey("title", retitled)
+        val refiled = added.isNotEmpty() || removed.isNotEmpty()
+        val titled = if (frontmatter.present) {
+            val tagged = if (refiled) frontmatter.withTags(ordered) else frontmatter
+            if (retitled == null) tagged else tagged.withKey("title", retitled)
+        } else {
+            // **A note with no frontmatter block at all gets one — but only to hold what the user
+            // just asked to store.**
+            //
+            // `Frontmatter.withTags` and `withKey` both return the block untouched when there is
+            // none, which is right for them and was silently wrong here: a tag added in the editor
+            // was dropped on the way to disk, and this function returned a note anyway, so the save
+            // path wrote the file back unchanged and reported success. The chip was on screen until
+            // the editor closed and the note was re-read. Reported 2026-09-09, on a folder in export
+            // shape where *every* note is blockless — which is the worst place for it, since that is
+            // exactly the folder somebody reaches for the tag sheet in before migrating.
+            //
+            // The same trap was fixed once already for a block that exists without a `tags:` key;
+            // this is the case underneath it.
+            if (refiled || retitled != null) Frontmatter.forNote(retitled, ordered) else frontmatter
+        }
         // `updated` tracks the writing, not the filing — see the file format contract in `CLAUDE.md`.
         // A note re-filed under a different tag, or given a better title, is not a note somebody
         // rewrote this morning, and the archive's dates are the thing it is kept for.
+        //
+        // A block the app has just created can take the stamp, because `rewritten` means the body
+        // genuinely changed. What it must not do is appear for the stamp's sake: a blockless note
+        // whose words were edited and nothing else stays blockless, since inventing a frontmatter to
+        // hold a timestamp nobody asked for is the prime directive's second prohibition exactly.
         val stamped = if (rewritten) titled.withKey("updated", stamp(now)) else titled
-        return copy(frontmatter = stamped, body = kept)
+        // A created block gets the blank line every note in the archive has under its frontmatter —
+        // the same rule, and the same reason, as `Migration.plan`. Done after `rewritten` is
+        // decided, so the app's own separator is never mistaken for the author's writing.
+        val addedBlock = !frontmatter.present && stamped.present
+        val spaced = if (addedBlock && kept.isNotEmpty() && !kept.startsWith("\n")) "\n" + kept else kept
+        return copy(frontmatter = stamped, body = spaced)
     }
 
     /**
