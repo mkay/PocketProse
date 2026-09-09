@@ -4,9 +4,12 @@ package de.singular.writer.ui
 
 import androidx.compose.foundation.border
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -59,17 +62,35 @@ fun rememberDateFormatter(): (Instant) -> String {
  *
  * One definition, used by both hosts. Two snackbars styled separately would drift, and the whole
  * reason this was worth fixing is that a message should look like it came from this app.
+ *
+ * **Built from the low-level overload on purpose.** The convenient one — `Snackbar(snackbarData =
+ * …)` — applies `modifier.padding(12.dp)` to whatever it is handed *before* passing it to the
+ * surface underneath, so a border given to it is drawn 12dp out from the bar it is meant to edge:
+ * a wide empty outline around a floating slab, which is the opposite of holding it off the list.
+ * That shipped for a day and was caught on a screenshot. Here the margin is applied first and the
+ * border second, so the edge is on the bar.
  */
 @Composable
 fun NoticeHost(state: SnackbarHostState, modifier: Modifier = Modifier) {
     SnackbarHost(state, modifier) { data ->
         Snackbar(
-            snackbarData = data,
+            // Order is the fix: margin outside, border on the surface itself. The 12dp is Material's
+            // own snackbar margin, restored by hand because building it this way skips the step that
+            // would have added it.
+            modifier = Modifier
+                .padding(12.dp)
+                .border(1.dp, MaterialTheme.colorScheme.outline, ControlShape),
+            action = data.visuals.actionLabel?.let { label ->
+                {
+                    TextButton(onClick = { data.performAction() }) { Text(label) }
+                }
+            },
             shape = ControlShape,
             containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
             contentColor = MaterialTheme.colorScheme.onSurface,
             actionContentColor = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.border(1.dp, MaterialTheme.colorScheme.outline, ControlShape),
-        )
+        ) {
+            Text(data.visuals.message)
+        }
     }
 }
