@@ -42,6 +42,27 @@ fun rememberDateFormatter(): (Instant) -> String {
 }
 
 /**
+ * A note's date **and** time of day, for the one screen that has room to be exact.
+ *
+ * The list shows a date alone, which is the right grain for scanning; the note's own details are
+ * where "when did I last touch this" gets a real answer, and two edits on the same afternoon are
+ * indistinguishable without the clock. Short time rather than medium — seconds are in the file but
+ * nobody reads a lyric by the second.
+ *
+ * Local zone, like [rememberDateFormatter]. The frontmatter is UTC and stays UTC; showing a writer
+ * their own evening as the following morning would be technically true and useless.
+ */
+@Composable
+fun rememberDateTimeFormatter(): (Instant) -> String {
+    val locale = LocalConfiguration.current.locales[0]
+    val formatter = DateTimeFormatter
+        .ofLocalizedDateTime(FormatStyle.MEDIUM, FormatStyle.SHORT)
+        .withLocale(locale)
+        .withZone(ZoneId.systemDefault())
+    return { instant -> formatter.format(instant) }
+}
+
+/**
  * The app's own snackbar, in the app's own colours.
  *
  * Material builds a snackbar from `inverseSurface` and `inverseOnSurface`, and `Theme.kt` states

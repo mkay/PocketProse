@@ -110,6 +110,28 @@
     <!-- Dismisses a dialog without doing anything. Shared by the new-note and delete dialogs. -->
     <string name="action_cancel">Cancel</string>
 
+    <!-- Opens the note's details. A look, never a change: nothing in the dialog it opens writes
+         anything. -->
+    <string name="editor_info">About this note</string>
+    <!-- Title of that dialog. -->
+    <string name="note_info_title">About this note</string>
+    <!-- Labels down the left of the dialog, each with its figure or date on the right. Keep them
+         short — they share a narrow row with the value, which is the part being read. -->
+    <string name="note_info_words">Words</string>
+    <string name="note_info_lines">Lines</string>
+    <string name="note_info_characters">Characters</string>
+    <!-- The note's name in the folder, extension included — what you would look for on a computer
+         or in the sync client. The one place this app names the thing on disk, because that is the
+         fact being reported; everywhere else it says "note". -->
+    <string name="note_info_name">Stored as</string>
+    <!-- When the note was first written, and when its words last changed. Both come from the note
+         itself, not from the phone. -->
+    <string name="note_info_created">Written</string>
+    <string name="note_info_updated">Last changed</string>
+    <!-- Stands in for a date the note does not carry. A dash, not "unknown" — it is an ordinary gap
+         in an old note, not an error. -->
+    <string name="note_info_unknown">—</string>
+
     <!-- Opens the menu in the editor's bar. -->
     <string name="editor_menu">More</string>
     <!-- The menu entry, and the confirming button in the dialog it opens. -->

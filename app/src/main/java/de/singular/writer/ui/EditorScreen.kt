@@ -28,6 +28,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -79,6 +80,7 @@ import de.singular.writer.markdown.Segment
 import de.singular.writer.markdown.Segments
 import de.singular.writer.markdown.Tags
 import de.singular.writer.vault.Attachments
+import java.time.Instant
 
 /**
  * A note as the editor holds it: its segments, and a live buffer for each editable one.
@@ -196,9 +198,13 @@ class NoteDocument(val name: String, body: String, tags: List<String>, title: St
  *
  * **The design is what is absent.** No toolbar, no formatting controls, no word count, no mode
  * switch — tapping a note in the list puts the cursor in it and the page is the writing. The only
- * chrome is a back arrow and a menu holding the one irreversible thing; the title is not chrome at
- * all, but the first line of the note. Formatting appears when text is selected and goes away
- * again, which is the one moment it is wanted.
+ * chrome is a back arrow, a menu holding the one irreversible thing, and an icon that opens the
+ * note's details; the title is not chrome at all, but the first line of the note. Formatting appears
+ * when text is selected and goes away again, which is the one moment it is wanted.
+ *
+ * The word count is still absent in the sense that matters — see [NoteInfoDialog]. A figure you open
+ * a dialog to read is not the same object as one that sits in the corner counting while you write,
+ * and the second is the one this screen was built without.
  *
  * The Markdown is invisible: see [MarkdownTransformation], which hides the markers and brings them
  * back under the cursor.
@@ -213,6 +219,16 @@ fun EditorScreen(
     knownTags: Set<String>,
     onOpenLink: (LinkRef) -> Unit,
     editable: Boolean,
+    /**
+     * The note's own dates, straight from its frontmatter, for the details dialog and nothing else.
+     *
+     * Not on [NoteDocument], which is the editable state and is deliberately rebuilt only when the
+     * note changes; these are facts about the file that no keystroke moves. Null for a note whose
+     * frontmatter does not carry them, which is no note in the archive but is any plain text file
+     * somebody drops into the folder.
+     */
+    created: Instant?,
+    updated: Instant?,
     /**
      * Put the cursor in the note and raise the keyboard as it opens.
      *
@@ -287,6 +303,28 @@ fun EditorScreen(
                 }
             },
             actions = {
+                // Out in the bar rather than in the menu, and it is the only thing that gets to be:
+                // it writes nothing. The menu below holds the irreversible thing, and mixing a
+                // look-only action into it would make opening that menu feel like less than it is.
+                var informing by remember(document) { mutableStateOf(false) }
+                IconButton(onClick = { informing = true }) {
+                    Icon(
+                        imageVector = Icons.Outlined.Info,
+                        contentDescription = stringResource(R.string.editor_info),
+                    )
+                }
+                if (informing) {
+                    NoteInfoDialog(
+                        name = document.name,
+                        // The note as it stands this second, unsaved keystrokes included — see
+                        // NoteInfoDialog on why the count is of the note and not of the file.
+                        body = document.body(),
+                        created = created,
+                        updated = updated,
+                        onDismiss = { informing = false },
+                    )
+                }
+
                 // One entry, and it is behind a menu on purpose. Deleting is the only thing this app
                 // does that cannot be undone, so it does not get a button of its own next to the
                 // back arrow where a thumb already goes.

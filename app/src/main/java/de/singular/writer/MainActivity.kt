@@ -466,6 +466,8 @@ private fun PocketProseApp(settings: Settings) {
             // written, because writing it would corrupt it. It is false for no note in the archive.
             knownTags = index.allTags,
             editable = openNote.roundTrips,
+            created = openNote.created,
+            updated = openNote.updated,
             focusOnOpen = focusNewNote,
             onBack = { leave() },
             onDelete = { deleting = true },
