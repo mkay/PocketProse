@@ -320,4 +320,9 @@
     </plurals>
     <string name="delete_notes_partial">%1$d gelöscht, aber %2$s ist noch da. Zum Aktualisieren ziehen und noch einmal versuchen.</string>
 
+    <string name="add_image">Bild hinzufügen</string>
+    <string name="add_image_failed">Das Bild konnte nicht in deinen Ordner gelegt werden</string>
+
+    <string name="note_has_attachments">Enthält Anhänge</string>
+
 </resources>

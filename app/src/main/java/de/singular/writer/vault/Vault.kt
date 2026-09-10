@@ -530,7 +530,15 @@ class Vault(context: Context) {
      * lost the same way, and a temp file mangled to `.pocketprose-tmp.txt` would no longer match
      * what `recoverTemp` looks for — so an interrupted write would leave an orphan nothing collects.
      */
-    private fun createNamed(parent: Uri, name: String): Uri? {
+    private fun createNamed(parent: Uri, name: String, mime: String? = null): Uri? {
+        if (mime != null) {
+            // An attachment is not a note: its own type is the right one and the markdown fallback
+            // below would be nonsense for a PNG.
+            val made = create(parent, mime, name) ?: return null
+            if (displayName(made) == name) return made
+            return runCatching { DocumentsContract.renameDocument(resolver, made, name) }
+                .getOrNull() ?: made
+        }
         // Markdown first, so a provider that understands it keeps the name as given. Falling back to
         // text/plain because a provider that does *not* understand a type can refuse outright, and
         // text/plain is the one this app is known to be able to create with on this device.
@@ -682,6 +690,118 @@ class Vault(context: Context) {
      * umlauts, accents, a trailing full stop, and spaces.
      */
 
+
+    /**
+     * Copy [source] into the folder's `attachments/`, and hand back the relative path to link it by.
+     *
+     * **The file goes into the user's folder, not into ours.** `CLAUDE.md` is explicit: an image the
+     * user adds is written next to the note and linked relatively, never copied into app-private
+     * storage as the canonical copy and never base64-inlined. So what comes back is
+     * `attachments/name.png` — a path that means the same thing to this app, to a desktop editor, and
+     * to whatever syncs the folder — and the bytes live where the other 26 attachments already do.
+     *
+     * The subfolder is created if the folder has none. A flat sibling layout is also valid and
+     * occurs in the archive (see [Attachments]), but a folder being written into for the first time
+     * gets the tidier of the two rather than 26 pictures loose among the notes.
+     *
+     * [suggested] is the name the picker offered, which for a camera roll is often something like
+     * `IMG_20260910_112233.jpg` and occasionally nothing at all. It goes through [fileStem] like any
+     * other name the user did not type, keeps its extension, and is numbered if it is taken — the
+     * archive's own convention, and the only alternative to overwriting a picture already in use.
+     *
+     * Returns null if anything went wrong, because the caller's answer to all of it is the same: say
+     * so and insert no link. **A link to a file that is not there is worse than no image**, since the
+     * note then carries a broken reference the user has to find and remove by hand.
+     */
+    suspend fun addAttachment(source: Uri, suggested: String?): String? = withContext(Dispatchers.IO) {
+        val root = rootFolder() ?: return@withContext null
+        val folder = attachmentsFolder(root) ?: return@withContext null
+
+        val taken = childNames(folder)
+        val raw = suggested?.substringAfterLast('/').orEmpty()
+        val extension = raw.substringAfterLast('.', "").takeIf { it.isNotEmpty() && it.length <= 5 }
+            ?: mimeExtension(source)
+            ?: "bin"
+        val stem = fileStem(raw.substringBeforeLast('.', raw).ifBlank { "image" })
+        val name = generateSequence(0) { it + 1 }
+            .map { if (it == 0) "$stem.$extension" else "$stem $it.$extension" }
+            .first { normalizedName(it) !in taken }
+
+        val created = createNamed(folder, name, mimeTypeOf(source) ?: "application/octet-stream")
+            ?: return@withContext null
+        val copied = runCatching {
+            resolver.openInputStream(source)?.use { input ->
+                resolver.openOutputStream(created, "wt")?.use { out -> input.copyTo(out) }
+                    ?: error("no stream")
+            } ?: error("no source")
+            true
+        }.getOrDefault(false)
+        if (!copied) {
+            // A half-written picture in somebody's folder is litter this app put there.
+            runCatching { DocumentsContract.deleteDocument(resolver, created) }
+            return@withContext null
+        }
+        "$ATTACHMENTS/${displayName(created) ?: name}"
+    }
+
+    /** The `attachments/` subfolder, made if the folder has not got one yet. */
+    private fun attachmentsFolder(root: Uri): Uri? {
+        val tree = this.root ?: return null
+        val existing = runCatching {
+            resolver.query(
+                DocumentsContract.buildChildDocumentsUriUsingTree(
+                    tree,
+                    DocumentsContract.getDocumentId(root),
+                ),
+                arrayOf(
+                    DocumentsContract.Document.COLUMN_DOCUMENT_ID,
+                    DocumentsContract.Document.COLUMN_DISPLAY_NAME,
+                    DocumentsContract.Document.COLUMN_MIME_TYPE,
+                ),
+                null, null, null,
+            )?.use { c ->
+                generateSequence { if (c.moveToNext()) c else null }
+                    .firstOrNull {
+                        c.getString(2) == DocumentsContract.Document.MIME_TYPE_DIR &&
+                            normalizedName(c.getString(1)) == ATTACHMENTS
+                    }
+                    ?.let { documentUri(tree, c.getString(0)) }
+            }
+        }.getOrNull()
+        if (existing != null) return existing
+        return runCatching {
+            DocumentsContract.createDocument(
+                resolver, root, DocumentsContract.Document.MIME_TYPE_DIR, ATTACHMENTS,
+            )
+        }.getOrNull()
+    }
+
+    /** Every name already in [folder], normalised, so a new one can avoid them. */
+    private fun childNames(folder: Uri): Set<String> {
+        val tree = root ?: return emptySet()
+        return runCatching {
+            resolver.query(
+                DocumentsContract.buildChildDocumentsUriUsingTree(
+                    tree, DocumentsContract.getDocumentId(folder),
+                ),
+                arrayOf(DocumentsContract.Document.COLUMN_DISPLAY_NAME),
+                null, null, null,
+            )?.use { c ->
+                buildSet { while (c.moveToNext()) add(normalizedName(c.getString(0))) }
+            }
+        }.getOrNull().orEmpty()
+    }
+
+    /** A file extension for [uri] from its type, when its name did not carry one. */
+    private fun mimeExtension(uri: Uri): String? = when (mimeTypeOf(uri)) {
+        "image/png" -> "png"
+        "image/jpeg" -> "jpg"
+        "image/webp" -> "webp"
+        "image/gif" -> "gif"
+        else -> null
+    }
+
+    private fun mimeTypeOf(uri: Uri): String? = runCatching { resolver.getType(uri) }.getOrNull()
 
     /**
      * Delete every note in [notes], and say honestly how far it got.
@@ -880,6 +1000,9 @@ class Vault(context: Context) {
         private const val UNTITLED = "Note"
 
         const val TEMP_SUFFIX = ".pocketprose-tmp"
+
+        /** The subfolder attachments go in. The archive's own, holding its 19 PNGs and 7 PDFs. */
+        const val ATTACHMENTS = "attachments"
 
         /** Providers disagree about Markdown's type; this is only what a new file is created as. */
         /**

@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -320,7 +321,21 @@ fun LibraryScreen(
             } else if (notes.isEmpty()) {
                 Empty(query, onChooseFolder)
             } else {
-                LazyColumn(Modifier.fillMaxSize()) {
+                val listState = rememberLazyListState()
+                // Picking a tag is asking a different question, so the answer starts at the top.
+                //
+                // Without this the list keeps its offset: the rows are keyed by uri, so Lazy tries
+                // to hold the note you were looking at, and when that note is not in the filtered
+                // set you land somewhere arbitrary in the middle of a list you have never seen. A
+                // filter of three notes could even open scrolled past all of them.
+                //
+                // Instant rather than animated. An animation carries the eye from one place to
+                // another in the same list; here the list itself has been replaced, so there is
+                // nothing in between to travel through.
+                LaunchedEffect(selectedTag) {
+                    if (notes.isNotEmpty()) listState.scrollToItem(0)
+                }
+                LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
                     items(notes, key = { it.file.uri.toString() }) { note ->
                         val uri = note.file.uri.toString()
                         NoteRow(
@@ -602,13 +617,32 @@ private fun NoteRow(
                 bottom = if (compact) 10.dp else 14.dp,
             ),
     ) {
-        Text(
-            text = note.title,
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onSurface,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-        )
+        Row(verticalAlignment = Alignment.Top, modifier = Modifier.fillMaxWidth()) {
+            Text(
+                text = note.title,
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
+            )
+            // A note that carries files says so on the title line, where the eye already is, and
+            // on the right edge, where the eye can find it without reading the titles. Only three of
+            // the archive's 168 notes carry anything, so a mark that trailed each title would appear
+            // at a different x on every row it turned up on — a few ragged marks in 168 rows, which
+            // is harder to spot than one column with a few things in it.
+            //
+            // The title takes the rest of the width whether or not the mark is there, so a row does
+            // not reflow when one appears.
+            if (note.hasAttachments) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_attach_file),
+                    contentDescription = stringResource(R.string.note_has_attachments),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                    modifier = Modifier.padding(start = 8.dp, top = 3.dp).size(16.dp),
+                )
+            }
+        }
         // Compact drops the writing and the date and keeps the tags. Not an arbitrary half: the
         // excerpt is the tallest part of the row and the least useful when you already know which
         // note you are after, while the tags are the only thing that tells four notes titled

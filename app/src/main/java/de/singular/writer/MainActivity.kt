@@ -214,7 +214,19 @@ private fun PocketProseApp(settings: Settings) {
     //
     // The name survives the swap, being what the temp is renamed to. Not on the content either, so
     // a background refresh does not throw away what is being typed.
-    val document = remember(openNote?.file?.name) {
+    // Bumped when the note's *structure* has changed underneath the editor — today only by an image
+    // being inserted. The document is otherwise keyed on the file name alone, deliberately: it must
+    // survive a save, which swaps the document id, and a background refresh, which must not throw
+    // away what is being typed.
+    //
+    // An image is the one edit that changes how the note is cut up. `Segments.split` makes a segment
+    // out of an image line, and the buffers were built when the note opened — so the link lands in a
+    // text field as text and stays text until the document is made again. Bumping this is what makes
+    // it a picture, and it is only ever bumped *after* a save has returned, so the rebuild reads an
+    // index that already holds the new bytes. Rebuilding before that is what once emptied a document
+    // and cost a tag; see the note below.
+    var documentGeneration by remember { mutableStateOf(0) }
+    val document = remember(openNote?.file?.name, documentGeneration) {
         NoteDocument(
             name = openNote?.file?.name.orEmpty(),
             body = openNote?.note?.body.orEmpty(),
@@ -354,6 +366,21 @@ private fun PocketProseApp(settings: Settings) {
                 message = context.getString(R.string.rename_note_failed, result.reason)
         }
     }
+
+    /**
+     * What the picker calls the image it handed over, or null when it will not say.
+     *
+     * Only ever a suggestion — `Vault.addAttachment` sanitises it, numbers it against what is already
+     * in `attachments/`, and falls back to a name of its own. A camera roll usually offers something
+     * like `IMG_20260910_112233.jpg`; a screenshot app sometimes offers nothing at all.
+     */
+    fun displayNameOf(uri: android.net.Uri): String? = runCatching {
+        context.contentResolver.query(
+            uri,
+            arrayOf(android.provider.OpenableColumns.DISPLAY_NAME),
+            null, null, null,
+        )?.use { if (it.moveToFirst()) it.getString(0) else null }
+    }.getOrNull()
 
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val noOpener = stringResource(R.string.attachment_no_app)
@@ -583,6 +610,22 @@ private fun PocketProseApp(settings: Settings) {
             updated = openNote.updated,
             noteNames = index.notes.map { it.file.name }.toSet(),
             onRename = { renameNote(it) },
+            onCopyImage = { picked ->
+                vault.addAttachment(picked, displayNameOf(picked)).also {
+                    if (it == null) message = context.getString(R.string.add_image_failed)
+                }
+            },
+            onImageInserted = {
+                scope.launch {
+                    // Saved first, then rebuilt. The other order hands the editor a document built
+                    // from an index that has not seen the link yet, which is the empty-document bug
+                    // the comment on `documentGeneration` is about.
+                    if (saveOpenNote()) {
+                        attachments.forget()
+                        documentGeneration++
+                    }
+                }
+            },
             focusOnOpen = focusNewNote,
             onBack = { leave() },
             onDelete = { deleting = true },

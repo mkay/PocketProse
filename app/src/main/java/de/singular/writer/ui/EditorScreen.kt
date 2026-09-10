@@ -33,7 +33,11 @@ import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.NoteAdd
 import androidx.compose.material3.AlertDialog
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.SnackbarHostState
@@ -54,6 +58,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -84,6 +89,7 @@ import de.singular.writer.markdown.Segment
 import de.singular.writer.markdown.Segments
 import de.singular.writer.markdown.Tags
 import de.singular.writer.vault.Attachments
+import kotlinx.coroutines.launch
 import java.time.Instant
 
 /**
@@ -241,6 +247,17 @@ fun EditorScreen(
      * answered.
      */
     noteNames: Set<String>,
+    /**
+     * Put a picked image into the folder's `attachments/` and hand back the relative path, or null
+     * if it could not be written. The copying is the vault's business; where the link lands is this
+     * screen's, because only the editor knows where the cursor is.
+     */
+    onCopyImage: suspend (android.net.Uri) -> String?,
+    /**
+     * Called once a link has been inserted. **The note has to be saved and reopened for the picture
+     * to appear**, and this is what asks for that — see the note on the picker below.
+     */
+    onImageInserted: () -> Unit,
     /** Rename the open note's file to this stem, `.md` excluded. */
     onRename: (String) -> Unit,
     /**
@@ -277,6 +294,52 @@ fun EditorScreen(
     // writer meant.
     var focused by remember(document) { mutableStateOf<Int?>(null) }
     val focusManager = LocalFocusManager.current
+    val editorScope = rememberCoroutineScope()
+
+    /**
+     * Put an image link where the cursor is, on a line of its own.
+     *
+     * **On its own line is not a nicety.** `Segments.split` classifies a whole line as an image line,
+     * so a link sharing a line with words would take the words into the picture segment and out of
+     * the text the author can edit. The newlines here are added only where the text has not got them
+     * already, so inserting at the end of an empty note does not open a gap above it.
+     *
+     * The fallback to the first stretch of prose is now belt and braces: the only way in is the
+     * format bar, and that bar exists only while a field has focus, so `focused` is set by the time
+     * anything can be picked. It stays because losing an image the user has already chosen — over a
+     * focus race nobody can see — would be a worse failure than putting it in a defensible place.
+     */
+    fun insertImage(path: String) {
+        val index = focused ?: document.firstProseIndex
+        if (index < 0) return
+        document.bufferAt(index).edit {
+            val at = selection.max
+            val text = asCharSequence()
+            val before = if (at == 0 || text[at - 1] == '\n') "" else "\n"
+            val after = if (at >= text.length || text[at] == '\n') "" else "\n"
+            replace(at, at, "$before![]($path)\n$after")
+        }
+    }
+
+    val pickImage = rememberLauncherForActivityResult(
+        ActivityResultContracts.PickVisualMedia(),
+    ) { picked ->
+        if (picked != null) {
+            editorScope.launch {
+                val path = onCopyImage(picked) ?: return@launch
+                insertImage(path)
+                // **The picture cannot appear until the note is written and read back.** The editor
+                // cuts a note into segments when it opens, and the buffers it types into were made
+                // then; a link appearing inside one of them is text in a text field, not a new
+                // segment. So this saves and asks for the document to be rebuilt, and the image
+                // arrives a moment later where the raw link briefly was.
+                //
+                // Adding a picture is a change to the writing, so the save moving `updated` is
+                // correct — unlike a tag, which is filing.
+                onImageInserted()
+            }
+        }
+    }
     val opening = remember { FocusRequester() }
     LaunchedEffect(document) {
         if (focusOnOpen && editable) runCatching { opening.requestFocus() }
@@ -499,7 +562,15 @@ fun EditorScreen(
         val target = focused?.let(document::bufferAt)
         Box(Modifier.heightIn(min = 56.dp)) {
             if (writing && target != null) {
-                FormatBar(target, onDone = { focusManager.clearFocus() })
+                FormatBar(
+                    body = target,
+                    onAddImage = {
+                        pickImage.launch(
+                            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly),
+                        )
+                    },
+                    onDone = { focusManager.clearFocus() },
+                )
             } else {
                 NoteTagBar(
                     tags = document.tags,
@@ -535,7 +606,12 @@ fun EditorScreen(
  * sometimes two storeys tall moves the writing up and down as you work.
  */
 @Composable
-private fun FormatBar(body: TextFieldState, onDone: () -> Unit, modifier: Modifier = Modifier) {
+private fun FormatBar(
+    body: TextFieldState,
+    onAddImage: () -> Unit,
+    onDone: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val clipboard = LocalClipboardManager.current
     val selected = !body.selection.collapsed
     Surface(
@@ -564,6 +640,12 @@ private fun FormatBar(body: TextFieldState, onDone: () -> Unit, modifier: Modifi
             FormatIcon(R.drawable.ic_horizontal_rule, R.string.format_rule, true) {
                 body.insertRule()
             }
+            // Beside the rule, because the two do the same kind of thing: put a block on a line of
+            // its own at the cursor. It lived in the overflow menu for an afternoon, which was worse
+            // in two ways — it read as a rare administrative act rather than as part of writing, and
+            // the menu is reachable with nothing focused, so the insertion point had to be guessed.
+            // Here there is always a cursor, because the bar only exists when there is one.
+            FormatIcon(R.drawable.ic_add_photo, R.string.add_image, true, onAddImage)
             FormatIcon(R.drawable.ic_remove_selection, R.string.format_clear, selected) {
                 body.clearFormatting()
             }

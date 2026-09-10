@@ -646,4 +646,19 @@
          %2$s names one that was not — the one to go and look at. -->
     <string name="delete_notes_partial">Deleted %1$d, but %2$s is still there. Pull to refresh and try again.</string>
 
+    <!-- The editor menu entry that opens the photo picker. Says "image" and not "attachment":
+         the picker only offers pictures, and the archive's other attachments are PDFs that came
+         from elsewhere. -->
+    <string name="add_image">Add image</string>
+    <!-- Shown when the picture could not be written into the folder. No link is inserted in that
+         case — a link to a file that is not there is worse than no image, since the note then
+         carries a broken reference the reader has to find and remove by hand. -->
+    <string name="add_image_failed">The image could not be added to your folder</string>
+
+    <!-- Spoken for the small paperclip on a list row. Not shown as text anywhere — the mark is
+         the whole of it, and a screen reader needs the word the mark stands in for. It says files
+         rather than images: three notes in the archive embed pictures and four link PDFs, and the
+         row that most wants marking is the one with an Anhänge section at the end of it. -->
+    <string name="note_has_attachments">Has attachments</string>
+
 </resources>
