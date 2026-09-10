@@ -55,6 +55,8 @@
     <string name="tag_sheet_new">Neues Schlagwort</string>
     <string name="tag_sheet_add">Hinzufügen</string>
     <string name="tag_sheet_done">Fertig</string>
+    <string name="tag_sheet_on_note">Auf diesem Text</string>
+    <string name="tag_sheet_from_folder">Aus deinem Ordner hinzufügen</string>
 
     <string name="conflict_title">Dieser Text wurde anderswo geändert</string>
     <string name="conflict_body">Während du geschrieben hast, wurde dieser Text auf einem anderen Gerät bearbeitet. Pocket Prose hat keine der beiden Fassungen angetastet.</string>
@@ -147,5 +149,44 @@
     <string name="support_generous_title">Der großzügige Weg</string>
     <string name="support_generous_action">Auf Ko-fi unterstützen</string>
     <string name="support_generous_note">Völlig freiwillig. Die App ist und bleibt kostenlos.</string>
+
+    <!-- Über diesen Text: die Zahlen und die beiden Daten. "Text" statt "Notiz", wie überall hier. -->
+    <string name="editor_info">Über diesen Text</string>
+    <string name="note_info_title">Über diesen Text</string>
+    <string name="note_info_words">Wörter</string>
+    <string name="note_info_lines">Zeilen</string>
+    <string name="note_info_paragraphs">Absätze</string>
+    <string name="note_info_characters">Zeichen</string>
+    <string name="note_info_name">Gespeichert als</string>
+    <string name="note_info_created">Geschrieben</string>
+    <string name="note_info_updated">Zuletzt geändert</string>
+    <string name="note_info_unknown">—</string>
+
+    <!-- Umbenennen. Alle Sätze beziehen sich auf "der Text", daher durchgehend "er". -->
+    <string name="rename_note_title">Text umbenennen</string>
+    <string name="rename_note_label">Name im Ordner</string>
+    <string name="rename_note_keeps_title">Der Titel bleibt. Nur der Name im Ordner ändert sich.</string>
+    <string name="rename_note_dropped">Dein Ordner kann nicht jedes Zeichen aufnehmen. Er hieße dann „%1$s“.</string>
+    <string name="rename_note_dropped_unchanged">Dein Ordner kann nicht jedes Zeichen aufnehmen, dadurch bleibt der Name, den er schon hat.</string>
+    <string name="rename_note_unchanged">So heißt er schon.</string>
+    <string name="rename_note_taken">Ein anderer Text heißt schon so.</string>
+    <string name="rename_note_confirm">Umbenennen</string>
+    <string name="rename_note_failed">Umbenennen nicht möglich: %1$s</string>
+
+    <!-- Schlagwörter aus dem Text holen. "Text" trägt hier beide Bedeutungen — der Text als Notiz
+         und der Text als das Geschriebene — was dem englischen "out of your writing" genau
+         entspricht, ohne eine steife Ersatzkonstruktion zu brauchen.
+
+         move_tags_what_* stehen hier, weil move_tags_banner_action sie einsetzt: ohne sie stünde
+         auf einem deutschen Knopf "tags verschieben". Sie gehören zum unübersetzten Rest, werden
+         aber von einer übersetzten Zeile gebraucht. -->
+    <string name="move_tags_what_tags">Schlagwörter</string>
+    <string name="move_tags_what_titles">Titel</string>
+    <string name="move_tags_what_both">Schlagwörter und Titel</string>
+    <string name="move_tags_banner_action">%1$s verschieben</string>
+    <string name="move_tags_confirm">Verschieben</string>
+    <string name="move_tags_body">Pocket Prose hält %1$s aus deinem Text heraus, dort wo die App sie nutzen kann. Beim Verschieben werden diese Texte geändert.</string>
+    <string name="settings_move_tags_caption">Verschieben holt deine %1$s aus deinem Text heraus, dorthin wo die App sie nutzen kann.</string>
+    <string name="drawer_tags_in_text_why">Pocket Prose hält Schlagwörter aus deinem Text heraus. Verschiebe sie, dann tauchen sie alle hier auf.</string>
 
 </resources>
