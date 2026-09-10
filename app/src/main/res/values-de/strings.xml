@@ -81,8 +81,6 @@
     <string name="drawer_collapse">Unterschlagwörter ausblenden</string>
 
     <string name="search_open">Suchen</string>
-    <string name="search_close">Suche schließen</string>
-    <string name="search_hint">Texte durchsuchen</string>
     <string name="search_no_results">Nichts passt zu „%1$s“</string>
     <string name="filter_no_results">Keine Texte mit diesem Schlagwort</string>
     <string name="filter_showing">Gefiltert nach %1$s</string>
@@ -324,5 +322,23 @@
     <string name="add_image_failed">Das Bild konnte nicht in deinen Ordner gelegt werden</string>
 
     <string name="note_has_attachments">Enthält Anhänge</string>
+
+    <!-- ===== Kombinierte Suche ===== -->
+
+    <string name="search_title">Suchen</string>
+    <string name="search_text_label">Wörter in einem Text</string>
+    <string name="search_attachments_label">Anhänge</string>
+    <string name="search_attachments_any">Egal</string>
+    <string name="search_attachments_with">Mit</string>
+    <string name="search_attachments_without">Ohne</string>
+    <plurals name="search_matches">
+        <item quantity="one">1 Text passt</item>
+        <item quantity="other">%1$d Texte passen</item>
+    </plurals>
+    <string name="search_apply">Anwenden</string>
+    <string name="search_clear">Zurücksetzen</string>
+    <string name="filter_by_text">„%1$s“</string>
+    <string name="filter_by_attachments_with">mit Anhängen</string>
+    <string name="filter_by_attachments_without">ohne Anhänge</string>
 
 </resources>

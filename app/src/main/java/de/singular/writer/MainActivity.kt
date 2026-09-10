@@ -76,6 +76,7 @@ import de.singular.writer.ui.DeleteSelectionDialog
 import de.singular.writer.ui.NewNoteDialog
 import de.singular.writer.ui.LibraryScreen
 import de.singular.writer.ui.PocketProseTheme
+import de.singular.writer.ui.SearchDialog
 import de.singular.writer.ui.SettingsScreen
 import de.singular.writer.ui.SupportDialog
 import de.singular.writer.ui.TagDrawer
@@ -86,6 +87,7 @@ import de.singular.writer.vault.IndexDump
 import de.singular.writer.vault.NoteIndex
 import de.singular.writer.vault.CreateResult
 import de.singular.writer.vault.DeleteResult
+import de.singular.writer.vault.Filters
 import de.singular.writer.vault.MigrationResult
 import de.singular.writer.vault.RenameResult
 import de.singular.writer.vault.RenameNoteResult
@@ -168,13 +170,17 @@ private fun PocketProseApp(settings: Settings) {
         mutableStateOf(if (vault.rootWasSet) null else VaultFailure.NO_FOLDER_CHOSEN)
     }
     var loading by remember { mutableStateOf(vault.rootWasSet) }
-    var query by remember { mutableStateOf("") }
-    var searching by remember { mutableStateOf(false) }
+    // The three questions as one value. `searchOpen` is only whether the dialog is up — the filters
+    // outlive it, which is the point: you close the dialog to look at what you asked for.
+    var filters by remember { mutableStateOf(Filters()) }
+    var searchOpen by remember { mutableStateOf(false) }
     // Seeded from the start-view setting rather than from null. Nothing validates it here: the tag
     // may have been renamed or may not have synced yet, and `refresh` below already drops a filter
     // whose tag is not in the index — which runs before the first list is drawn, so an impossible
     // start tag shows the whole library rather than an empty one.
-    var selectedTag by remember { mutableStateOf(settings.startTag) }
+    // The start tag seeds the filter's tag, which is the same tag the drawer sets. One filter, two
+    // ways in — see `Filters` and `SearchDialog`.
+    LaunchedEffect(Unit) { filters = filters.copy(tag = settings.startTag) }
     // The tag a long-press in the drawer opened the rename dialog on, if any.
     var renaming by remember { mutableStateOf<String?>(null) }
     // True while a rename is writing. It only picks the words for the loading drift — `loading`
@@ -280,8 +286,9 @@ private fun PocketProseApp(settings: Settings) {
             attachments.forget()
             // A tag that no longer exists after a sync would otherwise filter the list down to nothing
             // with no way to tell why.
-            if (selectedTag != null && index.allTags.none { Tags.isUnder(it, selectedTag!!) }) {
-                selectedTag = null
+            val tag = filters.tag
+            if (tag != null && index.allTags.none { Tags.isUnder(it, tag) }) {
+                filters = filters.copy(tag = null)
             }
             // Debug builds only, and app-private — see IndexDump.
             IndexDump.write(context, loaded)
@@ -413,9 +420,8 @@ private fun PocketProseApp(settings: Settings) {
         ActivityResultContracts.OpenDocumentTree(),
     ) { uri: Uri? ->
         if (uri != null && vault.setRoot(uri)) {
-            selectedTag = null
-            query = ""
-            searching = false
+            filters = Filters()
+            searchOpen = false
             refresh()
         }
     }
@@ -442,17 +448,12 @@ private fun PocketProseApp(settings: Settings) {
 
     // Tag first, then text: filtering a tag's notes by a word is the useful order, and it also means
     // a search inside a tag does not silently leave the tag.
-    val shown = remember(index, selectedTag, query, settings.sortBy, settings.sortOrder) {
-        val byTag = selectedTag?.let(index::withTag) ?: index.notes
-        // The search runs **once**, not once per note. It used to sit inside the filter, where
-        // `it in index.search(query).toSet()` scanned all 168 bodies and built a fresh set for every
-        // note it was checking — 168 full scans a keystroke, which is why typing was unusable.
-        val found = if (query.isBlank()) {
-            byTag
-        } else {
-            val matches = index.search(query).toSet()
-            byTag.filter { it in matches }
-        }
+    val shown = remember(index, filters, settings.sortBy, settings.sortOrder) {
+        // One pass over the notes for all three questions — see `NoteIndex.matching`. The text used
+        // to be checked with `it in index.search(query).toSet()` *inside* a filter, which scanned
+        // all 168 bodies and built a fresh set for every note it checked: 168 full scans a
+        // keystroke, and typing was unusable. One predicate, one pass.
+        val found = index.matching(filters)
         // Sorted last, over what is actually on screen. The index keeps its own recency order —
         // `replacing` and `renamed` rebuild it and have no business knowing what the reader last
         // picked in a menu — so the chosen order is a view onto the filtered list, not a property
@@ -489,17 +490,30 @@ private fun PocketProseApp(settings: Settings) {
     // Before search and before the tag filter: a selection is the most modal thing on this screen,
     // and Back out of it must not first close a search that is also open underneath.
     BackHandler(enabled = !drawerState.isOpen && selecting) { endSelecting() }
-    BackHandler(enabled = !drawerState.isOpen && !selecting && searching) {
-        searching = false
-        query = ""
-    }
-    BackHandler(enabled = !drawerState.isOpen && !selecting && !searching && selectedTag != null) {
-        selectedTag = null
+    // One handler for all three, because they are one question now. Back out of a filtered list
+    // and you are looking at the folder — not at a list still narrowed by whichever criterion
+    // happened to be second in a chain.
+    BackHandler(enabled = !drawerState.isOpen && !selecting && !filters.isEmpty) {
+        filters = Filters()
     }
 
     // Settings is a full screen over the library rather than a destination beside it: it is not a
     // place you navigate *to* while reading, it is a detour. Checked before the editor so that a
     // note left open underneath is still open on the way back.
+    if (searchOpen) {
+        SearchDialog(
+            filters = filters,
+            onFiltersChange = { filters = it },
+            // Counted off the index rather than off `shown`, so the number is the same one whatever
+            // the sort is doing. It is recomputed per keystroke over 168 notes, which is the same
+            // pass the list itself makes.
+            matches = shown.size,
+            tree = index.tagTree,
+            totalNotes = index.size,
+            onDismiss = { searchOpen = false },
+        )
+    }
+
     if (deletingSelection) {
         DeleteSelectionDialog(
             count = selected.size,
@@ -774,7 +788,7 @@ private fun PocketProseApp(settings: Settings) {
                             // attempt, and it left the list sitting on some unrelated filter from
                             // earlier in the session, which reads as the rename having gone
                             // somewhere else entirely.
-                            selectedTag = target
+                            filters = filters.copy(tag = target)
                             // The start view is a stored preference and not a place the user is
                             // standing, so it moves only when it was pointing at this tag.
                             settings.startTag?.let { start ->
@@ -814,9 +828,9 @@ private fun PocketProseApp(settings: Settings) {
                     TagDrawer(
                         tree = index.tagTree,
                         totalNotes = index.size,
-                        selected = selectedTag,
+                        selected = filters.tag,
                         onSelect = {
-                            selectedTag = it
+                            filters = filters.copy(tag = it)
                             scope.launch { drawerState.close() }
                         },
                         modifier = Modifier.weight(1f, fill = false),
@@ -872,14 +886,9 @@ private fun PocketProseApp(settings: Settings) {
                 movingTags -> R.string.move_tags_caption
                 else -> null
             },
-            query = query,
-            onQueryChange = { query = it },
-            searching = searching,
-            onSearchingChange = {
-                searching = it
-                if (!it) query = ""
-            },
-            selectedTag = selectedTag,
+            filters = filters,
+            onOpenSearch = { searchOpen = true },
+            onClearFilters = { filters = Filters() },
             sortBy = settings.sortBy,
             sortOrder = settings.sortOrder,
             onSortChange = { by, order ->
@@ -903,10 +912,7 @@ private fun PocketProseApp(settings: Settings) {
                 // A selection over a search is a selection of what the search found, which reads as
                 // fewer notes than the bar's count implies. Leaving search on entry keeps the two
                 // modes from stacking.
-                if (searching) {
-                    searching = false
-                    query = ""
-                }
+                searchOpen = false
             },
             onSelectAll = {
                 selected.clear()
@@ -919,7 +925,7 @@ private fun PocketProseApp(settings: Settings) {
             onDeleteSelected = { deletingSelection = true },
             // Not while a search or a tag filter is on: the banner counts the whole folder, and a
             // sentence about 165 notes over a list of three reads as being about the three.
-            moveTags = inlineTags?.takeIf { !settings.moveTagsDeclined && !searching && selectedTag == null },
+            moveTags = inlineTags?.takeIf { !settings.moveTagsDeclined && filters.isEmpty },
             onMoveTags = { offeringMove = true },
             onDismissMoveTags = {
                 settings.moveTagsDeclined = true

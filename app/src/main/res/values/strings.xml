@@ -297,9 +297,6 @@
     <!-- ===== Search ===== -->
 
     <string name="search_open">Search</string>
-    <string name="search_close">Close search</string>
-    <!-- Placeholder inside the search field. -->
-    <string name="search_hint">Search your notes</string>
     <!-- Shown when a search or a tag filter matches nothing. %1$s is what was typed. -->
     <string name="search_no_results">Nothing matches “%1$s”</string>
     <!-- Shown when a tag filter matches nothing, which should not happen but is cheap to survive. -->
@@ -660,5 +657,41 @@
          rather than images: three notes in the archive embed pictures and four link PDFs, and the
          row that most wants marking is the one with an Anhänge section at the end of it. -->
     <string name="note_has_attachments">Has attachments</string>
+
+    <!-- ===== Combined search ===== -->
+
+    <!-- Title of the dialog the magnifier opens. -->
+    <string name="search_title">Search</string>
+    <!-- Label on the text field. Says what is actually searched: the name, the writing, and the
+         tag names too. -->
+    <string name="search_text_label">Words in a note</string>
+    <!-- The label over the three chips. The noun is said once here so each chip can be one word:
+         "Without files" wrapped to two lines and left the row ragged. -->
+    <string name="search_attachments_label">Attachments</string>
+    <!-- The chips themselves. "Any" is the state this is in nearly always, so it comes first and is
+         the one that asks nothing. Keep them to a single short word — they share the row's width
+         equally and a long one will wrap. -->
+    <string name="search_attachments_any">Any</string>
+    <string name="search_attachments_with">With</string>
+    <string name="search_attachments_without">Without</string>
+    <!-- Live under the criteria. It is the only feedback a dialog can give about a list it is
+         standing in front of, so it is a count and never a reassurance: zero says zero. -->
+    <plurals name="search_matches">
+        <item quantity="one">1 note matches</item>
+        <item quantity="other">%1$d notes match</item>
+    </plurals>
+    <!-- The button that closes the search panel. It says Apply rather than Close even though the
+         filtering has already happened, keystroke by keystroke: "Close" reads as if nothing came of
+         the panel, and what the tap actually does is hand the reader the list they just described.
+         Not the shared action_close for that reason. -->
+    <string name="search_apply">Apply</string>
+    <!-- Puts all three back to asking nothing. Shown only while something is set. -->
+    <string name="search_clear">Clear</string>
+    <!-- The strip under the header, naming every filter that is on. Assembled in code from the
+         pieces below rather than as one string with three optional arguments, which no translation
+         could reorder sensibly. -->
+    <string name="filter_by_text">“%1$s”</string>
+    <string name="filter_by_attachments_with">with files</string>
+    <string name="filter_by_attachments_without">without files</string>
 
 </resources>

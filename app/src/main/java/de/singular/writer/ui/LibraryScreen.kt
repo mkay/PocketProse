@@ -34,6 +34,7 @@ import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.FilterAlt
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.SelectAll
 import androidx.compose.material.icons.outlined.Circle
@@ -44,6 +45,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -82,6 +84,8 @@ import de.singular.writer.RowDensity
 import de.singular.writer.SortBy
 import de.singular.writer.SortOrder
 import de.singular.writer.markdown.Migration
+import de.singular.writer.vault.AttachmentFilter
+import de.singular.writer.vault.Filters
 import de.singular.writer.vault.IndexedNote
 import de.singular.writer.vault.VaultFailure
 
@@ -104,11 +108,11 @@ fun LibraryScreen(
     @StringRes loadingSays: Int,
     // A line under the drift, or null for none — see `LoadingSheets`. Startup passes null.
     @StringRes loadingCaption: Int?,
-    query: String,
-    onQueryChange: (String) -> Unit,
-    searching: Boolean,
-    onSearchingChange: (Boolean) -> Unit,
-    selectedTag: String?,
+    // All three questions as one value — see `Filters`. The tag inside it is the same tag the
+    // drawer sets; there is one filter with two ways to reach it.
+    filters: Filters,
+    onOpenSearch: () -> Unit,
+    onClearFilters: () -> Unit,
     // The offer to move a folder's inline tags into its notes, or null when there is nothing to
     // move or the user has waved it away. It sits between the header and the list rather than over
     // them: this is an offer about the notes below it, and it must be ignorable. See MoveTagsBanner.
@@ -208,8 +212,6 @@ fun LibraryScreen(
                             ),
                             style = MaterialTheme.typography.titleMedium,
                         )
-                    } else if (searching) {
-                        SearchField(query, onQueryChange)
                     } else {
                         // The wordmark is the title of the list, filtered or not. It briefly changed
                         // to the folder name under a filter, on the reasoning that the bar should
@@ -265,24 +267,32 @@ fun LibraryScreen(
                             )
                         }
                     } else {
-                        // Not while searching: the bar is a text field then, and a menu about how
-                        // the list is ordered has nothing to say about a list being typed at.
-                        if (!searching) {
-                            ListOptionsMenu(
-                                sortBy = sortBy,
-                                sortOrder = sortOrder,
-                                onSortChange = onSortChange,
-                                density = density,
-                                onDensityChange = onDensityChange,
-                                onSelectNotes = { onStartSelecting(null) },
-                            )
-                        }
-                        IconButton(onClick = { onSearchingChange(!searching) }) {
+                        ListOptionsMenu(
+                            sortBy = sortBy,
+                            sortOrder = sortOrder,
+                            onSortChange = onSortChange,
+                            density = density,
+                            onDensityChange = onDensityChange,
+                            onSelectNotes = { onStartSelecting(null) },
+                        )
+                        // The bar keeps the wordmark now; the field moved into the dialog. The
+                        // icon changes when something is set, because **an active filter nobody
+                        // can see is the failure this whole change is about** — but it still just
+                        // opens the dialog. Clearing is a labelled button in there, never a second
+                        // tap out here that silently throws away what was asked for.
+                        IconButton(onClick = onOpenSearch) {
                             Icon(
-                                imageVector = if (searching) Icons.Filled.Close else Icons.Filled.Search,
-                                contentDescription = stringResource(
-                                    if (searching) R.string.search_close else R.string.search_open,
-                                ),
+                                imageVector = if (filters.isEmpty) {
+                                    Icons.Filled.Search
+                                } else {
+                                    Icons.Filled.FilterAlt
+                                },
+                                contentDescription = stringResource(R.string.search_open),
+                                tint = if (filters.isEmpty) {
+                                    LocalContentColor.current
+                                } else {
+                                    MaterialTheme.colorScheme.primary
+                                },
                             )
                         }
                     }
@@ -292,7 +302,12 @@ fun LibraryScreen(
                 // The only rule below it is the one under the strip, dividing header from list.
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
             )
-            StatusStrip(count = notes.size, tag = selectedTag, counted = !loading)
+            StatusStrip(
+                count = notes.size,
+                filters = filters,
+                counted = !loading,
+                onClear = onClearFilters,
+            )
             }
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
@@ -319,7 +334,7 @@ fun LibraryScreen(
                     )
                 }
             } else if (notes.isEmpty()) {
-                Empty(query, onChooseFolder)
+                Empty(filters.text, onChooseFolder)
             } else {
                 val listState = rememberLazyListState()
                 // Picking a tag or an order is asking a different question, so the answer starts
@@ -337,9 +352,13 @@ fun LibraryScreen(
                 // another in the same list; here the list has been replaced or reordered under it,
                 // so there is nothing in between to travel through.
                 //
-                // Not on the search text. Every keystroke would fight somebody scrolling a result
-                // set while still typing, and narrowing a list already brings the best matches up.
-                LaunchedEffect(selectedTag, sortBy, sortOrder) {
+                // Not on the search text, with one exception. Firing per keystroke would fight
+                // somebody scrolling a result set while still typing, and narrowing a list already
+                // brings the best matches up. But `isEmpty` is in the keys, so the two edges are
+                // caught: the first character typed, and — the one that matters — clearing the
+                // filters, which puts a list of 168 back under somebody who was three rows into a
+                // list of four.
+                LaunchedEffect(filters.tag, filters.attachments, filters.isEmpty, sortBy, sortOrder) {
                     if (notes.isNotEmpty()) listState.scrollToItem(0)
                 }
                 LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
@@ -428,7 +447,27 @@ private fun NewNoteButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
  * anything useful with.
  */
 @Composable
-private fun StatusStrip(count: Int, tag: String?, counted: Boolean) {
+private fun StatusStrip(count: Int, filters: Filters, counted: Boolean, onClear: () -> Unit) {
+    // **Everything that is on, named.** It said the tag alone, which was true while the tag was the
+    // only filter that could be set from somewhere you could not see. Now three can be, and a strip
+    // that mentioned one of them would be worse than the old silence: it would look like a complete
+    // answer.
+    //
+    // Assembled here rather than as one format string with three optional arguments — a translator
+    // handed `%1$s %2$s %3$s` cannot know which are present, and German would want them in another
+    // order anyway. Each piece is its own string and the joining is punctuation.
+    val parts = buildList {
+        filters.tag?.let { add(it) }
+        filters.text.trim().takeIf { it.isNotEmpty() }
+            ?.let { add(stringResource(R.string.filter_by_text, it)) }
+        when (filters.attachments) {
+            AttachmentFilter.ANY -> Unit
+            AttachmentFilter.WITH -> add(stringResource(R.string.filter_by_attachments_with))
+            AttachmentFilter.WITHOUT -> add(stringResource(R.string.filter_by_attachments_without))
+        }
+    }
+    val summary = parts.takeIf { it.isNotEmpty() }
+        ?.let { stringResource(R.string.filter_showing, it.joinToString(" · ")) }
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
@@ -438,18 +477,37 @@ private fun StatusStrip(count: Int, tag: String?, counted: Boolean) {
             .heightIn(min = 28.dp)
             .padding(horizontal = 20.dp, vertical = 6.dp),
     ) {
-        if (tag != null) {
+        if (summary != null) {
             // weight(1f) rather than weight(1f, fill = false): the label must claim the whole space
             // left over so the count is pushed flush to the right edge, where it lines up with the
             // counts in the tag drawer. With fill = false a short tag left the count floating.
             Text(
-                text = stringResource(R.string.filter_showing, tag),
+                text = summary,
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f),
             )
+        }
+        // The quick way out, next to the thing it undoes. Back clears the filters too, and the
+        // dialog has a labelled Clear — but both mean leaving what you are looking at or opening a
+        // panel over it, and a filter you can see should be removable where you can see it.
+        //
+        // Only while something is set, so the strip does not carry a permanent × for the folder's
+        // own unfiltered state.
+        if (summary != null) {
+            IconButton(
+                onClick = onClear,
+                modifier = Modifier.size(28.dp).padding(start = 4.dp, end = 4.dp),
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Close,
+                    contentDescription = stringResource(R.string.search_clear),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(16.dp),
+                )
+            }
         }
         // Nothing at all until the folder has actually been read. "0 notes" is a statement about
         // the archive, and for the moment before the first read it is a false one — the strip said
@@ -711,41 +769,6 @@ private fun Empty(query: String, onChooseFolder: () -> Unit) {
     }
 }
 
-/**
- * The search field, which takes the cursor the moment it appears.
- *
- * Tapping the magnifier is unambiguously "I want to search", so making someone then tap the field
- * as well is a second gesture for a decision already made. The focus request also brings the
- * keyboard up, so the next thing that happens is typing.
- *
- * The requester is fired from a [LaunchedEffect] keyed on nothing, so it runs once when the field
- * enters the composition and never again — re-requesting focus on every recomposition would fight
- * the user the moment they tapped anywhere else.
- */
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun SearchField(query: String, onQueryChange: (String) -> Unit) {
-    val focus = remember { FocusRequester() }
-    LaunchedEffect(Unit) { focus.requestFocus() }
-
-    TextField(
-        value = query,
-        onValueChange = onQueryChange,
-        placeholder = { Text(text = stringResource(R.string.search_hint)) },
-        singleLine = true,
-        // No clear button inside the field. It put a second identical ✕ immediately beside the top
-        // bar's close-search one, and two of the same glyph an inch apart is a coin toss rather than
-        // a choice. The bar's ✕ closes search and clears the query in one go, which is what someone
-        // reaching for either of them wanted.
-        colors = TextFieldDefaults.colors(
-            focusedContainerColor = Color.Transparent,
-            unfocusedContainerColor = Color.Transparent,
-            focusedIndicatorColor = Color.Transparent,
-            unfocusedIndicatorColor = Color.Transparent,
-        ),
-        modifier = Modifier.fillMaxWidth().focusRequester(focus),
-    )
-}
 
 /**
  * The app's mark, above the welcome screen's first sentence.

@@ -12,6 +12,43 @@ import de.singular.writer.SortOrder
 import java.time.Instant
 import java.time.format.DateTimeParseException
 
+/** Whether a note has to carry files, has to carry none, or may do either. */
+enum class AttachmentFilter { ANY, WITH, WITHOUT }
+
+/**
+ * The three questions the library can be asked at once.
+ *
+ * One value rather than three parameters threaded through the screen, because they are answered
+ * together in one dialog and are only ever meaningful together — "notes tagged radio, holding the
+ * word Zeit, with something attached" is one question, and splitting it into three would let two of
+ * them be set while the third was forgotten somewhere else. Which is what the app did before this:
+ * the tag lived in the drawer, the text in the bar, and nothing named both.
+ */
+data class Filters(
+    val text: String = "",
+    val tag: String? = null,
+    val attachments: AttachmentFilter = AttachmentFilter.ANY,
+) {
+    /** Nothing is being asked, so the whole folder is the answer. */
+    val isEmpty: Boolean
+        get() = text.isBlank() && tag == null && attachments == AttachmentFilter.ANY
+}
+
+/**
+ * What filtering a list of notes actually depends on.
+ *
+ * The sibling of [Sortable], and it exists for the same reason: an [IndexedNote] cannot be built off
+ * a device — its [NoteFile] needs a real `Uri` and `Uri.EMPTY` is null in the stub android.jar — so a
+ * predicate written against the note itself can only be tested on a phone. Naming what it actually
+ * reads makes it a JVM test.
+ */
+interface Filterable {
+    val title: String
+    val body: String
+    val tags: List<String>
+    val hasAttachments: Boolean
+}
+
 /**
  * What ordering a list of notes actually depends on: a name, a date, a length.
  *
@@ -54,7 +91,7 @@ data class IndexedNote(
      * the archive today.
      */
     val roundTrips: Boolean,
-) : Sortable {
+) : Sortable, Filterable {
     /**
      * The note's title, falling back to the filename without its extension.
      *
@@ -65,7 +102,10 @@ data class IndexedNote(
     override val title: String
         get() = note.title?.takeIf { it.isNotBlank() } ?: file.name.removeSuffix(".md")
 
-    val tags: List<String> get() = note.tags
+    override val tags: List<String> get() = note.tags
+
+    /** The note's writing, for the text search. The frontmatter is not part of it. */
+    override val body: String get() = note.body
 
     /** The first line or so of prose, or "" for the 40 notes that have none. See [Excerpt]. */
     val excerpt: String get() = Excerpt.of(note)
@@ -107,7 +147,7 @@ data class IndexedNote(
      * when it appears. Measured at 0.8 ms for all 168, against 8.2 ms for the excerpts the same rows
      * recompute far more often.
      */
-    val hasAttachments: Boolean by lazy {
+    override val hasAttachments: Boolean by lazy {
         Segments.imagesIn(note.body).isNotEmpty() ||
             Segments.linksIn(note.body).any { !Attachments.isAbsoluteUrl(it.target) }
     }
@@ -199,6 +239,43 @@ class NoteIndex(notes: List<IndexedNote>) {
             if (it.file.name == old.file.name) it.copy(file = it.file.copy(uri = uri, name = name)) else it
         },
     )
+
+    /**
+     * The notes matching all three criteria at once.
+     *
+     * **Tag first, then text.** Filtering a tag's notes by a word is the useful order, and it means
+     * a search inside a tag does not leave the tag. That combination is not new — the app has always
+     * ANDed the two — but it used to be invisible, the tag living in the drawer one screen away with
+     * nothing in front of the reader saying so. It is the dialog that fixes that, not this: the tag
+     * is shown, selected, with the way to widen it one tap above.
+     *
+     * The text still matches tag names as well as title and body. Having a tag picker does not make
+     * that redundant: typing `radio` is how somebody who has not opened the tag tree will look for
+     * notes tagged `radio`, and taking it away would be a loss dressed as tidiness.
+     *
+     * The search runs over the tag's notes rather than over the folder, which is also what makes it
+     * cheap — this is called on every keystroke.
+     */
+    fun <T : Filterable> matching(notes: List<T>, filters: Filters): List<T> {
+        val needle = filters.text.trim()
+        return notes.filter { note ->
+            (filters.tag == null || note.tags.any { Tags.isUnder(it, filters.tag) }) &&
+                (
+                    needle.isEmpty() ||
+                        note.title.contains(needle, ignoreCase = true) ||
+                        note.body.contains(needle, ignoreCase = true) ||
+                        note.tags.any { it.contains(needle, ignoreCase = true) }
+                    ) &&
+                when (filters.attachments) {
+                    AttachmentFilter.ANY -> true
+                    AttachmentFilter.WITH -> note.hasAttachments
+                    AttachmentFilter.WITHOUT -> !note.hasAttachments
+                }
+        }
+    }
+
+    /** The whole folder, filtered. */
+    fun matching(filters: Filters): List<IndexedNote> = matching(notes, filters)
 
     /**
      * [notes] in some other order — the library's sort, applied to a list the index has already
