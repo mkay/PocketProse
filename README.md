@@ -5,9 +5,9 @@
 
 **Write, keep, capture inspiration.**
 
-A Markdown notes app for Android that reads a folder you already have. Point it at a directory of `.md` files — via the system file picker, so it needs no storage permission of its own — and it lists, reads, searches and lightly edits them in place. The files stay the database. Uninstall it and the folder is byte-identical to how it found it, apart from edits you actually made.
+A writing app for Android that uses markdown and reads a folder. Point it at a directory full of `.md` files or start building your notebook from scratch. It uses the system file picker, so it needs no storage permission of its own - and it lists, reads, edits and searches them in place. The files stay the database. Uninstall it and the folder is byte-identical to how it found it, apart from edits you actually made.
 
-Built for a personal lyrics archive of 168 notes written over ten years, which is why it is opinionated about leaving things alone.
+Built for a personal prose and lyrics archive of ~ 200 notes over years, which is why it is opinionated about leaving things alone.
 
 ## Screenshots
 
