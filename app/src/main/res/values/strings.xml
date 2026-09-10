@@ -180,6 +180,8 @@
 
     <!-- Opens the menu in the editor's bar. -->
     <string name="editor_menu">More</string>
+    <!-- Hands the note's file to another app through the share sheet. One note at a time. -->
+    <string name="share_note">Share note</string>
     <!-- The menu entry, and the confirming button in the dialog it opens. -->
     <string name="delete_note">Delete note</string>
     <!-- Title of the confirmation. Names the note so there is no doubt which one; %1$s is its title. -->
@@ -716,9 +718,18 @@
         <item quantity="other">Merge %1$d notes</item>
     </plurals>
     <!-- Under the title field. Says what the merge decides that the field does not: the order,
-         and that it is a creation. "Kept" is the word that matters. -->
-    <string name="merge_notes_body">A new note, in the order the list shows them. The notes it came from are kept.</string>
+         and that it is a creation. What becomes of the originals is the checkbox's sentence, not
+         this one's, so this one does not promise either way. -->
+    <string name="merge_notes_body">A new note, in the order the list shows them.</string>
     <string name="merge_notes_confirm">Merge</string>
+    <!-- The checkbox under the sentence, off by default. Ticking it is the explicit yes to a
+         deletion, so the count is in the label rather than implied. -->
+    <plurals name="merge_notes_delete">
+        <item quantity="one">Delete the 1 original</item>
+        <item quantity="other">Delete the %1$d originals</item>
+    </plurals>
+    <!-- The confirming button while the box is ticked. Says the second thing it does. -->
+    <string name="merge_notes_confirm_delete">Merge and delete</string>
     <!-- After the merge. %1$s is the new note's title; the list is where it is found. -->
     <string name="merge_notes_done">Merged into %1$s</string>
 

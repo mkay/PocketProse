@@ -5,6 +5,7 @@ package de.singular.writer.ui
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -32,12 +33,14 @@ import androidx.compose.material.icons.outlined.CallSplit
 import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.NoteAdd
+import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material3.AlertDialog
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.SnackbarHostState
@@ -272,6 +275,8 @@ fun EditorScreen(
      */
     focusOnOpen: Boolean,
     onBack: () -> Unit,
+    /** Hand the note's file to another app. The caller saves first; what leaves is what is on disk. */
+    onShare: () -> Unit,
     onDelete: () -> Unit,
     message: String?,
     onMessageShown: () -> Unit,
@@ -429,9 +434,9 @@ fun EditorScreen(
                     )
                 }
 
-                // One entry, and it is behind a menu on purpose. Deleting is the only thing this app
-                // does that cannot be undone, so it does not get a button of its own next to the
-                // back arrow where a thumb already goes.
+                // Two entries, behind a menu on purpose. Deleting is the only thing this app does
+                // that cannot be undone, so it does not get a button of its own next to the back
+                // arrow where a thumb already goes; sharing is rare enough to keep it company.
                 var open by remember { mutableStateOf(false) }
                 IconButton(onClick = { open = true }) {
                     Icon(
@@ -441,7 +446,16 @@ fun EditorScreen(
                 }
                 DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
                     DropdownMenuItem(
+                        text = { Text(text = stringResource(R.string.share_note)) },
+                        leadingIcon = { Icon(Icons.Outlined.Share, contentDescription = null) },
+                        onClick = {
+                            open = false
+                            onShare()
+                        },
+                    )
+                    DropdownMenuItem(
                         text = { Text(text = stringResource(R.string.delete_note)) },
+                        leadingIcon = { Icon(Icons.Outlined.DeleteOutline, contentDescription = null) },
                         onClick = {
                             open = false
                             onDelete()
@@ -999,20 +1013,28 @@ fun NewNoteDialog(onCreate: (String) -> Unit, onDismiss: () -> Unit) {
  * order, and the user sees what the new file will be called before it exists.
  *
  * The sentence under the field says the rest of what the merge decides: the parts follow the list's
- * order, and the notes they came from are kept. The last is the one worth saying out loud — a merge
- * that also deleted would be several files gone with no undo, and this one is a creation.
+ * order, and it is a creation. What becomes of the originals is the checkbox's to say — the
+ * sentence promises nothing either way, since a line reading "the notes are kept" above a ticked
+ * box reading "delete them" is two claims and one truth.
+ *
+ * Deleting the originals is offered, off by default, because folding four copies of
+ * `Wer geht vor?` into one and then ticking four rows to delete them is the same decision made
+ * twice. It is still a decision: the box is the explicit yes `CLAUDE.md` asks for, and the
+ * confirming button changes its wording with it, so nobody agrees to a deletion under a button
+ * that says "Merge". The deleting happens after the merge has landed, never before.
  */
 @Composable
 fun MergeNotesDialog(
     count: Int,
     prefill: String,
-    onMerge: (String) -> Unit,
+    onMerge: (title: String, deleteOriginals: Boolean) -> Unit,
     onDismiss: () -> Unit,
 ) {
     var typed by rememberSaveable { mutableStateOf(prefill) }
+    var deleteOriginals by rememberSaveable { mutableStateOf(false) }
     val focus = remember { FocusRequester() }
     val ready = typed.isNotBlank()
-    val submit = { if (ready) onMerge(typed.trim()) else Unit }
+    val submit = { if (ready) onMerge(typed.trim(), deleteOriginals) else Unit }
 
     LaunchedEffect(Unit) { focus.requestFocus() }
 
@@ -1044,11 +1066,32 @@ fun MergeNotesDialog(
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                // The whole row toggles, not only the box — same as the export's switch.
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { deleteOriginals = !deleteOriginals },
+                ) {
+                    Checkbox(
+                        checked = deleteOriginals,
+                        onCheckedChange = { deleteOriginals = it },
+                    )
+                    Text(
+                        text = pluralStringResource(R.plurals.merge_notes_delete, count, count),
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
             }
         },
         confirmButton = {
             TextButton(onClick = submit, enabled = ready) {
-                Text(text = stringResource(R.string.merge_notes_confirm))
+                Text(
+                    text = stringResource(
+                        if (deleteOriginals) R.string.merge_notes_confirm_delete
+                        else R.string.merge_notes_confirm,
+                    ),
+                )
             }
         },
         dismissButton = {

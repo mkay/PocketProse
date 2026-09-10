@@ -648,19 +648,35 @@ private fun PocketProseApp(settings: Settings) {
             // first in list order, as a starting point rather than a claim.
             prefill = titles.singleOrNull() ?: notes.first().title,
             onDismiss = { mergingSelection = false },
-            onMerge = { title ->
+            onMerge = { title, deleteOriginals ->
                 mergingSelection = false
                 scope.launch {
                     when (val result = vault.merge(notes, title)) {
                         is CreateResult.Failed ->
                             message = context.getString(R.string.create_failed, result.reason)
                         is CreateResult.Made -> {
+                            // The originals go only once the merge is on disk: a delete that ran
+                            // first, or ran when the merge had failed, would be the one outcome
+                            // here that loses somebody's words.
+                            val removal = if (deleteOriginals) vault.deleteAll(notes) else null
                             // Back to the list, with the merge in it and nothing ticked. Both
                             // alternatives were tried: keeping the sources ticked read as the act
                             // not having finished, and opening the new note took the reader away
                             // from the list they were organising.
                             endSelecting()
-                            message = context.getString(R.string.merge_notes_done, title)
+                            message = when (removal) {
+                                null, is DeleteResult.Deleted ->
+                                    context.getString(R.string.merge_notes_done, title)
+                                // The merge is there; what is not is the tidying. Say which file
+                                // stayed, as the plain delete does.
+                                is DeleteResult.Partial -> context.getString(
+                                    R.string.delete_notes_partial,
+                                    removal.deleted,
+                                    removal.remaining.first(),
+                                )
+                                is DeleteResult.Failed ->
+                                    context.getString(R.string.save_failed, removal.reason)
+                            }
                             refresh()
                         }
                     }
@@ -774,6 +790,17 @@ private fun PocketProseApp(settings: Settings) {
             },
             focusOnOpen = focusNewNote,
             onBack = { leave() },
+            onShare = {
+                scope.launch {
+                    // Saved first: the other app gets the file, and the file has to be the note as
+                    // it reads on screen, not as it read when it was opened.
+                    if (!saveOpenNote()) return@launch
+                    val uri = openNote.file.uri
+                    val intent = attachments.share(uri, attachments.mimeTypeOf(uri))
+                    runCatching { context.startActivity(intent) }
+                        .onFailure { message = noOpener }
+                }
+            },
             onDelete = { deleting = true },
             message = message,
             onMessageShown = { message = null },

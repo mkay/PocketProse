@@ -3,6 +3,7 @@
 package de.singular.writer.vault
 
 import android.content.Context
+import android.content.ClipData
 import android.content.Intent
 import android.graphics.BitmapFactory
 import android.net.Uri
@@ -101,6 +102,24 @@ class Attachments(private val vault: Vault, context: Context) {
             setDataAndType(uri, mimeType ?: "*/*")
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
         }
+
+    /**
+     * Hand [uri] to an app the user picks, as one file — the note as it sits in the folder.
+     *
+     * The same grant as [openExternally], carried on a [ClipData] as well because the chooser only
+     * forwards a grant it finds there. One file only: a share sheet full of an archive is the bulk
+     * gesture this app does not make, and the export is the way to move the folder.
+     */
+    fun share(uri: Uri, mimeType: String?): Intent =
+        Intent.createChooser(
+            Intent(Intent.ACTION_SEND).apply {
+                type = mimeType ?: "text/plain"
+                putExtra(Intent.EXTRA_STREAM, uri)
+                clipData = ClipData.newRawUri(null, uri)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            },
+            null,
+        ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
 
     /** A browser intent for a link that was already a URL. */
     fun openUrl(url: String): Intent =

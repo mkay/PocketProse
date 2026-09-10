@@ -44,9 +44,10 @@
     <string name="new_note_create">Anlegen</string>
     <string name="action_cancel">Abbrechen</string>
     <string name="editor_menu">Mehr</string>
-    <string name="delete_note">Text-Datei löschen</string>
+    <string name="share_note">Teilen</string>
+    <string name="delete_note">Löschen</string>
     <string name="delete_note_confirm">„%1$s“ löschen?</string>
-    <string name="delete_note_body">Die Text-Datei wird aus deinem Ordner gelöscht. Pocket Prose kann ihn nicht zurückholen.</string>
+    <string name="delete_note_body">Die Text-Datei wird aus deinem Ordner gelöscht. Dies kann nicht rückgängig gemacht werden.</string>
     <string name="delete_failed">Die Text-Datei konnte nicht gelöscht werden</string>
 
     <string name="note_tags_edit">Schlagwörter bearbeiten</string>
@@ -361,8 +362,13 @@
         <item quantity="one">1 Text zusammenführen</item>
         <item quantity="other">%1$d Texte zusammenführen</item>
     </plurals>
-    <string name="merge_notes_body">Ein neuer Text, in der Reihenfolge der Liste. Die Texte, aus denen er entstand, bleiben erhalten.</string>
+    <string name="merge_notes_body">Ein neuer Text, in der Reihenfolge der Liste.</string>
     <string name="merge_notes_confirm">Zusammenführen</string>
+    <plurals name="merge_notes_delete">
+        <item quantity="one">Das 1 Original löschen</item>
+        <item quantity="other">Die %1$d Originale löschen</item>
+    </plurals>
+    <string name="merge_notes_confirm_delete">Zusammenführen und löschen</string>
     <string name="merge_notes_done">Zusammengeführt in %1$s</string>
 
     <string name="add_image">Bild hinzufügen</string>
