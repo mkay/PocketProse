@@ -2,24 +2,29 @@
 
 package de.singular.writer.ui
 
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.automirrored.outlined.Label
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -31,6 +36,7 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.toMutableStateList
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -64,6 +70,23 @@ import de.singular.writer.markdown.Tags
  *
  * Ordered the way the drawer orders them — alphabetically, with the ones already on this note first,
  * because those are what the reader came to check. No `#` anywhere: a tag reads `lyrics/snippet`.
+ *
+ * **Chips rather than a checklist, since 2026-09-10.** A list of 24 rows is a scroll for something
+ * the reader wants to see all of at once, and it put the field for a new tag either at the top of a
+ * list they were scrolling away from or below a list they never reached. As chips the whole folder
+ * fits above the fold, and the note's own tags read as the same objects the chip row under the
+ * editor shows — which is what they are.
+ *
+ * **The × is a marker, not a second target.** The whole chip toggles; the cross says what a tap will
+ * do. Two targets in one chip is how a mis-tap removes a tag from a note, and this sheet exists in
+ * the first place because that gesture was judged the wrong shape for the consequence.
+ *
+ * **The groups are fixed when the sheet opens.** Ticking a chip does not move it into the group
+ * above; it fills in place. A chip that jumped between groups would reflow every chip after it and
+ * land the next tap on a different tag — the same reason the ordering was already frozen per opening
+ * rather than re-sorted per tap. The cost is that "On this note" names the group as it stood when
+ * the sheet opened, so a chip unticked during this visit sits there outlined. That is the smaller
+ * lie: the reader can see it is outlined, and nothing moved under their thumb.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -104,52 +127,91 @@ fun TagSheet(
     // where it is instead of making it vanish with no way to tick it again. Held for as long as the
     // sheet is open; dismissing it drops the list, by which time `known` has the tag.
     val typedHere = remember(known) { mutableStateListOf<String>() }
-    val rows = folder.filterNot { it in typedHere }
+
+    // The two groups, fixed for as long as the sheet is open — see the note on the class. `mine` is
+    // what the note carried on the way in, plus anything invented here; `rest` is the folder.
+    val mine = remember(known) { folder.filter { it in on }.toMutableStateList() }
+    val rest = remember(known) { folder.filterNot { it in on } }
 
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = state) {
-        Column(Modifier.padding(bottom = 12.dp)) {
+        Column(
+            Modifier
+                .padding(bottom = 12.dp)
+                // Capped rather than free: the sheet must not grow past the point where the note
+                // behind it disappears. All 24 of this folder's tags fit inside it as chips, where
+                // as rows they did not come close.
+                .heightIn(max = 460.dp)
+                .verticalScroll(rememberScrollState()),
+        ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth().padding(start = 20.dp, end = 8.dp, bottom = 4.dp),
+                modifier = Modifier.fillMaxWidth().padding(start = 20.dp, end = 16.dp, bottom = 12.dp),
             ) {
-                Text(
-                    text = stringResource(R.string.tag_sheet_title),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.weight(1f),
-                )
-                TextButton(onClick = onDismiss, shape = ControlShape) {
+                // The dialogs' heading, worn by the sheet: same mark, same weight, same order. A
+                // sheet is not a dialog, but it is the same kind of moment and there is no reason
+                // for it to introduce itself differently.
+                Box(Modifier.weight(1f)) {
+                    DialogHeading(
+                        Icons.AutoMirrored.Outlined.Label,
+                        stringResource(R.string.tag_sheet_title),
+                    )
+                }
+                // Outlined rather than bare text. `primary` in this palette is a muted taupe sitting
+                // a hair off `onSurfaceVariant`, so a plain text button beside a title read as a
+                // second piece of the heading rather than as the way out.
+                OutlinedButton(onClick = onDismiss, shape = ControlShape) {
                     Text(text = stringResource(R.string.tag_sheet_done))
                 }
             }
 
+            // At the top, where it cannot be pushed under the folder's own tags. It was under them
+            // until 2026-09-10, which put the one control somebody came here to type in behind
+            // everything they came here not to type.
             NewTagField(
                 onAdd = { tag ->
                     // Typing a tag puts it on the note; it never takes one off, whatever state the
-                    // row was in. A tag the folder already has is moved up here too, so the answer
-                    // to typing is always a checked row under the field rather than a change
-                    // somewhere below the fold.
-                    if (tag !in typedHere) typedHere.add(0, tag)
+                    // chip was in. It joins the top group, so the answer to typing is always a
+                    // filled chip in the first cluster rather than a change somewhere below.
+                    if (tag !in typedHere) typedHere.add(tag)
+                    if (tag !in mine) mine.add(0, tag)
                     if (tag !in on) onToggle(tag)
                 },
             )
 
-            for (tag in typedHere) {
-                TagSheetRow(tag = tag, checked = tag in on, onClick = { onToggle(tag) })
+            if (mine.isNotEmpty()) {
+                GroupLabel(stringResource(R.string.tag_sheet_on_note))
+                TagChips(mine, on, onToggle)
             }
-
-            HorizontalDivider(
-                color = MaterialTheme.colorScheme.outlineVariant,
-                modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
-            )
-
-            // Capped rather than free: the sheet must not grow past the point where the note behind
-            // it disappears, and 25 tags do not need a full screen.
-            LazyColumn(Modifier.heightIn(max = 320.dp)) {
-                items(rows, key = { it }) { tag ->
-                    TagSheetRow(tag = tag, checked = tag in on, onClick = { onToggle(tag) })
-                }
+            if (rest.isNotEmpty()) {
+                GroupLabel(stringResource(R.string.tag_sheet_from_folder))
+                TagChips(rest, on, onToggle)
             }
+        }
+    }
+}
+
+/** The small heading over a cluster of chips. Quiet, because it labels rather than says. */
+@Composable
+private fun GroupLabel(text: String) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.labelMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 16.dp, bottom = 6.dp),
+    )
+}
+
+/** One cluster: every tag in it, wrapping. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun TagChips(tags: List<String>, on: Set<String>, onToggle: (String) -> Unit) {
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+    ) {
+        for (tag in tags) {
+            TagChip(tag = tag, checked = tag in on, onClick = { onToggle(tag) })
         }
     }
 }
@@ -228,33 +290,48 @@ private fun NewTagField(onAdd: (String) -> Unit) {
     }
 }
 
-/** One tag in the sheet: a check where one would go, and the tag. Tap it to turn it on or off. */
+/**
+ * One tag, as a chip. Tap it to put it on the note or take it off.
+ *
+ * On is filled and carries a cross; off is an outline. The two states differ in ground and not only
+ * in a mark, because a cluster of 24 has to be readable at a glance — which of these are mine is the
+ * question somebody opens this sheet to answer, and a small tick beside each of 24 items answers it
+ * slowly.
+ *
+ * **The cross is not a button.** The whole chip is one target and the cross only says what a tap
+ * will do. A separate × inside a chip is a 16dp target for the one gesture here that takes a tag off
+ * somebody's note, sitting a few pixels from the target that puts one on.
+ *
+ * The chip is sized for a thumb rather than for the text — the note's own chip row is `labelSmall`
+ * in a 6dp box because it is being read, and this one is being aimed at.
+ */
 @Composable
-private fun TagSheetRow(tag: String, checked: Boolean, onClick: () -> Unit) {
+private fun TagChip(tag: String, checked: Boolean, onClick: () -> Unit) {
     val scheme = MaterialTheme.colorScheme
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = 20.dp, vertical = 12.dp),
+    Surface(
+        onClick = onClick,
+        shape = ControlShape,
+        color = if (checked) scheme.secondaryContainer else Color.Transparent,
+        contentColor = if (checked) scheme.onSecondaryContainer else scheme.onSurfaceVariant,
+        border = if (checked) null else BorderStroke(1.dp, scheme.outline),
     ) {
-        Icon(
-            imageVector = Icons.Filled.Check,
-            contentDescription = null,
-            // Always laid out, so the tags line up whether or not they are on this note; only the
-            // colour says which. A row that shifted sideways on being checked would read as the
-            // list reordering itself.
-            tint = if (checked) scheme.onSurface else Color.Transparent,
-            modifier = Modifier.size(20.dp),
-        )
-        Text(
-            text = tag,
-            style = MaterialTheme.typography.bodyLarge,
-            fontWeight = if (checked) FontWeight.Medium else FontWeight.Normal,
-            color = scheme.onSurface,
-            modifier = Modifier.weight(1f),
-        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            modifier = Modifier.padding(start = 12.dp, end = if (checked) 8.dp else 12.dp, top = 8.dp, bottom = 8.dp),
+        ) {
+            Text(
+                text = tag,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = if (checked) FontWeight.Medium else FontWeight.Normal,
+            )
+            if (checked) {
+                Icon(
+                    imageVector = Icons.Filled.Close,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp),
+                )
+            }
+        }
     }
 }

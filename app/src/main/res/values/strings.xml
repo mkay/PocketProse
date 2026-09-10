@@ -184,6 +184,11 @@
     <!-- Title of the sheet that opens from the chip row. -->
     <string name="tag_sheet_title">Tags</string>
     <!-- Label of the field for a tag that does not exist yet. -->
+    <!-- Headings over the two clusters of chips. The first names the tags this note carried when the
+         sheet opened; a tag taken off during this visit stays in that cluster, unfilled, because
+         chips that jumped between clusters would move the next one out from under the thumb. -->
+    <string name="tag_sheet_on_note">On this note</string>
+    <string name="tag_sheet_from_folder">Add from your folder</string>
     <string name="tag_sheet_new">New tag</string>
     <!-- Button beside that field. A verb: it puts the typed tag on this note. -->
     <string name="tag_sheet_add">Add</string>
