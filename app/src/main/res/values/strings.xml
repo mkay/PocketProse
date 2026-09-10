@@ -325,6 +325,12 @@
     <!-- Section headings. Shown uppercased by the screen, so write them in sentence case. -->
     <string name="settings_section_writing">Writing</string>
     <string name="settings_section_appearance">Appearance</string>
+    <!-- The language row, and the dialog it opens. The languages themselves are never listed here:
+         each names itself, in itself, so somebody stranded in a language they cannot read can still
+         find their own. -->
+    <string name="settings_language">Language</string>
+    <!-- The first choice in that dialog: follow whatever the phone is set to. -->
+    <string name="language_system">System default</string>
     <string name="settings_section_folder">Folder</string>
     <string name="settings_section_start">Start view</string>
     <string name="settings_section_size">Size and spacing</string>

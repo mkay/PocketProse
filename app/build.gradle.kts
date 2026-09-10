@@ -26,6 +26,20 @@ android {
         }
     }
 
+    androidResources {
+        // Emit a locale config from the res/values-* folders and point the manifest at it, so the
+        // app shows up under Android's own Settings > Apps > Language. Without it the in-app picker
+        // still works — AppCompatDelegate forwards to the framework on 13+ — but the system list has
+        // no entry for this app, and the two places a per-app language can be set disagree about
+        // whether one can be set at all.
+        //
+        // Generated rather than hand-written, so it cannot fall behind: adding res/values-fr puts
+        // French in the system list by existing. The in-app picker's own list is still the explicit
+        // `supported_locales` array, and deliberately so — see locales.xml for why asking the
+        // resource table would offer eighty languages this app has never been translated into.
+        generateLocaleConfig = true
+    }
+
     buildFeatures {
         compose = true
         // For the version shown on the About screen. Generated from the constants above only —

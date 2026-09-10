@@ -5,6 +5,8 @@ package de.singular.writer.ui
 import androidx.activity.compose.BackHandler
 import androidx.annotation.StringRes
 import androidx.compose.foundation.background
+import androidx.appcompat.app.AppCompatDelegate
+import androidx.core.os.LocaleListCompat
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.layout.Arrangement
@@ -29,6 +31,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.Label
+import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.Label
 import androidx.compose.material3.AlertDialog
@@ -47,10 +51,12 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Brush
@@ -68,6 +74,7 @@ import de.singular.writer.markdown.Tags
 import de.singular.writer.R
 import de.singular.writer.markdown.Migration
 import de.singular.writer.ThemeMode
+import java.util.Locale
 
 /**
  * The two halves of the settings, and the page that is not a setting at all.
@@ -388,6 +395,7 @@ private fun SystemSettings(
         onSelect = onThemeModeChange,
         modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
     )
+    LanguageSetting()
 
     SettingsSectionLabel(R.string.settings_section_start)
     // A row that opens the tag tree rather than a row of chips. 24 tags with one of them covering
@@ -447,6 +455,121 @@ private fun SystemSettings(
             onClick = onMoveTags,
         )
         SettingsCaption(stringResource(R.string.settings_move_tags_caption, what))
+    }
+}
+
+/**
+ * One offered language: its BCP-47 [tag], or null for "follow the device".
+ *
+ * [label] is deliberately the language's name *in that language* — Deutsch, not German. Somebody who
+ * has landed in a language they cannot read needs a way out, and the only word on the screen they
+ * are certain to recognise is their own language's name for itself.
+ */
+private data class LanguageChoice(val tag: String?, val label: String)
+
+/**
+ * The languages on offer: the device's own, then everything in `supported_locales`.
+ *
+ * That array is an explicit list rather than something discovered at runtime, and `locales.xml` says
+ * why: the resource table also carries every locale the AndroidX dependencies ship, some eighty of
+ * them, so asking the framework what exists would offer a picker full of languages in which only the
+ * odd system-supplied button is translated. The list says what *this app* has been translated into —
+ * which today is English and a German that is 50 strings short, so the honest reading of "de" here
+ * is "mostly German".
+ */
+@Composable
+private fun rememberLanguageChoices(): List<LanguageChoice> {
+    val systemLabel = stringResource(R.string.language_system)
+    val tags = stringArrayResource(R.array.supported_locales)
+    return remember(systemLabel, tags) {
+        val offered = tags.map { tag ->
+            val locale = Locale.forLanguageTag(tag)
+            // Ask the locale to name itself, then fix the case: several languages write their own
+            // name lowercase mid-sentence (français, español) but expect a capital standing alone.
+            LanguageChoice(tag, locale.getDisplayName(locale).replaceFirstChar { it.titlecase(locale) })
+        }.sortedBy { it.label }
+        listOf(LanguageChoice(null, systemLabel)) + offered
+    }
+}
+
+/** The app's language as a BCP-47 tag, or null while it follows the device. */
+private fun currentLanguageTag(): String? =
+    AppCompatDelegate.getApplicationLocales().toLanguageTags().takeIf { it.isNotEmpty() }
+        ?.substringBefore(',')
+
+/**
+ * The language row and the dialog it opens.
+ *
+ * **The choice is not a preference of this app's.** It goes through [AppCompatDelegate], which on
+ * Android 13 and up writes through to the framework's per-app language — so this picker and the one
+ * in Android's own settings are the same setting rather than two that quietly disagree. Below 13,
+ * AppCompat stores it and re-applies it on launch, and that machinery hangs off `AppCompatActivity`,
+ * which is why `MainActivity` extends one and `themes.xml` is parented to AppCompat despite the UI
+ * being Compose throughout. All of that was already in place here waiting for this.
+ *
+ * Choosing recreates the activity, which is what re-reads the resources, so there is nothing to do
+ * afterwards and nothing of ours to persist. It also means the dates follow: `rememberDateFormatter`
+ * reads the locale from the configuration rather than from `Locale.getDefault()` precisely so that a
+ * note's date changes language with the rest of the app.
+ */
+@Composable
+private fun LanguageSetting() {
+    val choices = rememberLanguageChoices()
+    // Read per composition rather than held in state: the activity is recreated on a change, so this
+    // is re-read with the new value on the way back up.
+    val current = choices.firstOrNull { it.tag == currentLanguageTag() } ?: choices.first()
+    var picking by rememberSaveable { mutableStateOf(false) }
+
+    SettingActionRow(
+        label = R.string.settings_language,
+        subtitle = current.label,
+        icon = Icons.Default.Language,
+        onClick = { picking = true },
+    )
+
+    if (picking) {
+        AlertDialog(
+            onDismissRequest = { picking = false },
+            title = {
+                DialogHeading(Icons.Outlined.Language, stringResource(R.string.settings_language))
+            },
+            text = {
+                Column(Modifier.verticalScroll(rememberScrollState())) {
+                    choices.forEach { choice ->
+                        Row(
+                            Modifier
+                                .fillMaxWidth()
+                                .clip(ControlShape)
+                                .clickable {
+                                    picking = false
+                                    AppCompatDelegate.setApplicationLocales(
+                                        if (choice.tag == null) {
+                                            LocaleListCompat.getEmptyLocaleList()
+                                        } else {
+                                            LocaleListCompat.forLanguageTags(choice.tag)
+                                        },
+                                    )
+                                }
+                                .padding(horizontal = 8.dp, vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            RadioButton(
+                                selected = choice.tag == current.tag,
+                                // The whole row is the target; the button is the mark.
+                                onClick = null,
+                            )
+                            Spacer(Modifier.width(12.dp))
+                            Text(choice.label, style = MaterialTheme.typography.bodyLarge)
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { picking = false }) {
+                    Text(stringResource(R.string.action_cancel))
+                }
+            },
+        )
     }
 }
 
