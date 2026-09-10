@@ -37,7 +37,6 @@ import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.Label
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -342,11 +341,10 @@ private fun ProseSizeChips(
             ProseSize.LARGEST to R.string.size_largest,
         )
         ProseSize.entries.forEach { step ->
-            FilterChip(
+            ChoiceChip(
+                label = stringResource(label.getValue(step)),
                 selected = size == step,
                 onClick = { onSelect(step) },
-                label = { Text(stringResource(label.getValue(step))) },
-                shape = ControlShape,
             )
         }
     }
@@ -366,11 +364,10 @@ private fun ProseLeadingChips(
             ProseLeading.AIRY to R.string.leading_airy,
         )
         ProseLeading.entries.forEach { step ->
-            FilterChip(
+            ChoiceChip(
+                label = stringResource(label.getValue(step)),
                 selected = leading == step,
                 onClick = { onSelect(step) },
-                label = { Text(stringResource(label.getValue(step))) },
-                shape = ControlShape,
             )
         }
     }
@@ -674,11 +671,10 @@ private fun ThemeModeChips(
             ThemeMode.DARK to R.string.theme_dark,
         )
         ThemeMode.entries.forEach { m ->
-            FilterChip(
+            ChoiceChip(
+                label = stringResource(label.getValue(m)),
                 selected = mode == m,
                 onClick = { onSelect(m) },
-                label = { Text(stringResource(label.getValue(m))) },
-                shape = ControlShape,
             )
         }
     }

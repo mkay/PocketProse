@@ -10,6 +10,7 @@ import de.singular.writer.markdown.Tags
 import de.singular.writer.SortBy
 import de.singular.writer.SortOrder
 import java.time.Instant
+import java.text.Normalizer
 import java.time.format.DateTimeParseException
 
 /** Whether a note has to carry files, has to carry none, or may do either. */
@@ -28,10 +29,12 @@ data class Filters(
     val text: String = "",
     val tag: String? = null,
     val attachments: AttachmentFilter = AttachmentFilter.ANY,
+    /** Only notes that share a title or a body with another note — see [NoteIndex.duplicateGroups]. */
+    val duplicates: Boolean = false,
 ) {
     /** Nothing is being asked, so the whole folder is the answer. */
     val isEmpty: Boolean
-        get() = text.isBlank() && tag == null && attachments == AttachmentFilter.ANY
+        get() = text.isBlank() && tag == null && attachments == AttachmentFilter.ANY && !duplicates
 }
 
 /**
@@ -258,8 +261,14 @@ class NoteIndex(notes: List<IndexedNote>) {
      */
     fun <T : Filterable> matching(notes: List<T>, filters: Filters): List<T> {
         val needle = filters.text.trim()
-        return notes.filter { note ->
-            (filters.tag == null || note.tags.any { Tags.isUnder(it, filters.tag) }) &&
+        // Decided over the whole list handed in, before the other questions narrow it: a note is a
+        // duplicate because of what else is in the folder, not because of what else is on screen.
+        // Its partner may then be filtered out by the tag or the text — that is the reader's
+        // narrowing, and the row that remains is still one of a pair.
+        val groups = if (filters.duplicates) duplicateGroups(notes) else null
+        return notes.filterIndexed { i, note ->
+            (groups == null || groups[i] != null) &&
+                (filters.tag == null || note.tags.any { Tags.isUnder(it, filters.tag) }) &&
                 (
                     needle.isEmpty() ||
                         note.title.contains(needle, ignoreCase = true) ||
@@ -276,6 +285,55 @@ class NoteIndex(notes: List<IndexedNote>) {
 
     /** The whole folder, filtered. */
     fun matching(filters: Filters): List<IndexedNote> = matching(notes, filters)
+
+    /**
+     * Which of [notes] are duplicates of which: for each position, the group it belongs to, or null
+     * for a note nothing else resembles. A group is named by the lowest position in it.
+     *
+     * **Two notes are duplicates when they share a title or share a body**, and the two relations are
+     * chained — A titled like B, B worded like C, puts all three in one group. The archive has all
+     * three kinds: four files titled `Wer geht vor?` with different words, three (`Wer geht vor 2`,
+     * `3`, `4`) with the same 959 bytes of body, and a sync client's conflict copy, which is the
+     * same title and nearly the same body under a name the app has no business recognising. One
+     * rule finds all of them without the app knowing any sync client's filename grammar, which is
+     * why this exists instead of a pattern match on `.sync-conflict-`.
+     *
+     * A title matches case-insensitively and NFC-normalised, since the macOS-origin names in this
+     * folder arrive both ways. A body matches after trimming — the gap under the frontmatter and a
+     * trailing newline are structure, not writing — and **an empty body matches nothing**: 40 notes
+     * in the archive are a title and a tag, and calling them duplicates of each other would be
+     * the filter's own invention.
+     *
+     * "Duplicate" here is a suspicion the reader is invited to look at, never a verdict: a note
+     * titled `Lieblos` twice may be two songs. The app finds, the reader decides, and nothing is
+     * merged or removed by anything but the reader's own hand.
+     */
+    fun <T : Filterable> duplicateGroups(notes: List<T>): List<Int?> {
+        val parent = IntArray(notes.size) { it }
+        fun find(i: Int): Int {
+            var x = i
+            while (parent[x] != x) x = parent[x].also { parent[x] = parent[parent[x]] }
+            return x
+        }
+        fun union(a: Int, b: Int) {
+            val ra = find(a)
+            val rb = find(b)
+            if (ra != rb) parent[maxOf(ra, rb)] = minOf(ra, rb)
+        }
+
+        val byTitle = HashMap<String, Int>()
+        val byBody = HashMap<String, Int>()
+        val paired = BooleanArray(notes.size)
+        for ((i, note) in notes.withIndex()) {
+            val title = Normalizer.normalize(note.title.trim(), Normalizer.Form.NFC).lowercase()
+            byTitle.put(title, i)?.let { union(it, i); paired[it] = true; paired[i] = true }
+            val body = note.body.trim()
+            if (body.isNotEmpty()) {
+                byBody.put(body, i)?.let { union(it, i); paired[it] = true; paired[i] = true }
+            }
+        }
+        return List(notes.size) { i -> if (paired[i]) find(i) else null }
+    }
 
     /**
      * [notes] in some other order — the library's sort, applied to a list the index has already

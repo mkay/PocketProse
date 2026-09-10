@@ -15,7 +15,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -23,7 +22,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.pluralStringResource
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
@@ -111,18 +109,34 @@ fun SearchDialog(
                         AttachmentFilter.WITH to R.string.search_attachments_with,
                         AttachmentFilter.WITHOUT to R.string.search_attachments_without,
                     ).forEach { (value, label) ->
-                        FilterChip(
+                        ChoiceChip(
+                            label = stringResource(label),
                             selected = filters.attachments == value,
                             onClick = { onFiltersChange(filters.copy(attachments = value)) },
-                            label = {
-                                Text(
-                                    text = stringResource(label),
-                                    maxLines = 1,
-                                    textAlign = TextAlign.Center,
-                                    modifier = Modifier.fillMaxWidth(),
-                                )
-                            },
-                            shape = ControlShape,
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
+                }
+
+                // The same shape as the attachments question, label and a row of answers, though
+                // this one is a yes or a no: the folder, or only the notes in it that resemble
+                // another. One lone chip was tried and read as a button rather than a state. What
+                // "resemble" means is `NoteIndex.duplicateGroups`' business — a shared title or a
+                // shared body — and the list says which by showing the file names.
+                Text(
+                    text = stringResource(R.string.search_duplicates_label),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf(
+                        false to R.string.search_duplicates_off,
+                        true to R.string.search_duplicates_only,
+                    ).forEach { (value, label) ->
+                        ChoiceChip(
+                            label = stringResource(label),
+                            selected = filters.duplicates == value,
+                            onClick = { onFiltersChange(filters.copy(duplicates = value)) },
                             modifier = Modifier.weight(1f),
                         )
                     }

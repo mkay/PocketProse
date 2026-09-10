@@ -742,5 +742,15 @@
     <string name="filter_by_text">“%1$s”</string>
     <string name="filter_by_attachments_with">with files</string>
     <string name="filter_by_attachments_without">without files</string>
+    <string name="filter_by_duplicates">duplicates</string>
+    <!-- The search panel's chip. "Duplicate" means sharing a title or a body with another note —
+         a suspicion to look at, which is why the list then shows file names. -->
+    <string name="search_duplicates_label">Duplicates</string>
+    <!-- A switch, so its off state is "off" and not the attachments row's "any": the question is
+         whether the filter is on, not which kind of note is wanted. -->
+    <string name="search_duplicates_off">Off</string>
+    <string name="search_duplicates_only">Only duplicates</string>
+    <!-- The one empty list that is good news. -->
+    <string name="filter_no_duplicates">No two notes share a title or a body</string>
 
 </resources>

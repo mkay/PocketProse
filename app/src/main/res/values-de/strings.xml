@@ -80,7 +80,7 @@
     <string name="drawer_expand">Unterschlagwörter anzeigen</string>
     <string name="drawer_collapse">Unterschlagwörter ausblenden</string>
 
-    <string name="search_open">Suchen</string>
+    <string name="search_open">Suche</string>
     <string name="search_no_results">Nichts passt zu „%1$s“</string>
     <string name="filter_no_results">Keine Texte mit diesem Schlagwort</string>
     <string name="filter_showing">Gefiltert nach %1$s</string>
@@ -355,7 +355,7 @@
     <string name="search_title">Suchen</string>
     <string name="search_text_label">Wörter in einem Text</string>
     <string name="search_attachments_label">Anhänge</string>
-    <string name="search_attachments_any">Egal</string>
+    <string name="search_attachments_any">Alle</string>
     <string name="search_attachments_with">Mit</string>
     <string name="search_attachments_without">Ohne</string>
     <plurals name="search_matches">
@@ -367,5 +367,10 @@
     <string name="filter_by_text">„%1$s“</string>
     <string name="filter_by_attachments_with">mit Anhängen</string>
     <string name="filter_by_attachments_without">ohne Anhänge</string>
+    <string name="filter_by_duplicates">Doppelte</string>
+    <string name="search_duplicates_label">Doppelte</string>
+    <string name="search_duplicates_off">Aus</string>
+    <string name="search_duplicates_only">Nur Doppelte</string>
+    <string name="filter_no_duplicates">Keine zwei Texte teilen sich Titel oder Inhalt</string>
 
 </resources>

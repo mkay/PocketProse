@@ -97,3 +97,66 @@ class FilterTest {
         assertEquals(notes.map { it.title }, match(Filters(text = "   ")))
     }
 }
+
+/**
+ * The duplicates filter, and the grouping it rests on.
+ *
+ * "Duplicate" means sharing a title or a body with another note — the archive's four `Wer geht
+ * vor?`, its three byte-identical bodies, and a sync client's conflict copy all fall out of that
+ * one rule without the app knowing any client's filename grammar. What is pinned here is the rule's
+ * edges: the chain across the two relations, the empty body that matches nothing, and the title
+ * that matches whatever way it was normalised.
+ */
+class DuplicateTest {
+
+    private data class Row(
+        override val title: String,
+        override val body: String = "",
+        override val tags: List<String> = emptyList(),
+        override val hasAttachments: Boolean = false,
+    ) : Filterable
+
+    private val index = NoteIndex(emptyList())
+
+    @Test
+    fun `a shared title is a group`() {
+        val notes = listOf(Row("Wer geht vor?", "a"), Row("Atlantik", "b"), Row("Wer geht vor?", "c"))
+        assertEquals(listOf(0, null, 0), index.duplicateGroups(notes))
+    }
+
+    @Test
+    fun `a shared body is a group, whatever the titles`() {
+        val notes = listOf(Row("Wer geht vor 2", "same\n"), Row("Wer geht vor 3", "\nsame"))
+        assertEquals(listOf(0, 0), index.duplicateGroups(notes))
+    }
+
+    @Test
+    fun `the two relations chain into one group`() {
+        // A titled like B, B worded like C: one group, named by A's position.
+        val notes = listOf(Row("X", "one"), Row("Y", "two"), Row("X", "two"))
+        assertEquals(listOf(0, 0, 0), index.duplicateGroups(notes))
+    }
+
+    @Test
+    fun `an empty body matches nothing`() {
+        // 40 notes in the archive are a title and a tag. They are not duplicates of each other.
+        val notes = listOf(Row("Die Eule", "\n"), Row("Adlerohr", ""), Row("Müde", "  "))
+        assertEquals(listOf(null, null, null), index.duplicateGroups(notes))
+    }
+
+    @Test
+    fun `a title matches across case and normalisation`() {
+        val nfd = "Müde"
+        val notes = listOf(Row("Müde", "a"), Row(nfd.uppercase(), "b"))
+        assertEquals(listOf(0, 0), index.duplicateGroups(notes))
+    }
+
+    @Test
+    fun `the filter keeps the pairs and drops the rest`() {
+        val notes = listOf(Row("A", "x"), Row("B", "y"), Row("A", "z"), Row("C", "y"))
+        val shown = index.matching(notes, Filters(duplicates = true)).map { it.title + it.body }
+        assertEquals(listOf("Ax", "By", "Az", "Cy"), shown)
+        assertEquals(listOf("Ax"), index.matching(notes, Filters(duplicates = true, text = "x")).map { it.title + it.body })
+        assertTrue(!Filters(duplicates = true).isEmpty)
+    }
+}

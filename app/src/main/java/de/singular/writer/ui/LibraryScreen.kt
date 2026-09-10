@@ -34,12 +34,10 @@ import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.FilterAlt
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.SelectAll
 import androidx.compose.material.icons.outlined.Circle
 import androidx.compose.material.icons.outlined.DeleteOutline
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.DropdownMenu
@@ -300,13 +298,16 @@ fun LibraryScreen(
                         // can see is the failure this whole change is about** — but it still just
                         // opens the dialog. Clearing is a labelled button in there, never a second
                         // tap out here that silently throws away what was asked for.
+                        //
+                        // Still a magnifier when set — a magnifier with a check in it — rather
+                        // than a funnel. The funnel read as a second feature; this reads as the
+                        // same control in another state, which is what it is. Both states come
+                        // from the same Material Symbols export so the glass is the same glass.
                         IconButton(onClick = onOpenSearch) {
                             Icon(
-                                imageVector = if (filters.isEmpty) {
-                                    Icons.Filled.Search
-                                } else {
-                                    Icons.Filled.FilterAlt
-                                },
+                                imageVector = ImageVector.vectorResource(
+                                    if (filters.isEmpty) R.drawable.ic_search else R.drawable.ic_search_check,
+                                ),
                                 contentDescription = stringResource(R.string.search_open),
                                 tint = if (filters.isEmpty) {
                                     LocalContentColor.current
@@ -354,7 +355,7 @@ fun LibraryScreen(
                     )
                 }
             } else if (notes.isEmpty()) {
-                Empty(filters.text, onChooseFolder)
+                Empty(filters, onChooseFolder)
             } else {
                 val listState = rememberLazyListState()
                 // Picking a tag or an order is asking a different question, so the answer starts
@@ -378,7 +379,7 @@ fun LibraryScreen(
                 // caught: the first character typed, and — the one that matters — clearing the
                 // filters, which puts a list of 168 back under somebody who was three rows into a
                 // list of four.
-                LaunchedEffect(filters.tag, filters.attachments, filters.isEmpty, sortBy, sortOrder) {
+                LaunchedEffect(filters.tag, filters.attachments, filters.duplicates, filters.isEmpty, sortBy, sortOrder) {
                     if (notes.isNotEmpty()) listState.scrollToItem(0)
                 }
                 LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
@@ -387,6 +388,11 @@ fun LibraryScreen(
                         NoteRow(
                             note = note,
                             density = density,
+                            // The file name is what tells four notes titled "Wer geht vor?" apart
+                            // when the tags do not, and it is the one thing a merge or a delete
+                            // will be judged by. Shown only here: on an ordinary list it is a
+                            // second, less readable title under every row.
+                            showFileName = filters.duplicates,
                             selecting = selecting,
                             // Ticked by uri and never by title: four notes in the archive are called
                             // "Wer geht vor?" and three more share another title, so a selection
@@ -485,6 +491,7 @@ private fun StatusStrip(count: Int, filters: Filters, counted: Boolean, onClear:
             AttachmentFilter.WITH -> add(stringResource(R.string.filter_by_attachments_with))
             AttachmentFilter.WITHOUT -> add(stringResource(R.string.filter_by_attachments_without))
         }
+        if (filters.duplicates) add(stringResource(R.string.filter_by_duplicates))
     }
     val summary = parts.takeIf { it.isNotEmpty() }
         ?.let { stringResource(R.string.filter_showing, it.joinToString(" · ")) }
@@ -663,6 +670,7 @@ private fun CheckableItem(
 private fun NoteRow(
     note: IndexedNote,
     density: RowDensity,
+    showFileName: Boolean,
     selecting: Boolean,
     checked: Boolean,
     onClick: () -> Unit,
@@ -732,6 +740,15 @@ private fun NoteRow(
                 )
             }
         }
+        if (showFileName) {
+            Text(
+                text = note.file.name,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
         // Compact drops the writing and the date and keeps the tags. Not an arbitrary half: the
         // excerpt is the tallest part of the row and the least useful when you already know which
         // note you are after, while the tags are the only thing that tells four notes titled
@@ -777,13 +794,15 @@ private fun NoteRow(
 
 /** Nothing matched — either a search or a tag filter. */
 @Composable
-private fun Empty(query: String, onChooseFolder: () -> Unit) {
+private fun Empty(filters: Filters, onChooseFolder: () -> Unit) {
+    val query = filters.text
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Text(
-            text = if (query.isBlank()) {
-                stringResource(R.string.filter_no_results)
-            } else {
-                stringResource(R.string.search_no_results, query)
+            text = when {
+                query.isNotBlank() -> stringResource(R.string.search_no_results, query)
+                // The one empty list that is good news, and it should read as such.
+                filters.duplicates -> stringResource(R.string.filter_no_duplicates)
+                else -> stringResource(R.string.filter_no_results)
             },
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,

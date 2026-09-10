@@ -3,6 +3,13 @@
 package de.singular.writer.ui
 
 import androidx.compose.foundation.border
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.Box
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material3.Surface
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
@@ -162,6 +169,63 @@ fun NoticeHost(state: SnackbarHostState, modifier: Modifier = Modifier) {
             actionContentColor = MaterialTheme.colorScheme.primary,
         ) {
             Text(data.visuals.message)
+        }
+    }
+}
+
+/**
+ * One of several answers to a question, as a chip: the search panel's Any / With / Without, the
+ * settings' theme and size rows, and the duplicates switch.
+ *
+ * Material's `FilterChip` was used first and could not be read in this palette. Its selected state
+ * is a container a shade off the panel it sits on and its unselected state is an outline at 2.4:1,
+ * so on the search dialog three words sat in a row and nothing said which one was on — the reader
+ * had to know that the faintly lighter one was the answer. This wears the tag sheet's language
+ * instead, which the drawer's picked row and a ticked list row wear too: **on is a filled
+ * `secondaryContainer` with a check, off is an outline**. Two things differ, ground and mark, so
+ * the state survives a dim screen and a quick glance.
+ *
+ * The check is laid out only when on. The chips are usually sized to their words, so a reserved
+ * slot would leave every unselected chip with a hole in it; where a row shares its width equally
+ * the label is centred anyway and the mark shifts it by half its own width, which is less
+ * noticeable than a hole.
+ */
+@Composable
+fun ChoiceChip(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val scheme = MaterialTheme.colorScheme
+    Surface(
+        onClick = onClick,
+        shape = ControlShape,
+        color = if (selected) scheme.secondaryContainer else Color.Transparent,
+        contentColor = if (selected) scheme.onSecondaryContainer else scheme.onSurfaceVariant,
+        border = if (selected) null else BorderStroke(1.dp, scheme.outline),
+        modifier = modifier,
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center,
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+        ) {
+            if (selected) {
+                Icon(
+                    imageVector = Icons.Filled.Check,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp).padding(end = 0.dp),
+                )
+                Box(Modifier.size(6.dp))
+            }
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = if (selected) FontWeight.Medium else FontWeight.Normal,
+                maxLines = 1,
+                textAlign = TextAlign.Center,
+            )
         }
     }
 }

@@ -460,7 +460,17 @@ private fun PocketProseApp(settings: Settings) {
         // `replacing` and `renamed` rebuild it and have no business knowing what the reader last
         // picked in a menu — so the chosen order is a view onto the filtered list, not a property
         // of the folder.
-        index.sorted(found, settings.sortBy, settings.sortOrder)
+        val sorted = index.sorted(found, settings.sortBy, settings.sortOrder)
+        // Duplicates sit together. The chosen sort still decides where each group lands — at the
+        // position of its first member — and the order inside a group; the stable sort by group
+        // only pulls the partners up to it. Four "Wer geht vor?" spread across a list sorted by
+        // date would otherwise be four rows the reader has to find one another for.
+        if (filters.duplicates) {
+            val groups = index.duplicateGroups(sorted)
+            sorted.withIndex().sortedBy { (i, _) -> groups[i] ?: i }.map { it.value }
+        } else {
+            sorted
+        }
     }
 
     // Multi-select, held here rather than in the library because Back has to be able to leave it and
