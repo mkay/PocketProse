@@ -634,7 +634,12 @@
         <item quantity="one">Delete 1 note?</item>
         <item quantity="other">Delete %1$d notes?</item>
     </plurals>
-    <string name="delete_notes_body">They are removed from your folder. Pocket Prose cannot bring them back.</string>
+    <!-- A selection of one is still a selection, and "they" over one note read as the app not
+         having counted. -->
+    <plurals name="delete_notes_body">
+        <item quantity="one">It is removed from your folder. Pocket Prose cannot bring it back.</item>
+        <item quantity="other">They are removed from your folder. Pocket Prose cannot bring them back.</item>
+    </plurals>
     <plurals name="delete_notes_done">
         <item quantity="one">Deleted 1 note</item>
         <item quantity="other">Deleted %1$d notes</item>
@@ -670,6 +675,22 @@
     <string name="retag_stale">Nothing was changed: %1$s changed on disk. Pull to refresh and try again.</string>
     <string name="retag_refused">Nothing was changed: %1$s cannot be saved safely.</string>
     <string name="retag_partial">Tags changed in %1$d notes, %2$d left. Apply again to finish.</string>
+
+    <!-- ===== Merging a selection ===== -->
+
+    <!-- The selection bar button. -->
+    <string name="merge_notes">Merge into one note</string>
+    <!-- Heading of the dialog. %1$d is how many notes are ticked; never fewer than 2. -->
+    <plurals name="merge_notes_title">
+        <item quantity="one">Merge 1 note</item>
+        <item quantity="other">Merge %1$d notes</item>
+    </plurals>
+    <!-- Under the title field. Says what the merge decides that the field does not: the order,
+         and that it is a creation. "Kept" is the word that matters. -->
+    <string name="merge_notes_body">A new note, in the order the list shows them. The notes it came from are kept.</string>
+    <string name="merge_notes_confirm">Merge</string>
+    <!-- After the merge. %1$s is the new note's title; the list is where it is found. -->
+    <string name="merge_notes_done">Merged into %1$s</string>
 
     <!-- The editor menu entry that opens the photo picker. Says "image" and not "attachment":
          the picker only offers pictures, and the archive's other attachments are PDFs that came

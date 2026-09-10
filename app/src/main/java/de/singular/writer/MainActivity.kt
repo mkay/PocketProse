@@ -67,6 +67,7 @@ import de.singular.writer.markdown.Segments
 import de.singular.writer.markdown.Tags
 import de.singular.writer.ui.moveTagsWhat
 import de.singular.writer.ui.MoveTagsDialog
+import de.singular.writer.ui.MergeNotesDialog
 import de.singular.writer.ui.RenameTagDialog
 import de.singular.writer.ui.EditorScreen
 import de.singular.writer.ui.NoteDocument
@@ -471,6 +472,7 @@ private fun PocketProseApp(settings: Settings) {
     val selected = remember { mutableStateListOf<String>() }
     var deletingSelection by remember { mutableStateOf(false) }
     var taggingSelection by remember { mutableStateOf(false) }
+    var mergingSelection by remember { mutableStateOf(false) }
     // True while a selection's tags are being written. Same job as `renameRunning`: it picks the
     // sentence the loading sheet says.
     var retagRunning by remember { mutableStateOf(false) }
@@ -590,6 +592,38 @@ private fun PocketProseApp(settings: Settings) {
                     }
                     retagRunning = false
                     refresh()
+                }
+            },
+        )
+    }
+
+    if (mergingSelection) {
+        // In the list's order, not the order of ticking: the list is what the user is looking at,
+        // and sorting it first is how they choose which part comes first.
+        val notes = shown.filter { it.file.uri.toString() in selected }
+        val titles = notes.map { it.title }.distinct()
+        MergeNotesDialog(
+            count = notes.size,
+            // The shared title when there is one — the archive's duplicates all have one — else the
+            // first in list order, as a starting point rather than a claim.
+            prefill = titles.singleOrNull() ?: notes.first().title,
+            onDismiss = { mergingSelection = false },
+            onMerge = { title ->
+                mergingSelection = false
+                scope.launch {
+                    when (val result = vault.merge(notes, title)) {
+                        is CreateResult.Failed ->
+                            message = context.getString(R.string.create_failed, result.reason)
+                        is CreateResult.Made -> {
+                            // Back to the list, with the merge in it and nothing ticked. Both
+                            // alternatives were tried: keeping the sources ticked read as the act
+                            // not having finished, and opening the new note took the reader away
+                            // from the list they were organising.
+                            endSelecting()
+                            message = context.getString(R.string.merge_notes_done, title)
+                            refresh()
+                        }
+                    }
                 }
             },
         )
@@ -968,6 +1002,7 @@ private fun PocketProseApp(settings: Settings) {
             },
             onEndSelecting = { endSelecting() },
             onTagSelected = { taggingSelection = true },
+            onMergeSelected = { mergingSelection = true },
             onDeleteSelected = { deletingSelection = true },
             // Not while a search or a tag filter is on: the banner counts the whole folder, and a
             // sentence about 165 notes over a list of three reads as being about the three.

@@ -137,6 +137,7 @@ fun LibraryScreen(
     onSelectAll: () -> Unit,
     onEndSelecting: () -> Unit,
     onTagSelected: () -> Unit,
+    onMergeSelected: () -> Unit,
     onDeleteSelected: () -> Unit,
     onOpenDrawer: () -> Unit,
     onChooseFolder: () -> Unit,
@@ -261,6 +262,15 @@ fun LibraryScreen(
                             Icon(
                                 imageVector = ImageVector.vectorResource(R.drawable.ic_label_more),
                                 contentDescription = stringResource(R.string.retag_selection),
+                            )
+                        }
+                        // Two is the smallest thing that can be merged. One note has nothing to
+                        // fold into, so the button waits for a second tick rather than opening a
+                        // dialog that would have to refuse.
+                        IconButton(onClick = onMergeSelected, enabled = selected.size >= 2) {
+                            Icon(
+                                imageVector = ImageVector.vectorResource(R.drawable.ic_stack_group),
+                                contentDescription = stringResource(R.string.merge_notes),
                             )
                         }
                         // Enabled only with something ticked, and tinted `error` — the one colour

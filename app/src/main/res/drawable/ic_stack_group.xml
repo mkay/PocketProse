@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Material Symbols, exported from assets/icons/editor/stack_group_24dp_E3E3E3_FILL0_wght400_GRAD0_opsz24.svg.
+
+  Drawn in white and tinted at the call site, the same way the wordmark is: the icon follows the
+  theme's ink rather than carrying a colour of its own. Do not hand-edit the path data — re-export.
+
+  The source viewBox starts at y=-960, which a vector drawable cannot express, so the path sits in
+  a group translated back down by 960.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="960"
+    android:viewportHeight="960">
+    <group android:translateX="-0" android:translateY="960">
+        <path
+            android:pathData="M400-80q-33 0-56.5-23.5T320-160v-160H160q-33 0-56.5-23.5T80-400v-400q0-33 23.5-56.5T160-880h400q33 0 56.5 23.5T640-800v160h160q33 0 56.5 23.5T880-560v400q0 33-23.5 56.5T800-80H400Zm0-80h400v-400H560v-240H160v400h240v240Zm80-320Z"
+            android:fillColor="#FFFFFFFF" />
+    </group>
+</vector>

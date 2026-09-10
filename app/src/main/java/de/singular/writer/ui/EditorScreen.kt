@@ -71,7 +71,9 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalTextToolbar
 import androidx.compose.foundation.text.contextmenu.provider.LocalTextContextMenuDropdownProvider
 import androidx.compose.foundation.text.contextmenu.provider.LocalTextContextMenuToolbarProvider
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -986,6 +988,76 @@ fun NewNoteDialog(onCreate: (String) -> Unit, onDismiss: () -> Unit) {
 }
 
 /**
+ * The dialog that folds a selection into one new note: a title, and a sentence about what happens.
+ *
+ * **The title is the one question a merge cannot answer for itself.** Four notes titled
+ * `Wer geht vor?` merge under `Wer geht vor?` and nobody needs to be asked — so the field comes
+ * prefilled with the shared title when every selected note has the same one. Three snippets with
+ * three different titles are another matter: taking the first would claim the other two were drafts
+ * of it, and the file is named after the title at creation and never renamed after, so a wrong
+ * guess is a wrong filename for good. The field is prefilled with the first note's title in list
+ * order, and the user sees what the new file will be called before it exists.
+ *
+ * The sentence under the field says the rest of what the merge decides: the parts follow the list's
+ * order, and the notes they came from are kept. The last is the one worth saying out loud — a merge
+ * that also deleted would be several files gone with no undo, and this one is a creation.
+ */
+@Composable
+fun MergeNotesDialog(
+    count: Int,
+    prefill: String,
+    onMerge: (String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var typed by rememberSaveable { mutableStateOf(prefill) }
+    val focus = remember { FocusRequester() }
+    val ready = typed.isNotBlank()
+    val submit = { if (ready) onMerge(typed.trim()) else Unit }
+
+    LaunchedEffect(Unit) { focus.requestFocus() }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            DialogHeading(
+                ImageVector.vectorResource(R.drawable.ic_stack_group),
+                pluralStringResource(R.plurals.merge_notes_title, count, count),
+            )
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedTextField(
+                    value = typed,
+                    onValueChange = { typed = it },
+                    label = { Text(text = stringResource(R.string.new_note_label)) },
+                    singleLine = true,
+                    shape = ControlShape,
+                    keyboardOptions = KeyboardOptions(
+                        capitalization = KeyboardCapitalization.Sentences,
+                        imeAction = ImeAction.Done,
+                    ),
+                    keyboardActions = KeyboardActions(onDone = { submit() }),
+                    modifier = Modifier.fillMaxWidth().focusRequester(focus),
+                )
+                Text(
+                    text = stringResource(R.string.merge_notes_body),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = submit, enabled = ready) {
+                Text(text = stringResource(R.string.merge_notes_confirm))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(text = stringResource(R.string.action_cancel)) }
+        },
+    )
+}
+
+/**
  * The one confirmation in the app that guards something irreversible.
  *
  * `CLAUDE.md` forbids deleting anything without an explicit yes, and this is where that yes is
@@ -1042,7 +1114,7 @@ fun DeleteSelectionDialog(count: Int, onConfirm: () -> Unit, onDismiss: () -> Un
                 tint = MaterialTheme.colorScheme.error,
             )
         },
-        text = { Text(text = stringResource(R.string.delete_notes_body)) },
+        text = { Text(text = pluralStringResource(R.plurals.delete_notes_body, count, count)) },
         confirmButton = {
             TextButton(onClick = onConfirm) { Text(text = stringResource(R.string.delete_note)) }
         },

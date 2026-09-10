@@ -44,10 +44,10 @@
     <string name="new_note_create">Anlegen</string>
     <string name="action_cancel">Abbrechen</string>
     <string name="editor_menu">Mehr</string>
-    <string name="delete_note">Text löschen</string>
+    <string name="delete_note">Text-Datei löschen</string>
     <string name="delete_note_confirm">„%1$s“ löschen?</string>
-    <string name="delete_note_body">Der Text wird aus deinem Ordner gelöscht. Pocket Prose kann ihn nicht zurückholen.</string>
-    <string name="delete_failed">Der Text konnte nicht gelöscht werden</string>
+    <string name="delete_note_body">Die Text-Datei wird aus deinem Ordner gelöscht. Pocket Prose kann ihn nicht zurückholen.</string>
+    <string name="delete_failed">Die Text-Datei konnte nicht gelöscht werden</string>
 
     <string name="note_tags_edit">Schlagwörter bearbeiten</string>
     <string name="note_tags_none">Schlagwort hinzufügen</string>
@@ -60,8 +60,8 @@
     <string name="tag_sheet_on_note">Auf diesem Text</string>
     <string name="tag_sheet_from_folder">Aus deinem Ordner hinzufügen</string>
 
-    <string name="conflict_title">Dieser Text wurde anderswo geändert</string>
-    <string name="conflict_body">Während du geschrieben hast, wurde dieser Text auf einem anderen Gerät bearbeitet. Pocket Prose hat keine der beiden Fassungen angetastet.</string>
+    <string name="conflict_title">Diese Text-Datei wurde anderswo geändert</string>
+    <string name="conflict_body">Während du geschrieben hast, wurde diese Text-Datei auf einem anderen Gerät bearbeitet. Pocket Prose hat keine der beiden Fassungen angetastet.</string>
     <string name="conflict_keep_both">Beide behalten</string>
     <string name="conflict_discard">Meine Änderungen verwerfen</string>
 
@@ -308,13 +308,16 @@
     <string name="select_all">Alle auswählen</string>
     <string name="selection_end">Auswahl beenden</string>
     <plurals name="delete_notes_confirm">
-        <item quantity="one">1 Text löschen?</item>
-        <item quantity="other">%1$d Texte löschen?</item>
+        <item quantity="one">1 Text-Datei löschen?</item>
+        <item quantity="other">%1$d Text-Dateien löschen?</item>
     </plurals>
-    <string name="delete_notes_body">Sie werden aus deinem Ordner gelöscht. Pocket Prose kann sie nicht zurückholen.</string>
+    <plurals name="delete_notes_body">
+        <item quantity="one">Sie wird aus deinem Ordner gelöscht. \nDies kann nicht rückgängig gemacht werden.</item>
+        <item quantity="other">Sie werden aus deinem Ordner gelöscht. \nDies kann nicht rückgängig gemacht werden.</item>
+    </plurals>
     <plurals name="delete_notes_done">
-        <item quantity="one">1 Text gelöscht</item>
-        <item quantity="other">%1$d Texte gelöscht</item>
+        <item quantity="one">1 Text-Datei gelöscht</item>
+        <item quantity="other">%1$d Text-Dateien gelöscht</item>
     </plurals>
     <string name="delete_notes_partial">%1$d gelöscht, aber %2$s ist noch da. Zum Aktualisieren ziehen und noch einmal versuchen.</string>
     <string name="retag_selection">Ausgewählte Texte verschlagworten</string>
@@ -333,6 +336,14 @@
     <string name="retag_stale">Nichts geändert: %1$s wurde inzwischen geändert. Zum Aktualisieren ziehen und noch einmal versuchen.</string>
     <string name="retag_refused">Nichts geändert: %1$s kann nicht sicher gespeichert werden.</string>
     <string name="retag_partial">Schlagwörter in %1$d Texten geändert, %2$d übrig. Noch einmal anwenden, um fertig zu werden.</string>
+    <string name="merge_notes">Zu einem Text zusammenführen</string>
+    <plurals name="merge_notes_title">
+        <item quantity="one">1 Text zusammenführen</item>
+        <item quantity="other">%1$d Texte zusammenführen</item>
+    </plurals>
+    <string name="merge_notes_body">Ein neuer Text, in der Reihenfolge der Liste. Die Texte, aus denen er entstand, bleiben erhalten.</string>
+    <string name="merge_notes_confirm">Zusammenführen</string>
+    <string name="merge_notes_done">Zusammengeführt in %1$s</string>
 
     <string name="add_image">Bild hinzufügen</string>
     <string name="add_image_failed">Das Bild konnte nicht in deinen Ordner gelegt werden</string>

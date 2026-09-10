@@ -640,16 +640,46 @@ class Vault(context: Context) {
         withContext(Dispatchers.IO) {
             val clean = title.trim()
             if (clean.isEmpty()) return@withContext CreateResult.Failed("a note needs a title")
+            createNamedAfter(clean, newNoteText(clean, now))
+        }
+
+    /**
+     * One note made of [notes], in the order given, titled [title]. The sources are not touched.
+     *
+     * The library's other multi-select act, and the one the archive's duplicates ask for: four files
+     * titled `Wer geht vor?`, three `Wer nicht will`, the byte-identical `Wer geht vor 2`, `3` and
+     * `4`. Folding them is the user's decision — `CLAUDE.md` says so of deduplicating — and this is
+     * the shape that decision can take without the app deciding anything itself.
+     *
+     * **A new file, and the sources stay.** The merge is a *creation*: the words go into a note that
+     * did not exist, and the notes they came from are exactly as they were. Deleting them is a
+     * separate act with its own confirmation. The alternative — write the merge into the first note and delete the rest — is one
+     * operation with no undo across several of somebody's files, which is a shape this app does not
+     * have and should not grow for a convenience.
+     *
+     * The name comes from [title] through the same rule as any new note, so a merge of the four
+     * `Wer geht vor?` lands as `Wer geht vor 5.md` beside them: a numbered sibling, which is what the
+     * archive already calls a repeat. What goes into the file is [mergedNoteText]'s business.
+     */
+    suspend fun merge(notes: List<IndexedNote>, title: String, now: Instant = Instant.now()): CreateResult =
+        withContext(Dispatchers.IO) {
+            val clean = title.trim()
+            if (clean.isEmpty()) return@withContext CreateResult.Failed("a note needs a title")
+            if (notes.size < 2) return@withContext CreateResult.Failed("a merge needs two notes")
+            createNamedAfter(clean, mergedNoteText(clean, notes.map { it.note }, now))
+        }
+
+    /** Make a file named after [title], holding [text], verified before it is reported. */
+    private suspend fun createNamedAfter(title: String, text: String): CreateResult =
+        withContext(Dispatchers.IO) {
             val parent = rootFolder()
                 ?: return@withContext CreateResult.Failed("the folder is no longer reachable")
 
             val taken = list().files.map { normalizedName(it.name) }.toSet()
-            val stem = fileStem(clean)
+            val stem = fileStem(title)
             val name = generateSequence(0) { it + 1 }
                 .map { if (it == 0) "$stem.md" else "$stem $it.md" }
                 .first { normalizedName(it) !in taken }
-
-            val text = newNoteText(clean, now)
 
             val created = runCatching {
                 createNamed(parent, name)
@@ -1029,6 +1059,56 @@ class Vault(context: Context) {
                 append("updated: ").append(stamp).append('\n')
                 append("tags: []\n")
                 append("---\n\n")
+            }
+        }
+
+        /**
+         * The bytes a merged note is made of: [notes]' writing, one after another, under one block.
+         *
+         * **The block is the archive's shape** — `title`, `created`, `updated`, `tags` — and every
+         * value is decided here, once, in the open:
+         *
+         * - `created` is the *earliest* of the sources'. Dates spanning 2015 to 2025 are what this
+         *   archive is kept for, and a merge that stamped today would make a ten-year-old song a
+         *   note from this morning. A source with no date is skipped; if none has one, today it is.
+         * - `updated` is now. Unlike a rename or a retag this is writing: the body is new text no
+         *   file held before.
+         * - `tags` is the union, in the order met, first occurrence winning. `tags: []` if there
+         *   are none, as the three untagged notes carry it.
+         *
+         * **The bodies are carried, not annotated.** No heading names which source a section came
+         * from and no line is added that the author did not write: the parts are joined by a `---`
+         * rule between blank lines, which is how 21 notes in the archive already separate their
+         * sections. Each part loses the blank line it opened on — that gap is structure, not
+         * writing, and the merged note gets exactly one of its own — and the trailing newlines it
+         * ended on, so the rule sits evenly. A part with no prose at all contributes nothing, not
+         * even a rule: 40 notes are a title and a tag, and a rule over an empty section would be
+         * the merge's own invention.
+         *
+         * Pure and separate so it can be tested against the parser, for the same reason
+         * [newNoteText] is: a note the parser cannot reproduce is born read-only.
+         */
+        fun mergedNoteText(title: String, notes: List<Note>, now: Instant): String {
+            val stamp = Note.stamp(now)
+            val created = notes.mapNotNull { it.frontmatter.created?.takeIf(String::isNotBlank) }
+                .minOrNull() ?: stamp
+            val tags = notes.flatMap { it.tags }.distinct()
+            val parts = notes.map { it.body.removePrefix("\n").trimEnd('\n') }.filter { it.isNotBlank() }
+            return buildString {
+                append("---\n")
+                append("title: ").append(Frontmatter.quoted(title)).append('\n')
+                append("created: ").append(created).append('\n')
+                append("updated: ").append(stamp).append('\n')
+                if (tags.isEmpty()) {
+                    append("tags: []\n")
+                } else {
+                    append("tags:\n")
+                    for (tag in tags) append("  - ").append(Frontmatter.quoted(tag)).append('\n')
+                }
+                append("---\n\n")
+                if (parts.isNotEmpty()) {
+                    append(parts.joinToString("\n\n---\n\n")).append('\n')
+                }
             }
         }
 
