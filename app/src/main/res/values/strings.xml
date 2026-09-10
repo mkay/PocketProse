@@ -119,6 +119,10 @@
          short — they share a narrow row with the value, which is the part being read. -->
     <string name="note_info_words">Words</string>
     <string name="note_info_lines">Lines</string>
+    <!-- Blocks separated by a blank line. Deliberately not "verses": in this archive the count is
+         one out whenever a note opens with a leftover hashtag line, so it names the text rather
+         than the song. -->
+    <string name="note_info_paragraphs">Paragraphs</string>
     <string name="note_info_characters">Characters</string>
     <!-- The note's name in the folder, extension included — what you would look for on a computer
          or in the sync client. The one place this app names the thing on disk, because that is the

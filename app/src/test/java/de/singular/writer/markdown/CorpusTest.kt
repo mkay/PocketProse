@@ -160,6 +160,38 @@ class CorpusTest {
     }
 
     @Test
+    fun `the paragraph count over the archive is what it was measured to be`() {
+        val corpus = corpus()
+        val stats = corpus.values.map { Stats.of(Note.parse(it).body) }
+
+        // 818 blocks over 168 notes, measured on 2026-09-10. The figure is here so that a change to
+        // the block rule has to be argued for against the archive rather than against a fixture.
+        assertEquals(818, stats.sumOf { it.paragraphs })
+
+        // 66 of those blocks are a leftover hashtag line standing alone at the head of a note, which
+        // is why the dialog says "Paragraphs" and never "Verses" — for these notes the count is one
+        // more than the song has verses. The app does not correct that; the files do, when the
+        // author sweeps them.
+        // A line of nothing but hashtags — several notes carry two on it, so "no space in the line"
+        // is not the test; every word on it beginning with `#` is.
+        val leadWithATag = corpus.values.count { text ->
+            val first = Note.parse(text).body.trim().lineSequence().firstOrNull()?.trim().orEmpty()
+            first.isNotEmpty() && first.split(' ').all { it.isNotEmpty() && it.startsWith("#") }
+        }
+        assertEquals(66, leadWithATag)
+
+        // The 39 notes whose entire body is the tag line: one block, and every word on it a hashtag.
+        // Their paragraph count is 1 and none of that 1 is the song, which is the sharpest case for
+        // the name — "1 verse" would be false, "1 paragraph" is exactly what the file holds.
+        val tagOnly = corpus.values.count { text ->
+            val body = Note.parse(text).body
+            val words = body.split(Regex("\\s+")).filter { it.isNotEmpty() }
+            Stats.of(body).paragraphs == 1 && words.isNotEmpty() && words.all { it.startsWith("#") }
+        }
+        assertEquals(39, tagOnly)
+    }
+
+    @Test
     fun `every leftover body hashtag has a frontmatter entry, so clearing the bodies loses nothing`() {
         // The app stopped reading body hashtags on 2026-09-09 — see the Tag rules in `CLAUDE.md`.
         // The bodies still hold them, and the author intends to clear them out by script one day.
