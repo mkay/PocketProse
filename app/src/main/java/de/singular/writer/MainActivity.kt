@@ -62,6 +62,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import de.singular.writer.ui.DrawerWidth
+import de.singular.writer.ui.ExportDialog
+import de.singular.writer.vault.ExportResult
 import de.singular.writer.markdown.Migration
 import de.singular.writer.markdown.Segments
 import de.singular.writer.markdown.Tags
@@ -417,6 +419,31 @@ private fun PocketProseApp(settings: Settings) {
     }
 
 
+    // The export: a dialog with one switch, then the system's file picker for where the zip goes.
+    // The switch's answer is held here between the two, since the picker is an activity result and
+    // the dialog is long gone by the time it comes back.
+    var exporting by remember { mutableStateOf(false) }
+    var exportInline by remember { mutableStateOf(false) }
+    val createZip = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/zip"),
+    ) { uri: Uri? ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        scope.launch {
+            val result = vault.exportZip(uri, exportInline)
+            // Out of the settings and onto the library, where the notice host is; and the folder
+            // is what was just copied, so it is the thing to be looking at.
+            showSettings = false
+            message = when (result) {
+                is ExportResult.Exported -> context.getString(
+                    R.string.export_done,
+                    context.resources.getQuantityString(R.plurals.export_done_notes, result.notes, result.notes),
+                    context.resources.getQuantityString(R.plurals.export_done_attachments, result.attachments, result.attachments),
+                )
+                is ExportResult.Failed -> context.getString(R.string.export_failed, result.reason)
+            }
+        }
+    }
+
     /**
      * `OpenDocumentTree` rather than a path. The app never proposes a location — no `Documents/`
      * default, no folder of its own — because the folder already exists and belongs to the user.
@@ -675,8 +702,23 @@ private fun PocketProseApp(settings: Settings) {
                 showSettings = false
                 offeringMove = true
             },
+            onExport = { exporting = true },
             onClose = { showSettings = false },
         )
+        if (exporting) {
+            ExportDialog(
+                notes = index.size,
+                onDismiss = { exporting = false },
+                onExport = { inline ->
+                    exporting = false
+                    exportInline = inline
+                    // The folder's name and the day, which is what somebody looking at a Downloads
+                    // folder in a year will want to know.
+                    val day = java.time.LocalDate.now().toString()
+                    createZip.launch("${folderName ?: "notes"} $day.zip")
+                },
+            )
+        }
         return
     }
 

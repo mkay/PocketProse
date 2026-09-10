@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.provider.DocumentsContract
+import de.singular.writer.markdown.Export
 import de.singular.writer.markdown.Frontmatter
 import de.singular.writer.markdown.Migration
 import de.singular.writer.markdown.Note
@@ -830,8 +831,18 @@ class Vault(context: Context) {
 
     /** The `attachments/` subfolder, made if the folder has not got one yet. */
     private fun attachmentsFolder(root: Uri): Uri? {
+        findAttachmentsFolder(root)?.let { return it }
+        return runCatching {
+            DocumentsContract.createDocument(
+                resolver, root, DocumentsContract.Document.MIME_TYPE_DIR, ATTACHMENTS,
+            )
+        }.getOrNull()
+    }
+
+    /** The `attachments/` subfolder if there is one, and nothing made if there is not. */
+    private fun findAttachmentsFolder(root: Uri): Uri? {
         val tree = this.root ?: return null
-        val existing = runCatching {
+        return runCatching {
             resolver.query(
                 DocumentsContract.buildChildDocumentsUriUsingTree(
                     tree,
@@ -852,13 +863,108 @@ class Vault(context: Context) {
                     ?.let { documentUri(tree, c.getString(0)) }
             }
         }.getOrNull()
-        if (existing != null) return existing
-        return runCatching {
-            DocumentsContract.createDocument(
-                resolver, root, DocumentsContract.Document.MIME_TYPE_DIR, ATTACHMENTS,
-            )
-        }.getOrNull()
     }
+
+    /**
+     * The folder as a zip: every note and every attachment, under the folder's own name, written to
+     * [destination] — a document the user has just created through `CreateDocument`.
+     *
+     * A zip rather than a folder, and the reasons are in `PLAN.md`'s phase 8: one file and one
+     * picker; a failure part way is one file to delete; and a zip entry carries an mtime where a
+     * SAF copy cannot, so each note's entry is stamped with its `updated` and the archive's dates
+     * travel with the files even to a tool that reads mtimes. Entry names are NFC and UTF-8 with
+     * the EFS flag, which is what `ZipOutputStream` writes by default, and they sit under
+     * `<folder name>/` so unpacking does not spray 168 files into wherever it was opened.
+     *
+     * With [inline] on, each note goes through `Export.render`, which writes its tags and title
+     * back into the body for an editor that reads them there — see that file. A note the parser
+     * cannot reproduce byte for byte is copied as it is even then, and counted in
+     * [ExportResult.Exported.verbatim]: transforming a note the app has misread is how a copy
+     * stops being a copy.
+     *
+     * **Every note is read from disk, not from the index.** The copy is the file, not the parse;
+     * the index is a view that may be a refresh behind.
+     *
+     * Nothing in the folder is touched. This is the one write path in the app that carries none of
+     * `save`'s atomic-write, conflict or no-undo weight, which is why the inline transformation
+     * lives here and not in the save path — the same operation against the live folder would need
+     * all three.
+     */
+    suspend fun exportZip(destination: Uri, inline: Boolean): ExportResult =
+        withContext(Dispatchers.IO) {
+            val folder = rootFolder() ?: return@withContext ExportResult.Failed("the folder is no longer reachable")
+            val name = rootName() ?: "notes"
+            val listing = list()
+            if (listing.error != null && listing.error != VaultFailure.FOLDER_EMPTY) {
+                return@withContext ExportResult.Failed("the folder could not be listed")
+            }
+
+            var notes = 0
+            var attachments = 0
+            var verbatim = 0
+            val written = runCatching {
+                val out = resolver.openOutputStream(destination, "wt") ?: error("no stream")
+                java.util.zip.ZipOutputStream(java.io.BufferedOutputStream(out)).use { zip ->
+                    for (file in listing.files) {
+                        val text = read(file.uri) ?: error("${file.name} could not be read")
+                        val note = Note.parse(text)
+                        val bytes = when {
+                            !inline -> text
+                            note.render() != text -> { verbatim++; text }
+                            else -> Export.render(note, inline = true)
+                        }.toByteArray(Charsets.UTF_8)
+                        val entry = java.util.zip.ZipEntry("$name/${normalizedName(file.name)}")
+                        instantOf(note.frontmatter.updated)?.let { entry.time = it.toEpochMilli() }
+                        zip.putNextEntry(entry)
+                        zip.write(bytes)
+                        zip.closeEntry()
+                        notes++
+                    }
+                    findAttachmentsFolder(folder)?.let { dir ->
+                        for ((childName, uri) in children(dir)) {
+                            val entry = java.util.zip.ZipEntry("$name/$ATTACHMENTS/${normalizedName(childName)}")
+                            zip.putNextEntry(entry)
+                            resolver.openInputStream(uri)?.use { it.copyTo(zip) }
+                                ?: error("$childName could not be read")
+                            zip.closeEntry()
+                            attachments++
+                        }
+                    }
+                }
+            }
+            written.exceptionOrNull()?.let { failure ->
+                // A truncated zip is worse than none: somebody unpacks it later and trusts it.
+                runCatching { DocumentsContract.deleteDocument(resolver, destination) }
+                return@withContext ExportResult.Failed(failure.message ?: "the zip could not be written")
+            }
+            ExportResult.Exported(notes, attachments, verbatim)
+        }
+
+    /** The files directly inside [dir], by display name. Folders are skipped. */
+    private fun children(dir: Uri): List<Pair<String, Uri>> {
+        val tree = root ?: return emptyList()
+        val id = runCatching { DocumentsContract.getDocumentId(dir) }.getOrNull() ?: return emptyList()
+        val query = runCatching { DocumentsContract.buildChildDocumentsUriUsingTree(tree, id) }.getOrNull()
+            ?: return emptyList()
+        val columns = arrayOf(
+            DocumentsContract.Document.COLUMN_DOCUMENT_ID,
+            DocumentsContract.Document.COLUMN_DISPLAY_NAME,
+            DocumentsContract.Document.COLUMN_MIME_TYPE,
+        )
+        val out = ArrayList<Pair<String, Uri>>()
+        runCatching { resolver.query(query, columns, null, null, null) }.getOrNull()?.use {
+            while (it.moveToNext()) {
+                if (it.getString(2) == DocumentsContract.Document.MIME_TYPE_DIR) continue
+                val childId = it.getString(0) ?: continue
+                val childName = it.getString(1) ?: continue
+                out += childName to documentUri(tree, childId)
+            }
+        }
+        return out.sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.first })
+    }
+
+    private fun instantOf(stamp: String?): Instant? =
+        stamp?.let { runCatching { Instant.parse(it) }.getOrNull() }
 
     /** Every name already in [folder], normalised, so a new one can avoid them. */
     private fun childNames(folder: Uri): Set<String> {

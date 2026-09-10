@@ -187,6 +187,26 @@
     <string name="move_tags_confirm">Verschieben</string>
     <string name="move_tags_body">Pocket Prose hält %1$s aus deinem Text heraus, sodass sie verwendet werden können, ohne im Weg zu sein. Beim Verschieben werden diese Dateien neu geschrieben: Die betreffenden Zeilen verschwinden, sonst ändert sich nichts.</string>
     <string name="settings_move_tags_caption">Verschieben holt deine %1$s aus deinem Text heraus, dorthin wo die App sie nutzen kann.</string>
+    <string name="settings_export">Als Zip exportieren</string>
+    <string name="settings_export_subtitle">Eine Kopie deines Ordners, als eine Datei</string>
+    <string name="export_title">Als Zip exportieren</string>
+    <plurals name="export_body">
+        <item quantity="one">Ein Zip mit deinem 1 Text und seinen Anhängen, wie sie jetzt sind. Zum Wiederherstellen entpackst du es in deinen Ordner – Pocket Prose übernimmt das nicht.</item>
+        <item quantity="other">Ein Zip mit deinen %1$d Texten und ihren Anhängen, wie sie jetzt sind. Zum Wiederherstellen entpackst du es in deinen Ordner – Pocket Prose übernimmt das nicht.</item>
+    </plurals>
+    <string name="export_inline">Schlagwörter und Titel in den Text schreiben</string>
+    <string name="export_inline_caption">Für Editoren, die sie dort lesen. Dein Ordner bleibt, wie er ist.</string>
+    <string name="export_confirm">Exportieren</string>
+    <string name="export_done">%1$s und %2$s exportiert</string>
+    <plurals name="export_done_notes">
+        <item quantity="one">1 Text</item>
+        <item quantity="other">%1$d Texte</item>
+    </plurals>
+    <plurals name="export_done_attachments">
+        <item quantity="one">1 Anhang</item>
+        <item quantity="other">%1$d Anhänge</item>
+    </plurals>
+    <string name="export_failed">Nichts exportiert: %1$s</string>
     <string name="drawer_tags_in_text_why">Pocket Prose hält diese aus deinem Text heraus. Verschiebe sie, dann erscheinen sie in der Liste.</string>
 
     <!-- ===== Der Rest, nachgezogen ===== -->

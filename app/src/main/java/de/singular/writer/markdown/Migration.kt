@@ -296,6 +296,38 @@ object Migration {
         )
     }
 
+    /**
+     * What [body] already holds of its own filing: the tags written on lines of their own, and the
+     * heading it opens with, if the first line that is not a tag line is one.
+     *
+     * For the export, which is this file's inverse and must not double what a body still carries —
+     * 165 notes in the archive kept their tag line when the migration left them alone, and an
+     * export that wrote `#lyrics/snippet` above each of them would say every tag twice. It asks
+     * here rather than running [HASHTAG] itself, which is what keeps the grammar with one owner.
+     *
+     * [heading] is read regardless of whether the note has a `title:` — unlike [lift], which
+     * leaves a titled note's heading alone. The question here is not "is this a title" but "does
+     * this note already open with a heading", because a second one above it would be wrong
+     * whatever the first one says. [at] is the index of that heading's physical line, for a caller
+     * that has to write under it.
+     */
+    data class Carried(val tags: Set<String>, val heading: String?, val at: Int)
+
+    fun carried(body: String): Carried {
+        val lines = physicalLines(body)
+        val tags = lines.filter { isTagLine(content(it)) }
+            .flatMap { content(it).trim().split(Regex("""\s+""")) }
+            .map(Tags::normalize)
+            .toSet()
+        val at = lines.indices.firstOrNull {
+            val line = content(lines[it])
+            line.isNotBlank() && !isTagLine(line)
+        }
+        val heading = at?.let { TITLE.find(content(lines[it]))?.groupValues?.get(1)?.trim() }
+            ?.takeIf { it.isNotEmpty() }
+        return Carried(tags, heading, if (heading != null) at!! else -1)
+    }
+
     /** [body] without its tag lines, how many went, and the tags they carried in reading order. */
     private fun strip(body: String): Triple<String, Int, List<String>> {
         val lines = physicalLines(body)
@@ -344,7 +376,7 @@ object Migration {
         }
 
     /** Lines with their terminators kept, so rejoining them is concatenation. */
-    private fun physicalLines(text: String): List<String> =
+    internal fun physicalLines(text: String): List<String> =
         Regex("""[^\n]*\n|[^\n]+""").findAll(text).map { it.value }.toList()
 
     /** A line without its terminator. */

@@ -65,6 +65,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.unit.dp
 import de.singular.writer.ProseFont
 import de.singular.writer.ProseLeading
@@ -130,6 +131,7 @@ fun SettingsScreen(
     // to name what it would move as well as how much of it.
     moveTags: Migration.Survey?,
     onMoveTags: () -> Unit,
+    onExport: () -> Unit,
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -188,6 +190,7 @@ fun SettingsScreen(
                     onChooseFolder = onChooseFolder,
                     moveTags = moveTags,
                     onMoveTags = onMoveTags,
+                    onExport = onExport,
                 )
             }
 
@@ -385,6 +388,7 @@ private fun SystemSettings(
     onChooseFolder: () -> Unit,
     moveTags: Migration.Survey?,
     onMoveTags: () -> Unit,
+    onExport: () -> Unit,
 ) {
     SettingsSectionLabel(R.string.settings_section_appearance)
     ThemeModeChips(
@@ -435,6 +439,17 @@ private fun SystemSettings(
         onClick = onChooseFolder,
     )
     SettingsCaption(R.string.settings_folder_caption)
+
+    // Under the folder, because it is about the folder: a copy of it, as one file, wherever the
+    // user puts it. Shown only once there is a folder to copy.
+    if (folderName != null) {
+        SettingActionRow(
+            label = R.string.settings_export,
+            subtitle = stringResource(R.string.settings_export_subtitle),
+            icon = ImageVector.vectorResource(R.drawable.ic_archive),
+            onClick = onExport,
+        )
+    }
 
     // Under the folder, because it is a fact about the folder rather than a preference — and it is
     // here at all only so that dismissing the banner is not a door that locks behind you. It shows

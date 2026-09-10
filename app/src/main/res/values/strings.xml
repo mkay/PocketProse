@@ -549,6 +549,36 @@
     </plurals>
     <string name="settings_move_tags_caption">Moving them takes your %1$s out of your writing, to where the app can use them.</string>
 
+    <!-- ===== Export ===== -->
+
+    <!-- The Settings row. "Export", never "backup": the app cannot restore, and the dialog says
+         what restoring is. -->
+    <string name="settings_export">Export as zip</string>
+    <string name="settings_export_subtitle">A copy of your folder, as one file</string>
+    <string name="export_title">Export as zip</string>
+    <!-- %1$d is the folder's note count. The last sentence is the one that matters: the app has no
+         restore, and the reader should know what the file is for before they make it. -->
+    <plurals name="export_body">
+        <item quantity="one">A zip of your 1 note and its attachments, as they are now. To restore, unzip it into your folder — Pocket Prose does not do that for you.</item>
+        <item quantity="other">A zip of your %1$d notes and their attachments, as they are now. To restore, unzip it into your folder — Pocket Prose does not do that for you.</item>
+    </plurals>
+    <!-- The switch. Off by default; on, the copy's notes carry their tags and title in the text
+         as well as in the frontmatter. -->
+    <string name="export_inline">Write tags and titles into the text</string>
+    <string name="export_inline_caption">For editors that read them there. Your folder stays as it is.</string>
+    <string name="export_confirm">Export</string>
+    <!-- After the export. %1$s and %2$s are the two counted phrases below. -->
+    <string name="export_done">Exported %1$s and %2$s</string>
+    <plurals name="export_done_notes">
+        <item quantity="one">1 note</item>
+        <item quantity="other">%1$d notes</item>
+    </plurals>
+    <plurals name="export_done_attachments">
+        <item quantity="one">1 attachment</item>
+        <item quantity="other">%1$d attachments</item>
+    </plurals>
+    <string name="export_failed">Nothing was exported: %1$s</string>
+
     <!-- ===== About ===== -->
 
     <!-- The version line. %1$s is a version like "0.1 (1)". -->
