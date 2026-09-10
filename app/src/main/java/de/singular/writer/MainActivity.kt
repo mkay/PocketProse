@@ -78,6 +78,7 @@ import de.singular.writer.ui.LibraryScreen
 import de.singular.writer.ui.PocketProseTheme
 import de.singular.writer.ui.SearchDialog
 import de.singular.writer.ui.SettingsScreen
+import de.singular.writer.ui.SelectionTagSheet
 import de.singular.writer.ui.SupportDialog
 import de.singular.writer.ui.TagDrawer
 import de.singular.writer.ui.isDark
@@ -469,6 +470,10 @@ private fun PocketProseApp(settings: Settings) {
     // one that was ticked.
     val selected = remember { mutableStateListOf<String>() }
     var deletingSelection by remember { mutableStateOf(false) }
+    var taggingSelection by remember { mutableStateOf(false) }
+    // True while a selection's tags are being written. Same job as `renameRunning`: it picks the
+    // sentence the loading sheet says.
+    var retagRunning by remember { mutableStateOf(false) }
 
     fun endSelecting() {
         selecting = false
@@ -549,6 +554,44 @@ private fun PocketProseApp(settings: Settings) {
                 }
             },
             onDismiss = { deletingSelection = false },
+        )
+    }
+
+    if (taggingSelection) {
+        val notes = index.notes.filter { it.file.uri.toString() in selected }
+        SelectionTagSheet(
+            counts = notes.flatMap { it.tags }.groupingBy { it }.eachCount(),
+            total = notes.size,
+            known = index.allTags,
+            onDismiss = { taggingSelection = false },
+            onApply = { add, remove ->
+                taggingSelection = false
+                scope.launch {
+                    // The same borrowed `loading` as a rename, for the same reason: every ticked
+                    // row's chips are being rewritten underneath the list.
+                    retagRunning = true
+                    loading = true
+                    message = when (val result = vault.retag(notes, add, remove)) {
+                        is RenameResult.Renamed -> {
+                            endSelecting()
+                            context.resources.getQuantityString(R.plurals.retag_done, result.count, result.count)
+                        }
+                        is RenameResult.Stale ->
+                            context.getString(R.string.retag_stale, result.notes.first())
+                        is RenameResult.Refused ->
+                            context.getString(R.string.retag_refused, result.notes.first())
+                        // The selection is kept, as after a partial delete: applying the same sheet
+                        // again finishes the notes that were not written.
+                        is RenameResult.Partial ->
+                            context.getString(R.string.retag_partial, result.renamed, result.remaining.size)
+                        // Every note already carried what was asked for. Nothing was written and
+                        // there is nothing to say.
+                        RenameResult.NoSuchTag -> null
+                    }
+                    retagRunning = false
+                    refresh()
+                }
+            },
         )
     }
 
@@ -878,11 +921,13 @@ private fun PocketProseApp(settings: Settings) {
             loading = loading,
             loadingSays = when {
                 renameRunning -> R.string.rename_tag_working
+                retagRunning -> R.string.retag_working
                 movingTags -> R.string.move_tags_working
                 else -> R.string.library_loading
             },
             loadingCaption = when {
                 renameRunning -> R.string.rename_tag_caption
+                retagRunning -> R.string.retag_caption
                 movingTags -> R.string.move_tags_caption
                 else -> null
             },
@@ -922,6 +967,7 @@ private fun PocketProseApp(settings: Settings) {
                 shown.forEach { selected.add(it.file.uri.toString()) }
             },
             onEndSelecting = { endSelecting() },
+            onTagSelected = { taggingSelection = true },
             onDeleteSelected = { deletingSelection = true },
             // Not while a search or a tag filter is on: the banner counts the whole folder, and a
             // sentence about 165 notes over a list of three reads as being about the three.

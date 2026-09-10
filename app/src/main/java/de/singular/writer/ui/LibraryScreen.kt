@@ -78,6 +78,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.res.pluralStringResource
 import de.singular.writer.R
 import de.singular.writer.RowDensity
@@ -135,6 +136,7 @@ fun LibraryScreen(
     onStartSelecting: (IndexedNote?) -> Unit,
     onSelectAll: () -> Unit,
     onEndSelecting: () -> Unit,
+    onTagSelected: () -> Unit,
     onDeleteSelected: () -> Unit,
     onOpenDrawer: () -> Unit,
     onChooseFolder: () -> Unit,
@@ -251,6 +253,14 @@ fun LibraryScreen(
                             Icon(
                                 imageVector = Icons.Filled.SelectAll,
                                 contentDescription = stringResource(R.string.select_all),
+                            )
+                        }
+                        // Filing before deleting: the common act sits nearer the thumb than the
+                        // destructive one, and the destructive one keeps the edge.
+                        IconButton(onClick = onTagSelected, enabled = selected.isNotEmpty()) {
+                            Icon(
+                                imageVector = ImageVector.vectorResource(R.drawable.ic_label_more),
+                                contentDescription = stringResource(R.string.retag_selection),
                             )
                         }
                         // Enabled only with something ticked, and tinted `error` — the one colour
@@ -601,7 +611,11 @@ private fun ListOptionsMenu(
         }
 
         HorizontalDivider(Modifier.padding(vertical = 4.dp))
-        CheckableItem(stringResource(R.string.select_notes), checked = false) {
+        CheckableItem(
+            stringResource(R.string.select_notes),
+            checked = false,
+            icon = ImageVector.vectorResource(R.drawable.ic_library_add_check),
+        ) {
             open = false
             onSelectNotes()
         }

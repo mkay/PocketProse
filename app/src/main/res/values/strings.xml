@@ -643,6 +643,34 @@
          %2$s names one that was not — the one to go and look at. -->
     <string name="delete_notes_partial">Deleted %1$d, but %2$s is still there. Pull to refresh and try again.</string>
 
+    <!-- ===== Tagging a selection ===== -->
+
+    <!-- The selection bar button that opens the sheet. -->
+    <string name="retag_selection">Tag selected notes</string>
+    <!-- Heading of the sheet. %1$d is how many notes are ticked. -->
+    <plurals name="retag_title">
+        <item quantity="one">Tags for 1 note</item>
+        <item quantity="other">Tags for %1$d notes</item>
+    </plurals>
+    <!-- The button that writes. Nothing is written before it. -->
+    <string name="retag_apply">Apply</string>
+    <!-- Over the chips the selection carries, wholly or in part. -->
+    <string name="retag_on_selection">On these notes</string>
+    <!-- Spoken while the tags are being written; the loading sheet's sentence. -->
+    <string name="retag_working">Changing tags on the selected notes</string>
+    <string name="retag_caption">Tagging…</string>
+    <!-- After the write. %1$d is the number of notes rewritten — a note already carrying what was
+         asked for counts, since it ends up in the same state. -->
+    <plurals name="retag_done">
+        <item quantity="one">Tags changed in 1 note</item>
+        <item quantity="other">Tags changed in %1$d notes</item>
+    </plurals>
+    <!-- The same three outcomes a rename has. Nothing written because the folder moved, nothing
+         written because a note cannot be reproduced, or stopped part way. -->
+    <string name="retag_stale">Nothing was changed: %1$s changed on disk. Pull to refresh and try again.</string>
+    <string name="retag_refused">Nothing was changed: %1$s cannot be saved safely.</string>
+    <string name="retag_partial">Tags changed in %1$d notes, %2$d left. Apply again to finish.</string>
+
     <!-- The editor menu entry that opens the photo picker. Says "image" and not "attachment":
          the picker only offers pictures, and the archive's other attachments are PDFs that came
          from elsewhere. -->

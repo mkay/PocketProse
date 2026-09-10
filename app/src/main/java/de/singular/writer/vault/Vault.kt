@@ -430,6 +430,60 @@ class Vault(context: Context) {
         }
 
     /**
+     * Put [add] on every one of [notes] and take [remove] off every one of them, or do nothing.
+     *
+     * The library's multi-select filing: a handful of notes ticked, then a sheet where a tag is
+     * switched on for all of them or off for all of them. It is [renameTag] with a different
+     * predicate — two passes, the first read-only, the second writing through [save] so that
+     * `updated` stays where it was on every note — and it reports through [RenameResult] because the
+     * outcomes are the same four: everything written, nothing written because the folder moved,
+     * nothing written because a note cannot be reproduced, or stopped part way. A note that already
+     * says what it should is a success, which is what makes running it again after a
+     * [RenameResult.Partial] finish the job rather than start over.
+     *
+     * [RenameResult.NoSuchTag] here means the sheet asked for nothing that any of the notes did not
+     * already have — every note was left alone, and there is nothing to say.
+     */
+    suspend fun retag(notes: List<IndexedNote>, add: List<String>, remove: Set<String>): RenameResult =
+        withContext(Dispatchers.IO) {
+            val wanted = add.map(Tags::normalize).distinct()
+            val affected = notes.filter { note ->
+                note.tags.any { it in remove } || wanted.any { it !in note.tags }
+            }
+            if (affected.isEmpty()) return@withContext RenameResult.NoSuchTag
+
+            val refused = affected.filterNot { it.roundTrips }.map { it.file.name }
+            if (refused.isNotEmpty()) return@withContext RenameResult.Refused(refused)
+
+            val stale = affected.filter { note ->
+                val current = read(note.file.uri)
+                current == null || sha256(current) != note.contentHash
+            }.map { it.file.name }
+            if (stale.isNotEmpty()) return@withContext RenameResult.Stale(stale)
+
+            var written = 0
+            for ((i, note) in affected.withIndex()) {
+                // Kept ones in their own order, new ones after — `Note.withTags` appends anyway, and
+                // the frontmatter contract says add to the end rather than sort.
+                val filed = note.tags.filterNot { it in remove } + wanted.filterNot { it in note.tags }
+                when (val result = save(note, note.note.body, filed)) {
+                    is SaveResult.Saved, SaveResult.Unchanged -> written++
+                    else -> {
+                        val remaining = affected.drop(i).map { it.file.name }
+                        val reason = when (result) {
+                            is SaveResult.Conflict -> "a note changed while the tags were being written"
+                            is SaveResult.Failed -> result.reason
+                            SaveResult.Refused -> "a note could not be reproduced byte for byte"
+                            else -> "the change stopped"
+                        }
+                        return@withContext RenameResult.Partial(written, remaining, reason)
+                    }
+                }
+            }
+            RenameResult.Renamed(written)
+        }
+
+    /**
      * Move every note's filing out of the folder's text and into its frontmatter — once, on consent.
      *
      * The migration a folder from another editor needs: a tag written as `#lyrics/snippet` in the

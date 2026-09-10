@@ -300,7 +300,7 @@
     <string name="sort_length_asc">Kürzeste zuerst</string>
     <string name="density_full">Volle Zeilen</string>
     <string name="density_compact">Kompakte Zeilen</string>
-    <string name="select_notes">Texte auswählen</string>
+    <string name="select_notes">Mehrfachauswahl</string>
     <plurals name="selected_count">
         <item quantity="one">1 ausgewählt</item>
         <item quantity="other">%1$d ausgewählt</item>
@@ -317,6 +317,22 @@
         <item quantity="other">%1$d Texte gelöscht</item>
     </plurals>
     <string name="delete_notes_partial">%1$d gelöscht, aber %2$s ist noch da. Zum Aktualisieren ziehen und noch einmal versuchen.</string>
+    <string name="retag_selection">Ausgewählte Texte verschlagworten</string>
+    <plurals name="retag_title">
+        <item quantity="one">Schlagwörter für 1 Text</item>
+        <item quantity="other">Schlagwörter für %1$d Texte</item>
+    </plurals>
+    <string name="retag_apply">Anwenden</string>
+    <string name="retag_on_selection">Auf diesen Texten</string>
+    <string name="retag_working">Die Schlagwörter der ausgewählten Texte werden geändert</string>
+    <string name="retag_caption">Wird verschlagwortet…</string>
+    <plurals name="retag_done">
+        <item quantity="one">Schlagwörter in 1 Text geändert</item>
+        <item quantity="other">Schlagwörter in %1$d Texten geändert</item>
+    </plurals>
+    <string name="retag_stale">Nichts geändert: %1$s wurde inzwischen geändert. Zum Aktualisieren ziehen und noch einmal versuchen.</string>
+    <string name="retag_refused">Nichts geändert: %1$s kann nicht sicher gespeichert werden.</string>
+    <string name="retag_partial">Schlagwörter in %1$d Texten geändert, %2$d übrig. Noch einmal anwenden, um fertig zu werden.</string>
 
     <string name="add_image">Bild hinzufügen</string>
     <string name="add_image_failed">Das Bild konnte nicht in deinen Ordner gelegt werden</string>

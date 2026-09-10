@@ -31,6 +31,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.Button
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -38,12 +39,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.toMutableStateList
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
@@ -190,6 +193,151 @@ fun TagSheet(
     }
 }
 
+/**
+ * The same sheet for a selection of notes: every tag in the folder, switchable on for all of them
+ * or off for all of them.
+ *
+ * **Three states, because a selection has three.** A tag is on every ticked note, on none of them,
+ * or on some — and the third is the common case, since a selection is usually made to *fix* filing
+ * rather than to admire it. A mixed chip shows its count, `radio 2/5`, and a tap on it puts the tag
+ * on all five; a second tap takes it off all five. There is no way back to "some", which is the one
+ * state nobody opened this sheet to produce.
+ *
+ * **Nothing is written until Apply.** The note's own [TagSheet] toggles live because each tap edits
+ * a draft that the editor saves later as one file; here each tap would be a write across the whole
+ * selection, so the sheet collects decisions and hands them over once. Dismissing hands over none.
+ *
+ * Grouped as the note's sheet groups: what the selection carries first — wholly or in part — then
+ * the rest of the folder, both alphabetical and both fixed for as long as the sheet is open.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SelectionTagSheet(
+    counts: Map<String, Int>,
+    total: Int,
+    known: Set<String>,
+    onApply: (add: List<String>, remove: Set<String>) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val state = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    // What the sheet has decided so far: true puts the tag on every note, false takes it off every
+    // note, absent leaves the notes as they are. Only the decisions travel back — a chip that was
+    // tapped on and then off again is an absence, not a removal.
+    val decided = remember(known) { mutableStateMapOf<String, Boolean>() }
+
+    val carried = remember(known, counts) {
+        (counts.keys).sortedWith(String.CASE_INSENSITIVE_ORDER).toMutableStateList()
+    }
+    val rest = remember(known, counts) {
+        (known - counts.keys).sortedWith(String.CASE_INSENSITIVE_ORDER)
+    }
+
+    fun stateOf(tag: String): ChipState {
+        decided[tag]?.let { return if (it) ChipState.ALL else ChipState.NONE }
+        val n = counts[tag] ?: 0
+        return when {
+            n == 0 -> ChipState.NONE
+            n == total -> ChipState.ALL
+            else -> ChipState.SOME
+        }
+    }
+
+    // On wins from anywhere but "on": a mixed chip goes to all before it goes to none, because
+    // filing is the likelier intent and taking a tag off notes that carry it deserves a plain
+    // signal on screen first.
+    fun toggle(tag: String) {
+        decided[tag] = stateOf(tag) != ChipState.ALL
+    }
+
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = state) {
+        Column(
+            Modifier
+                .padding(bottom = 12.dp)
+                .heightIn(max = 460.dp)
+                .verticalScroll(rememberScrollState()),
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth().padding(start = 20.dp, end = 16.dp, bottom = 12.dp),
+            ) {
+                Box(Modifier.weight(1f)) {
+                    DialogHeading(
+                        Icons.AutoMirrored.Outlined.Label,
+                        pluralStringResource(R.plurals.retag_title, total, total),
+                    )
+                }
+                // Filled where the note's sheet has an outlined Done: that one is a way out and
+                // this one is the write.
+                Button(
+                    onClick = {
+                        onApply(
+                            decided.filterValues { it }.keys.toList(),
+                            decided.filterValues { !it }.keys,
+                        )
+                    },
+                    enabled = decided.isNotEmpty(),
+                    shape = ControlShape,
+                ) {
+                    Text(text = stringResource(R.string.retag_apply))
+                }
+            }
+
+            NewTagField(
+                onAdd = { tag ->
+                    // A tag typed here joins the top group, so the answer to typing is always a
+                    // filled chip in the first cluster — the same promise the note's sheet makes.
+                    if (tag !in carried && tag !in rest) carried.add(0, tag)
+                    decided[tag] = true
+                },
+            )
+
+            if (carried.isNotEmpty()) {
+                GroupLabel(stringResource(R.string.retag_on_selection))
+                SelectionChips(carried, counts, total, ::stateOf, ::toggle)
+            }
+            if (rest.isNotEmpty()) {
+                GroupLabel(stringResource(R.string.tag_sheet_from_folder))
+                SelectionChips(rest, counts, total, ::stateOf, ::toggle)
+            }
+        }
+    }
+}
+
+/** Which of a selection's notes a tag is on. */
+private enum class ChipState { NONE, SOME, ALL }
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun SelectionChips(
+    tags: List<String>,
+    counts: Map<String, Int>,
+    total: Int,
+    stateOf: (String) -> ChipState,
+    onToggle: (String) -> Unit,
+) {
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+    ) {
+        for (tag in tags) {
+            when (stateOf(tag)) {
+                ChipState.ALL -> TagChip(tag = tag, checked = true, onClick = { onToggle(tag) })
+                ChipState.NONE -> TagChip(tag = tag, checked = false, onClick = { onToggle(tag) })
+                // The count is the chip's label for as long as it is mixed: `radio 2/5` says exactly
+                // what a tap will change, where a half-filled chip would only say "something".
+                ChipState.SOME -> TagChip(
+                    tag = tag,
+                    checked = false,
+                    detail = "${counts[tag]}/$total",
+                    onClick = { onToggle(tag) },
+                )
+            }
+        }
+    }
+}
+
 /** The small heading over a cluster of chips. Quiet, because it labels rather than says. */
 @Composable
 private fun GroupLabel(text: String) {
@@ -306,7 +454,7 @@ private fun NewTagField(onAdd: (String) -> Unit) {
  * in a 6dp box because it is being read, and this one is being aimed at.
  */
 @Composable
-private fun TagChip(tag: String, checked: Boolean, onClick: () -> Unit) {
+private fun TagChip(tag: String, checked: Boolean, onClick: () -> Unit, detail: String? = null) {
     val scheme = MaterialTheme.colorScheme
     Surface(
         onClick = onClick,
@@ -325,6 +473,13 @@ private fun TagChip(tag: String, checked: Boolean, onClick: () -> Unit) {
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = if (checked) FontWeight.Medium else FontWeight.Normal,
             )
+            if (detail != null) {
+                Text(
+                    text = detail,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
             if (checked) {
                 Icon(
                     imageVector = Icons.Filled.Close,
