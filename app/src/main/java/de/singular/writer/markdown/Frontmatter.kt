@@ -84,6 +84,14 @@ class Frontmatter private constructor(
      * a bare `tags:`, and the literal `tags: []` that the three untagged notes carry. A missing
      * `tags` key and an empty list are the same answer here — no tags — but they are *not* the same
      * bytes, and [withTags] keeps whichever the file already had.
+     *
+     * Two shapes the archive does *not* use are read anyway, because a folder this app points at is
+     * also opened by other editors and by hand: a single tag written as a bare scalar
+     * (`tags: lyrics/snippet`) and a block list whose items sit at column zero, which YAML permits
+     * under a key. Both used to fall through the block-list scan and read as *no tags at all* —
+     * and, worse, [withTags] would then write over what it had not seen, so the tag left the file
+     * on the next edit. Reading a shape wrongly is a bug; reading it wrongly and then saving is data
+     * loss, and the folder is shared with tools that write these shapes.
      */
     val tags: List<String>
         get() {
@@ -92,13 +100,16 @@ class Frontmatter private constructor(
             val inline = lines[at].substringAfter(':').trim()
             if (inline == "[]") return emptyList()
             if (inline.startsWith("[")) {
-                return inline.removeSurrounding("[", "]")
-                    .split(',')
+                return splitFlow(inline.removeSurrounding("[", "]"))
                     .map { unquote(it.trim()) }
                     .filter { it.isNotEmpty() }
             }
+            // A value on the key's own line and no list under it: one tag, written as a scalar. A
+            // `#` is excluded because after `: ` YAML reads it as a comment, not as a value — and a
+            // comment above a perfectly good block list must not become a tag named `#`.
+            if (inline.isNotEmpty() && !inline.startsWith("#")) return listOf(unquote(inline))
             return lines.drop(at + 1)
-                .takeWhile { it.startsWith(" ") || it.startsWith("\t") }
+                .takeWhile(::isListItem)
                 .mapNotNull { line ->
                     line.trim().takeIf { it.startsWith("- ") }?.removePrefix("- ")?.let(::unquote)
                 }
@@ -132,11 +143,17 @@ class Frontmatter private constructor(
     /**
      * This block with the `tags` list replaced.
      *
-     * The shape is preserved: a note that had a block list keeps a block list, one that had
-     * `tags: []` keeps the inline form when the new list is empty too, and the indentation and
-     * quoting of the existing entries are copied onto the new ones. A note whose tags all went away
-     * collapses to `tags: []`, which is what the three untagged notes in the archive look like — the
-     * app writes the form the archive already uses rather than inventing a third.
+     * The shape is preserved: a note that had a block list keeps a block list, one that had a flow
+     * list keeps a flow list, one that had `tags: []` keeps the inline form when the new list is
+     * empty too, and the indentation, separator and quoting of the existing entries are copied onto
+     * the new ones. A note whose tags all went away collapses to `tags: []`, which is what the three
+     * untagged notes in the archive look like — the app writes the form the archive already uses
+     * rather than inventing a third.
+     *
+     * The one shape that is deliberately *not* carried over is `tags: []` gaining its first tag: it
+     * becomes a block list, because that is what all 165 tagged notes in the archive are. An empty
+     * list has no entries to copy a style from, so there is nothing to preserve and the archive's own
+     * shape is the better guess. A non-empty flow list, by contrast, states its style outright.
      */
     fun withTags(newTags: List<String>): Frontmatter {
         if (!present) return this
@@ -152,14 +169,38 @@ class Frontmatter private constructor(
                 newTags.map { "  - " + quoteLike(lines.firstOrNull { l -> l.startsWith("title:") }, it) }
             return of(lines + written)
         }
-        val existing = lines.drop(at + 1)
-            .takeWhile { it.startsWith(" ") || it.startsWith("\t") }
+        // The same span [tags] reads, and it has to stay the same span: a list item this misses is
+        // one that survives below the rebuilt block and gets counted twice, and a scalar this does
+        // not know about is one that vanishes when the key's line is replaced.
+        val existing = lines.drop(at + 1).takeWhile(::isListItem)
         val indent = existing.firstOrNull()?.takeWhile { it == ' ' || it == '\t' } ?: "  "
+        // The quoting to copy onto the new entries: an existing item's, or — for a scalar written on
+        // the key's own line — that scalar's, so a bare `tags: released` becomes a bare `  - x`
+        // rather than acquiring quotes on the way past.
+        val inline = lines[at].substringAfter(':').trim()
+        // `[]` and a flow list are not scalars, and `tags: []` in particular must not become the
+        // sample — the three untagged notes in the archive carry it, and their first tag is quoted
+        // like every other tag in the folder.
+        val inlineScalar = inline
+            .takeIf { it.isNotEmpty() && !it.startsWith("[") && !it.startsWith("#") }
+        // A flow list with something in it. `[]` is excluded: it is a shape with no entries, so it
+        // has no style to preserve, and the archive's block list is the better shape to grow into.
+        val flow = inline.takeIf { it.startsWith("[") && it.endsWith("]") }
+            ?.removeSurrounding("[", "]")
+            ?.takeIf { it.isNotBlank() }
         val sample = existing.firstOrNull()?.trim()?.removePrefix("- ")
+            ?: flow?.let { splitFlow(it).first().trim() }
+            ?: inlineScalar
         val head = lines[at].substringBefore(':') + ":"
 
         val rebuilt = when {
             newTags.isEmpty() -> listOf("$head []")
+            // A flow list keeps its brackets and its separator — `[a, b]` and `[a,b]` are both out
+            // there and neither is this app's to normalise.
+            flow != null -> {
+                val separator = if (", " in flow) ", " else ","
+                listOf(head + " [" + newTags.joinToString(separator) { inFlow(sample, it) } + "]")
+            }
             else -> listOf(head) + newTags.map { "$indent- " + requote(sample ?: "\"\"", it) }
         }
         return of(lines.subList(0, at) + rebuilt + lines.drop(at + 1 + existing.size))
@@ -259,6 +300,69 @@ class Frontmatter private constructor(
                 value.endsWith(':') ||
                 value.contains(" #") ||
                 value.any { it.isISOControl() }
+
+        /**
+         * The entries of a flow list's innards, split on the commas that are not inside quotes.
+         *
+         * The naive `split(',')` was fine while nothing wrote a comma into a tag, and [inFlow] is now
+         * the thing that does: it quotes such a value precisely so the comma stays inside the entry,
+         * and a reader that splits on it anyway would tear back apart what the writer just protected.
+         * Still not a YAML parser — it tracks one level of quoting and nothing else, because one level
+         * is all a list of tags can have.
+         */
+        private fun splitFlow(inner: String): List<String> {
+            val entries = mutableListOf<String>()
+            val entry = StringBuilder()
+            var quote: Char? = null
+            var i = 0
+            while (i < inner.length) {
+                val c = inner[i]
+                when {
+                    // A backslash escape inside double quotes, so `\"` does not close the entry.
+                    quote == '"' && c == '\\' && i + 1 < inner.length -> entry.append(c).append(inner[++i])
+                    quote != null -> {
+                        entry.append(c)
+                        if (c == quote) quote = null
+                    }
+                    c == '"' || c == '\'' -> {
+                        entry.append(c)
+                        quote = c
+                    }
+                    c == ',' -> {
+                        entries.add(entry.toString())
+                        entry.clear()
+                    }
+                    else -> entry.append(c)
+                }
+                i++
+            }
+            return entries + entry.toString()
+        }
+
+        /**
+         * [value] as an entry inside a flow list, quoted like [sample] unless the brackets force it.
+         *
+         * Inside `[...]` a comma or a bracket ends the entry, so a value carrying one cannot be
+         * written bare however the neighbouring entries are written — that is the same trade [requote]
+         * makes for a colon on a scalar line, in the one place [needsQuotes] cannot see. No tag in
+         * the archive comes near it; a tag typed by hand could.
+         */
+        private fun inFlow(sample: String?, value: String): String =
+            if (value.any { it in FLOW_INDICATORS }) quoted(value) else requote(sample ?: "\"\"", value)
+
+        /** The characters that end an entry inside a flow list, wherever in the entry they appear. */
+        private const val FLOW_INDICATORS = ",[]{}"
+
+        /**
+         * Whether [line] belongs to the block list under a key rather than starting the next key.
+         *
+         * Indented is the archive's shape and the usual one. Column zero is the case that has to be
+         * spelled out: YAML lets a sequence under a mapping key sit flush left, so `- released` on
+         * its own is an item and not a sibling key. Nothing else can be confused with it — a key
+         * line has a colon before any dash could be read as one.
+         */
+        private fun isListItem(line: String): Boolean =
+            line.startsWith(" ") || line.startsWith("\t") || line.startsWith("- ")
 
         /** The characters YAML gives a meaning to when a scalar begins with one. */
         private const val INDICATORS = "-?:,[]{}#&*!|>'\"%@`"
