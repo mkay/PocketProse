@@ -230,6 +230,16 @@ fun EditorScreen(
     created: Instant?,
     updated: Instant?,
     /**
+     * Every name already in the folder, so the rename dialog can refuse a collision before writing.
+     *
+     * Handed down rather than looked up here: the editor holds one note and knows nothing about the
+     * folder, and a dialog that queried the provider would be asking a question the index already
+     * answered.
+     */
+    noteNames: Set<String>,
+    /** Rename the open note's file to this stem, `.md` excluded. */
+    onRename: (String) -> Unit,
+    /**
      * Put the cursor in the note and raise the keyboard as it opens.
      *
      * True for a note that was just created and false for one being opened to read. A note is opened
@@ -313,6 +323,11 @@ fun EditorScreen(
                         contentDescription = stringResource(R.string.editor_info),
                     )
                 }
+                // Opened from the details sheet, which closes behind it. Kept here rather than
+                // inside that dialog so the rename outlives it — a dialog cannot host the thing
+                // that replaces it.
+                var renaming by remember(document) { mutableStateOf(false) }
+
                 if (informing) {
                     NoteInfoDialog(
                         name = document.name,
@@ -321,7 +336,27 @@ fun EditorScreen(
                         body = document.body(),
                         created = created,
                         updated = updated,
+                        // The same gate the writing is behind. A note whose bytes the parser cannot
+                        // reproduce is not written to at all, and renaming it would be the one write
+                        // that slipped past that — harmless to the content, but it would move a file
+                        // the app has already admitted it does not understand.
+                        onRename = if (editable) {
+                            { informing = false; renaming = true }
+                        } else {
+                            null
+                        },
                         onDismiss = { informing = false },
+                    )
+                }
+                if (renaming) {
+                    RenameNoteDialog(
+                        name = document.name,
+                        taken = noteNames,
+                        onRename = { stem ->
+                            renaming = false
+                            onRename(stem)
+                        },
+                        onDismiss = { renaming = false },
                     )
                 }
 

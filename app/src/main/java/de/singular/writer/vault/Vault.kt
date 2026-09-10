@@ -607,6 +607,61 @@ class Vault(context: Context) {
         }
 
     /**
+     * Give [note]'s file a new name, leaving every byte inside it alone.
+     *
+     * **This is not the rename `CLAUDE.md` forbids.** That prohibition — "rename a file to match its
+     * title, its heading, or anything else" — is about the app deciding, on its own, that a file is
+     * called the wrong thing. A person renaming their own note is the opposite act, and it is the
+     * same kind of edit as renaming a tag: asked for, confirmed, and touching exactly what was named.
+     *
+     * The note is not opened, parsed or written. `title` in the frontmatter is untouched, and stays
+     * authoritative — after this the two may disagree, which is the archive's ordinary state and not
+     * a thing to reconcile. `updated` does not move either, for the reason it never moves on a filing
+     * change: nobody rewrote the song.
+     *
+     * [stem] is the name without `.md`, and it goes through [fileStem] here as well as in the dialog
+     * that previewed it — the check the user saw and the check that runs must be the same one.
+     *
+     * **A taken name is refused, never numbered.** See [RenameNoteResult.Taken].
+     *
+     * The provider hands back a new document id, so the caller has to re-point at it; there is no
+     * way to rename in SAF that keeps the uri. Verified afterwards by asking the provider what the
+     * file is now called, because `createNamed` had to learn that a display name is a suggestion.
+     */
+    suspend fun renameNote(note: IndexedNote, stem: String): RenameNoteResult =
+        withContext(Dispatchers.IO) {
+            val clean = fileStem(stem.trim().removeSuffix(".md"))
+            val name = "$clean.md"
+            if (normalizedName(name) == normalizedName(note.file.name)) {
+                return@withContext RenameNoteResult.Unchanged
+            }
+
+            val listing = list()
+            if (listing.error != null) {
+                return@withContext RenameNoteResult.Failed("the folder is no longer reachable")
+            }
+            // Compared normalised, because a name that came off a Mac is decomposed and would
+            // otherwise look free while the provider knows it is taken — and then the rename fails
+            // for a reason the user was told would not happen.
+            if (listing.files.any { normalizedName(it.name) == normalizedName(name) }) {
+                return@withContext RenameNoteResult.Taken
+            }
+
+            val renamed = runCatching {
+                DocumentsContract.renameDocument(resolver, note.file.uri, name)
+            }.getOrNull() ?: return@withContext RenameNoteResult.Failed("the note could not be renamed")
+
+            // A provider that renamed the file but called it something else has made a note this app
+            // may not be able to find again — `.md` is what `list` looks for. Say so rather than
+            // report a success the folder does not agree with.
+            val actual = displayName(renamed)
+            if (actual != null && normalizedName(actual) != normalizedName(name)) {
+                return@withContext RenameNoteResult.Failed("your folder named it “$actual” instead")
+            }
+            RenameNoteResult.Renamed(renamed, name)
+        }
+
+    /**
      * Delete [note]'s file.
      *
      * The only place the app removes anything the user wrote, and it is never reached without an
@@ -626,11 +681,6 @@ class Vault(context: Context) {
      * object to. Everything else the archive already proves is fine stays: commas, parentheses,
      * umlauts, accents, a trailing full stop, and spaces.
      */
-    private fun fileStem(title: String): String {
-        val stripped = title.filterNot { it in "/\\:*?\"<>|" || it.code < 0x20 }.trim()
-        val stem = normalizedName(stripped).take(120).trim()
-        return stem.ifEmpty { UNTITLED }
-    }
 
 
     /**
@@ -776,6 +826,24 @@ class Vault(context: Context) {
                 append("tags: []\n")
                 append("---\n\n")
             }
+        }
+
+        /**
+         * A title reduced to the part a filename can hold.
+         *
+         * **What it drops is the point.** 11 titles in the archive end in a `?` that no filename can
+         * carry, so the two are not the same string and the app must never treat one as derivable
+         * from the other. This exists for the two moments a name has to be chosen — a note being
+         * made, and a note being renamed by hand — and in the second it is shown to the user before
+         * they commit, because a field that silently eats the `?` you typed is a field that lies.
+         *
+         * Public so the rename dialog can preview it. There is exactly one rule for what a note may
+         * be called and it lives here; a second copy in the UI is a second rule waiting to disagree.
+         */
+        fun fileStem(title: String): String {
+            val stripped = title.filterNot { it in "/\\:*?\"<>|" || it.code < 0x20 }.trim()
+            val stem = normalizedName(stripped).take(120).trim()
+            return stem.ifEmpty { UNTITLED }
         }
 
         /** What a note is called when its title survives none of the filename rules. */

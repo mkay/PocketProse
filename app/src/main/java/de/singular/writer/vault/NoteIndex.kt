@@ -122,6 +122,23 @@ class NoteIndex(notes: List<IndexedNote>) {
         return NoteIndex(notes.map { if (it.file.name == old.file.name) replaced else it })
     }
 
+    /**
+     * This index with one note renamed — a new name and a new uri, the same note inside.
+     *
+     * The sibling of [replacing] and for the same reason: the editor has to be re-pointed at the
+     * renamed file the moment the rename lands, and making it wait on 168 documents being re-read
+     * would put three or four seconds between the confirm and the dialog closing.
+     *
+     * Nothing about the content changes, so [contentHash] and [roundTrips] carry over untouched.
+     * That is not an optimisation but the truth: `Vault.renameNote` never opens the file, and a note
+     * that round-tripped a second ago still does under a different name.
+     */
+    fun renamed(old: IndexedNote, uri: android.net.Uri, name: String): NoteIndex = NoteIndex(
+        notes.map {
+            if (it.file.name == old.file.name) it.copy(file = it.file.copy(uri = uri, name = name)) else it
+        },
+    )
+
     /** The tag tree the drawer draws. See [Tags.tree] for why it is built from path segments. */
     val tagTree: List<Tags.Node> by lazy { Tags.tree(this.notes.map { it.tags }) }
 

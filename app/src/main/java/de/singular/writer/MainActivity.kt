@@ -85,6 +85,7 @@ import de.singular.writer.vault.NoteIndex
 import de.singular.writer.vault.CreateResult
 import de.singular.writer.vault.MigrationResult
 import de.singular.writer.vault.RenameResult
+import de.singular.writer.vault.RenameNoteResult
 import de.singular.writer.vault.SaveResult
 import de.singular.writer.vault.Vault
 import de.singular.writer.vault.VaultFailure
@@ -314,6 +315,43 @@ private fun PocketProseApp(settings: Settings) {
         }
     }
 
+    /**
+     * Rename the open note's file, and keep the editor pointed at it.
+     *
+     * **The save comes first, and a failed save cancels the rename.** What is typed is still under
+     * the old name at this moment; renaming out from under it would leave the pending write aimed at
+     * a file that no longer exists, and the editor holding the only copy of the words. A conflict or
+     * a refusal stops here with the note untouched, which is the same answer leaving the editor gets.
+     *
+     * The note is then re-resolved rather than taken from the composition: `saveOpenNote` re-points
+     * `openNoteUri` when it writes, so the `openNote` this lambda closed over may already be the
+     * previous document. Reading the state again is the only way to be sure which file is being
+     * renamed — and this is the app's one gesture that acts on a file by identity while the identity
+     * is in motion.
+     *
+     * Index first, then the uri, exactly as in `saveOpenNote`: pointing at the new document while
+     * the old index is still in place resolves to no note at all, which closes the editor by itself.
+     * Updated in place rather than re-read, because a rename is news the app already has — the bytes
+     * did not change, only what they are called.
+     */
+    fun renameNote(stem: String) = scope.launch {
+        if (!saveOpenNote()) return@launch
+        val uri = openNoteUri ?: return@launch
+        val note = index.notes.firstOrNull { it.file.uri.toString() == uri } ?: return@launch
+        when (val result = vault.renameNote(note, stem)) {
+            is RenameNoteResult.Renamed -> {
+                index = index.renamed(note, result.uri, result.name)
+                openNoteUri = result.uri.toString()
+            }
+            // The dialog refuses both of these before the write; reaching them means the folder
+            // changed underneath the dialog, which is a sync doing its job rather than a bug.
+            RenameNoteResult.Unchanged -> Unit
+            RenameNoteResult.Taken -> message = context.getString(R.string.rename_note_taken)
+            is RenameNoteResult.Failed ->
+                message = context.getString(R.string.rename_note_failed, result.reason)
+        }
+    }
+
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val noOpener = stringResource(R.string.attachment_no_app)
     val deleteFailed = stringResource(R.string.delete_failed)
@@ -468,6 +506,8 @@ private fun PocketProseApp(settings: Settings) {
             editable = openNote.roundTrips,
             created = openNote.created,
             updated = openNote.updated,
+            noteNames = index.notes.map { it.file.name }.toSet(),
+            onRename = { renameNote(it) },
             focusOnOpen = focusNewNote,
             onBack = { leave() },
             onDelete = { deleting = true },

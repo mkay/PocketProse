@@ -132,6 +132,33 @@
          in an old note, not an error. -->
     <string name="note_info_unknown">—</string>
 
+    <!-- ===== Renaming a note ===== -->
+
+    <!-- Title of the dialog, and the spoken label of the row that opens it. -->
+    <string name="rename_note_title">Rename note</string>
+    <!-- Label on the field. The ".md" is shown beside it and cannot be typed away. -->
+    <string name="rename_note_label">Name in the folder</string>
+    <!-- Shown while the typed name would work. Says the thing a person renaming a file is most
+         likely to assume wrongly: the note's title is a separate thing and stays as it is. -->
+    <string name="rename_note_keeps_title">The note keeps its title. Only its name in the folder changes.</string>
+    <!-- Shown when characters a name cannot hold were typed. %1$s is the name that would result, so
+         the user sees the loss before agreeing to it rather than afterwards. Characters dropped are
+         / \ : * ? " &lt; &gt; | — do not list them in the translation, show the result instead. -->
+    <string name="rename_note_dropped">Your folder cannot hold every character. It would be called “%1$s”.</string>
+    <!-- Shown when the characters a name cannot hold were the only thing typed, so the name would
+         not actually change and the button is greyed out. Explains the dead button: the character
+         responsible has already vanished from the field. -->
+    <string name="rename_note_dropped_unchanged">Your folder cannot hold every character, so this leaves the name it already has.</string>
+    <!-- Shown when the typed name comes out as the current one for any other reason. -->
+    <string name="rename_note_unchanged">That is already the name.</string>
+    <!-- Shown when another note in the folder already has that name. The app refuses rather than
+         numbering it, because the user typed this one. -->
+    <string name="rename_note_taken">Another note already has that name.</string>
+    <!-- Confirms the rename. -->
+    <string name="rename_note_confirm">Rename</string>
+    <!-- Shown when the folder would not do it. %1$s is the reason, as the folder gave it. -->
+    <string name="rename_note_failed">Couldn\'t rename: %1$s</string>
+
     <!-- Opens the menu in the editor's bar. -->
     <string name="editor_menu">More</string>
     <!-- The menu entry, and the confirming button in the dialog it opens. -->
