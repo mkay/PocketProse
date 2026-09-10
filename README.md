@@ -9,6 +9,10 @@ A Markdown notes app for Android that reads a folder you already have. Point it 
 
 Built for a personal lyrics archive of 168 notes written over ten years, which is why it is opinionated about leaving things alone.
 
+## Screenshots
+
+<img src="docs/screenshot.png" alt="Pocket Prose library with tagged notes, and a note open with its details dialog" width="640" />
+
 ## What it does not do
 
 This is the short list, and it is the point of the app rather than a set of missing features:
