@@ -24,6 +24,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalUriHandler
@@ -58,7 +59,9 @@ fun SupportDialog(onDismiss: () -> Unit) {
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.support_title)) },
+        title = {
+            DialogHeading(Icons.Outlined.FavoriteBorder, stringResource(R.string.support_title))
+        },
         text = {
             Column(
                 Modifier.verticalScroll(rememberScrollState()),

@@ -9,6 +9,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.Label
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -170,7 +172,14 @@ fun MoveTagsDialog(
     val what = stringResource(moveTagsWhat(survey))
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.move_tags_title, what)) },
+        // The same mark as the tag rename, because this is the same subject. Two dialogs sharing an
+        // icon is not a collision when they are about one thing.
+        title = {
+            DialogHeading(
+                Icons.AutoMirrored.Outlined.Label,
+                stringResource(R.string.move_tags_title, what),
+            )
+        },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text(

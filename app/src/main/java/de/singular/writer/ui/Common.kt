@@ -3,15 +3,23 @@
 package de.singular.writer.ui
 
 import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalConfiguration
 import java.time.Instant
@@ -60,6 +68,48 @@ fun rememberDateTimeFormatter(): (Instant) -> String {
         .withLocale(locale)
         .withZone(ZoneId.systemDefault())
     return { instant -> formatter.format(instant) }
+}
+
+/**
+ * The heading every dialog in the app wears: an icon, then the words, on one line.
+ *
+ * **One definition because there were nine.** The dialogs grew one at a time as each feature landed
+ * and each brought its own bare `Text`, so nothing held them to a shape — and the first one to gain
+ * an icon would have made the other eight look unfinished. Handing them a composable rather than a
+ * convention is the only version of this that survives the next dialog somebody adds.
+ *
+ * **Not Material's `icon` slot**, which stacks the icon above the title and centres both. Centred
+ * headings are a different app from this one: every screen here is left-aligned and reads as a page
+ * rather than as an announcement. The icon goes in the `title` slot with the words instead.
+ *
+ * The icon is 24dp against a heading of about the same, so it reads as a mark beside the sentence
+ * and not as a button. [tint] exists for the one dialog that needs to say something with colour
+ * before it says it in words — see `DeleteDialog` — and defaults to the heading's own ink.
+ *
+ * A dialog with no honest icon passes null and keeps a plain heading. That is not a gap to be filled
+ * later: a decorative glyph on a dialog that has nothing to depict is worse than the bare title it
+ * replaced, and it would teach the reader that the icons here mean nothing.
+ */
+@Composable
+fun DialogHeading(
+    icon: ImageVector?,
+    text: String,
+    tint: Color = Color.Unspecified,
+) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (icon != null) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = if (tint == Color.Unspecified) LocalContentColor.current else tint,
+                modifier = Modifier.size(24.dp),
+            )
+        }
+        Text(text)
+    }
 }
 
 /**

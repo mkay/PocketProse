@@ -120,6 +120,33 @@ private val OnAccentLight = Color(0xFFFFFFFF)
  * wash that announces itself would be the loudest thing on a screen whose whole point is to be
  * quiet; the label going to full weight is what actually says "this one".
  */
+/**
+ * The one warning colour, and **the only place this palette raises its voice.**
+ *
+ * Both schemes state every other role in full and never stated this one, so until 2026-09-10 `error`
+ * fell through to Material's defaults — a pale pink `#FFB4AB` in the dark scheme and a cool crimson
+ * `#B3261E` in the light. The same oversight the snackbar had, and visible in the same way: the
+ * delete confirm's mark was the one cool object in an entirely warm app, and it read as a sticker on
+ * somebody else's dialog rather than as this app being serious.
+ *
+ * So a red off this palette's own axis — the terracotta the browns are already leaning towards,
+ * turned up rather than a hue borrowed from a spec. It has to work in two places at once: as the
+ * 24dp mark on the delete heading, and as 12sp of refusal text under a field. The second is the
+ * binding one, so both are measured against `surfaceContainerHigh`, the dialog's own ground, and not
+ * only against the page.
+ *
+ * Dark: 4.60:1 on the dialog, 5.72:1 on the page — a shade above `InkDark`'s 5.35, which is the
+ * whole of what "this line is a refusal" needs to be. Light: 5.76:1 on the dialog, 6.88:1 on the
+ * page, sitting between `AccentLight` and `InkLight`. Neither is loud. A palette that argues against
+ * slabs does not get to shout in red either; it gets to be unmistakably a different colour.
+ */
+private val ErrorDark = Color(0xFFE09C8A) // 5.72:1 on PageDark, 4.60:1 on the dialog
+private val ErrorLight = Color(0xFF8E4032) // 6.88:1 on PageLight, 5.76:1 on the dialog
+
+/** Ink for the rare surface painted in [ErrorDark] or [ErrorLight]. Nothing uses it yet. */
+private val OnErrorDark = Color(0xFF3A211B) // 6.57:1 on ErrorDark
+private val OnErrorLight = Color(0xFFFFFFFF) // 7.17:1 on ErrorLight
+
 private val SelectedDark = Color(0xFF423C3A) // 1.19:1 off the page
 private val OnSelectedDark = Color(0xFFDCD1CC) // 7.24:1 on SelectedDark
 private val SelectedLight = Color(0xFFE8E5E4) // 1.20:1 off the page
@@ -151,6 +178,8 @@ private val PocketLightColors = lightColorScheme(
     surfaceContainerHighest = Color(0xFFE5DDDF),
     outline = Color(0xFFAEA0A2), // 2.41:1 — a drawn edge, not type
     outlineVariant = Color(0xFFE5DDDF), // 1.28:1 — the divider between rows
+    error = ErrorLight,
+    onError = OnErrorLight,
 )
 
 /**
@@ -180,6 +209,8 @@ private val PocketDarkColors = darkColorScheme(
     surfaceContainerHighest = Color(0xFF4E4546),
     outline = Color(0xFF6D6364), // 2.23:1
     outlineVariant = Color(0xFF463F40), // 1.26:1
+    error = ErrorDark,
+    onError = OnErrorDark,
 )
 
 /**

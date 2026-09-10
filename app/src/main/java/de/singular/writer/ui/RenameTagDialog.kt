@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.Label
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -90,7 +92,12 @@ fun RenameTagDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.rename_tag_title, tag)) },
+        title = {
+            DialogHeading(
+                Icons.AutoMirrored.Outlined.Label,
+                stringResource(R.string.rename_tag_title, tag),
+            )
+        },
         text = {
             Column {
                 OutlinedTextField(

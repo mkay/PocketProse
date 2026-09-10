@@ -28,7 +28,10 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.outlined.CallSplit
+import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.NoteAdd
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -866,7 +869,9 @@ fun NewNoteDialog(onCreate: (String) -> Unit, onDismiss: () -> Unit) {
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(text = stringResource(R.string.new_note_title)) },
+        title = {
+            DialogHeading(Icons.Outlined.NoteAdd, stringResource(R.string.new_note_title))
+        },
         text = {
             OutlinedTextField(
                 value = typed,
@@ -910,7 +915,16 @@ fun NewNoteDialog(onCreate: (String) -> Unit, onDismiss: () -> Unit) {
 fun DeleteDialog(title: String, onConfirm: () -> Unit, onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(text = stringResource(R.string.delete_note_confirm, title)) },
+        // The one heading in the app that carries colour. `error` is spent here and nowhere else,
+        // on the one thing this app does that it cannot undo — a red mark on any other dialog would
+        // spend it, and then this one would look like the rest.
+        title = {
+            DialogHeading(
+                icon = Icons.Outlined.DeleteOutline,
+                text = stringResource(R.string.delete_note_confirm, title),
+                tint = MaterialTheme.colorScheme.error,
+            )
+        },
         text = { Text(text = stringResource(R.string.delete_note_body)) },
         confirmButton = {
             TextButton(onClick = onConfirm) { Text(text = stringResource(R.string.delete_note)) }
@@ -935,7 +949,11 @@ fun DeleteDialog(title: String, onConfirm: () -> Unit, onDismiss: () -> Unit) {
 fun ConflictDialog(onKeepBoth: () -> Unit, onDiscard: () -> Unit) {
     AlertDialog(
         onDismissRequest = {},
-        title = { Text(text = stringResource(R.string.conflict_title)) },
+        // Two versions of one note, which is what the fork depicts. Not a sync icon: the app does
+        // not talk to the sync client and should not draw as though it did.
+        title = {
+            DialogHeading(Icons.Outlined.CallSplit, stringResource(R.string.conflict_title))
+        },
         text = { Text(text = stringResource(R.string.conflict_body)) },
         confirmButton = {
             TextButton(onClick = onKeepBoth) { Text(text = stringResource(R.string.conflict_keep_both)) }

@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -89,7 +91,11 @@ fun RenameNoteDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.rename_note_title)) },
+        // The pencil that marks the row this dialog is opened from, repeated here so the tap and
+        // what it produced are visibly the same gesture.
+        title = {
+            DialogHeading(Icons.Outlined.Edit, stringResource(R.string.rename_note_title))
+        },
         text = {
             Column {
                 OutlinedTextField(

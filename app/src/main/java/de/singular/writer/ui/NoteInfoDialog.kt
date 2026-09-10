@@ -78,21 +78,8 @@ fun NoteInfoDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        // Deliberately in the title slot and not in `icon`, which Material centres the whole heading
-        // for. The heading stays left-aligned like every other dialog in the app; the icon sits
-        // beside the words at their own size. This is the shape the other dialogs are to converge on.
         title = {
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Icon(
-                    imageVector = Icons.Outlined.Info,
-                    contentDescription = null,
-                    modifier = Modifier.size(24.dp),
-                )
-                Text(stringResource(R.string.note_info_title))
-            }
+            DialogHeading(Icons.Outlined.Info, stringResource(R.string.note_info_title))
         },
         text = {
             // A long name and a long localised timestamp both wrap, and a note made in a folder that

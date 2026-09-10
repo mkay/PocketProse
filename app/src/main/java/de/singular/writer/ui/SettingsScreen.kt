@@ -28,6 +28,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.Label
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.Label
 import androidx.compose.material3.AlertDialog
@@ -474,7 +475,12 @@ private fun StartTagDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.settings_start_tag)) },
+        title = {
+            DialogHeading(
+                Icons.AutoMirrored.Outlined.Label,
+                stringResource(R.string.settings_start_tag),
+            )
+        },
         text = {
             TagDrawer(
                 tree = tree,
