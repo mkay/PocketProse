@@ -5,15 +5,15 @@
     <string name="app_tagline">Schreiben, bewahren, Inspiration festhalten</string>
 
     <string name="welcome_title">Deine Texte liegen in einem Ordner</string>
-    <string name="welcome_body">Zeig Pocket Prose den Ordner, in dem deine Texte schon liegen. Es wird nichts kopiert und nichts verschoben — alles bleibt genau dort, wo es ist.</string>
+    <string name="welcome_body">Zeig Pocket Prose den Ordner, in dem deine Texte schon liegen. Es wird nichts kopiert und nichts verschoben — alles bleibt, wo es ist.</string>
     <string name="welcome_choose">Ordner wählen</string>
 
-    <string name="folder_gone_title">Diesen Ordner gibt es nicht mehr</string>
-    <string name="folder_gone_body">Pocket Prose erreicht den gewählten Ordner nicht. Vielleicht wurde er verschoben, umbenannt oder mit einer SD-Karte entfernt. Deine Texte sind davon nicht betroffen.</string>
+    <string name="folder_gone_title">Dieser Ordner existiert nicht mehr</string>
+    <string name="folder_gone_body">Pocket Prose findet den gewählten Ordner nicht. Er wurde eventuell verschoben, umbenannt oder mit einer SD-Karte entfernt. Deine Texte sind davon nicht betroffen.</string>
     <string name="folder_gone_choose">Anderen Ordner wählen</string>
 
     <string name="note_empty">-</string>
-    <string name="library_loading">Sieht deinen Ordner durch</string>
+    <string name="library_loading">Untersucht deinen Ordner</string>
     <string name="library_empty">Noch keine Texte in diesem Ordner</string>
     <string name="action_change_folder">Ordner wechseln</string>
 
@@ -46,7 +46,7 @@
     <string name="editor_menu">Mehr</string>
     <string name="delete_note">Text löschen</string>
     <string name="delete_note_confirm">„%1$s“ löschen?</string>
-    <string name="delete_note_body">Der Text wird aus deinem Ordner entfernt. Pocket Prose kann ihn nicht zurückholen.</string>
+    <string name="delete_note_body">Der Text wird aus deinem Ordner gelöscht. Pocket Prose kann ihn nicht zurückholen.</string>
     <string name="delete_failed">Der Text konnte nicht gelöscht werden</string>
 
     <string name="note_tags_edit">Schlagwörter bearbeiten</string>
@@ -71,7 +71,7 @@
     <string name="image_missing">Bild nicht gefunden: %1$s</string>
 
     <string name="attachments_title">Anhänge</string>
-    <string name="attachment_no_app">Auf diesem Telefon kann diese Datei nichts öffnen</string>
+    <string name="attachment_no_app">Dieses Gerät kann diese Datei nicht öffnen</string>
     <string name="attachment_missing">fehlt</string>
 
     <string name="drawer_open">Schlagwörter anzeigen</string>
@@ -126,7 +126,7 @@
     <string name="about_version_copied">Version kopiert</string>
 
     <string name="about_section_about">Über</string>
-    <string name="about_body_about">Ich habe Pocket Prose für meine eigenen Texte gebaut, die in einem Ordner liegen und da auch bleiben sollen. Vielleicht geht es deinem Schreiben genauso.</string>
+    <string name="about_body_about">Ich habe Pocket Prose für mich selbst erstellt. Texte, die in einem frei wählbaren Ordner liegen.</string>
     <string name="about_section_website">Website</string>
     <string name="about_body_website">Die App wohnt hier:</string>
     <string name="about_section_bugs">Fehler</string>
@@ -168,8 +168,8 @@
     <string name="rename_note_title">Text umbenennen</string>
     <string name="rename_note_label">Name im Ordner</string>
     <string name="rename_note_keeps_title">Der Titel bleibt. Nur der Name im Ordner ändert sich.</string>
-    <string name="rename_note_dropped">Dein Ordner kann nicht jedes Zeichen aufnehmen. Er hieße dann „%1$s“.</string>
-    <string name="rename_note_dropped_unchanged">Dein Ordner kann nicht jedes Zeichen aufnehmen, dadurch bleibt der Name, den er schon hat.</string>
+    <string name="rename_note_dropped">Nicht jedes Zeichen kann als Dateiname verwendet werden. Der Name lautet „%1$s“.</string>
+    <string name="rename_note_dropped_unchanged">Nicht jedes Zeichen kann als Dateiname verwendet werden, daher bleibt der bereits verwendete Name.</string>
     <string name="rename_note_unchanged">So heißt er schon.</string>
     <string name="rename_note_taken">Ein anderer Text heißt schon so.</string>
     <string name="rename_note_confirm">Umbenennen</string>
@@ -187,9 +187,9 @@
     <string name="move_tags_what_both">Schlagwörter und Titel</string>
     <string name="move_tags_banner_action">%1$s verschieben</string>
     <string name="move_tags_confirm">Verschieben</string>
-    <string name="move_tags_body">Pocket Prose hält %1$s aus deinem Text heraus, dort wo die App sie nutzen kann. Beim Verschieben werden diese Texte geändert.</string>
+    <string name="move_tags_body">Pocket Prose hält %1$s aus deinem Text heraus, sodass sie verwendet werden können, ohne im Weg zu sein. Beim Verschieben werden diese aus dem Text entfernt.</string>
     <string name="settings_move_tags_caption">Verschieben holt deine %1$s aus deinem Text heraus, dorthin wo die App sie nutzen kann.</string>
-    <string name="drawer_tags_in_text_why">Pocket Prose hält Schlagwörter aus deinem Text heraus. Verschiebe sie, dann tauchen sie alle hier auf.</string>
+    <string name="drawer_tags_in_text_why">Pocket Prose hält diese aus deinem Text heraus. Verschiebe sie, dann erscheinen sie in der Liste.</string>
 
     <!-- ===== Der Rest, nachgezogen ===== -->
 
@@ -202,7 +202,7 @@
     <string name="create_failed">Text konnte nicht angelegt werden: %1$s</string>
 
     <string name="tag_no_hash">Ein Schlagwort kann kein # enthalten.</string>
-    <string name="tag_no_spaces">Ein Schlagwort kann kein Leerzeichen enthalten — nimm einen Bindestrich, etwa meta-info.</string>
+    <string name="tag_no_spaces">Ein Schlagwort kann kein Leerzeichen enthalten — verwende z.B. einen Bindestrich wie in meta-info.</string>
 
     <!-- Schriftgröße und Zeilenabstand. -->
     <string name="settings_section_size">Größe und Abstand</string>
@@ -218,11 +218,11 @@
     <string name="leading_normal">Normal</string>
     <string name="leading_airy">Luftig</string>
 
-    <!-- Startansicht. "Alle Texte" ist bewusst dasselbe Wort wie in der Schlagwortleiste. -->
+    <!-- Startansicht. „Alle Texte“ ist bewusst dasselbe Wort wie in der Schlagwortleiste. -->
     <string name="settings_section_start">Startansicht</string>
-    <string name="settings_start_tag">Gefiltert öffnen nach</string>
+    <string name="settings_start_tag">Filter beim Start</string>
     <string name="settings_start_tag_all">Alle Texte</string>
-    <string name="settings_start_tag_caption">Beim Start siehst du nur Texte mit diesem Schlagwort. Fehlt es beim Start, siehst du alle.</string>
+    <string name="settings_start_tag_caption">Schlagwort, nach dem die Ansicht beim Start filtert. Ist nichts gesetzt, wird die Ansicht ungefiltert angezeigt.</string>
 
     <!-- Ein Schlagwort umbenennen — die eine Geste, die viele Dateien auf einmal umschreibt. -->
     <string name="rename_tag_title">%1$s umbenennen</string>
@@ -247,7 +247,7 @@
     <!-- Schlagwörter (und Titel) aus dem Geschriebenen holen. -->
     <string name="drawer_no_tags">Noch keine Schlagwörter auf diesen Texten.</string>
     <plurals name="drawer_tags_in_text">
-        <item quantity="one">Deine Schlagwörter stehen noch in einem deiner Texte.</item>
+        <item quantity="one">Einer deiner Texte enthält noch Schlagwörter.</item>
         <item quantity="other">Deine Schlagwörter stehen noch in %1$d deiner Texte.</item>
     </plurals>
     <string name="move_tags_banner">Deine %1$s stehen mitten in deinen Texten.</string>
@@ -258,10 +258,10 @@
     <!-- Endgültig, deshalb nicht „Später“ — das verspräche eine Wiederkehr, die es nicht gibt. -->
     <string name="move_tags_banner_dismiss">Nein danke</string>
     <string name="move_tags_dismissed">Du kannst sie später in den Einstellungen verschieben.</string>
-    <string name="move_tags_title">Deine %1$s verschieben</string>
+    <string name="move_tags_title">%1$s verschieben</string>
     <plurals name="move_tags_scope">
-        <item quantity="one">Bei 1 von %2$d Texten stehen %3$s mitten im Text.</item>
-        <item quantity="other">Bei %1$d von %2$d Texten stehen %3$s mitten im Text.</item>
+        <item quantity="one">Bei 1 von %2$d deiner Texte erscheinen %3$s im Text.</item>
+        <item quantity="other">Bei %1$d von %2$d deiner Texte erscheinen %3$s im Text.</item>
     </plurals>
     <plurals name="move_tags_gained">
         <item quantity="one">Deine Schlagwortliste bekommt 1 Schlagwort dazu.</item>
