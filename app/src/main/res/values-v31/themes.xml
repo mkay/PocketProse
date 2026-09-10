@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      The same bare theme as values/themes.xml, plus the two lines the system splash screen reads on
+      Android 12 and later. Left alone, the splash shows the launcher icon with its tile, masked to a
+      circle; the app opened on a dark box. ic_splash is the artwork without the tile — see that file.
+
+      The background is PageDark, so the disc lands on the colour the library will paint a moment
+      later. It is dark in both themes: the splash is drawn by the system before the app has read
+      its own theme setting, so there is nothing for a light-mode reader to be followed with.
+    -->
+    <style name="Theme.PocketProse" parent="Theme.AppCompat.NoActionBar">
+        <item name="android:windowSplashScreenBackground">#363031</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/ic_splash</item>
+    </style>
+</resources>

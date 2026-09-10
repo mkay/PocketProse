@@ -3,17 +3,17 @@
   Pocket Prose's launcher icon: a closed notebook seen from above and slightly to one side, with a
   black ribbon marker laid across the cover and folded over the fore edge, resting on a pale disc.
 
-  Generated from assets/icon_mk6.svg, which is the editable source and lives beside this repository
+  Generated from assets/icon_mk7.svg, which is the editable source and lives beside this repository
   rather than in it. Re-export from there; do not hand-edit the path data below.
 
   TWO THINGS ARE STRIPPED FROM THE SOURCE on the way in, and both must stay stripped.
 
-  The rounded rect. mk6 bakes its own tile — a 779x779 rect, rx 151, #0C0B0B — because the source is
-  drawn as a finished icon. An adaptive icon keeps its ground in a separate layer, so the rect is
-  dropped here and its colour lives in values/ic_launcher_background.xml instead. Left in, it would
-  draw a rounded square *inside* whatever shape the launcher masks to. The two files must be changed
-  together; the tile is #0C0B0B because mk6 says so, where mk3 and mk5 offered no hint and the repo
-  picked #1C1917 on its own.
+  The rounded rect. mk7 bakes its own tile — a 779x779 rect, rx 151, filled with a vertical gradient
+  — because the source is drawn as a finished icon. An adaptive icon keeps its ground in a separate
+  layer, so the rect is dropped here and its gradient lives in drawable/ic_launcher_background.xml
+  instead. Left in, it would draw a rounded square *inside* whatever shape the launcher masks to. The
+  two files must be changed together. mk6 had the same rect in flat #0C0B0B; mk7 changed only that,
+  and the artwork below is mk6's to the coordinate.
 
   The path with no fill attribute, duplicating the cover outline. SVG inherits fill="none" from the
   root there, so it draws nothing; it is dropped rather than exported as an opaque black shape,

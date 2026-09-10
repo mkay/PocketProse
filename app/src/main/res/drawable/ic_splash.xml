@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The mark as the system splash screen shows it, on Android 12 and later.
+
+  With nothing said, the splash shows the launcher icon — both layers of it, tile included, cut to a
+  circle — so the app opened on a dark rounded disc of tile sitting on the page, which is the one
+  place the tile is a box on a page with no other box on it. This is ic_mark, the artwork with its
+  own disc and no tile, exactly as the welcome screen shows it; see that file for why the disc makes
+  the tile unnecessary.
+
+  SIZE. The splash draws its icon into a square and masks it to a circle two thirds as wide — the
+  outer sixth on every side is cut away — and it scales the drawable to fill the square whatever the
+  drawable's own size says. A layer-list item fixed at 160dp was tried first and came out filling the
+  circle, notebook corners clipped, because the list's intrinsic size was 160dp and was scaled up to
+  fit. So the inset is a fraction, which is relative to the bounds the system sets and cannot be
+  scaled away: a fifth on each side leaves the mark at 60% of the square, inside the circle with a
+  little room around the disc.
+-->
+<inset xmlns:android="http://schemas.android.com/apk/res/android"
+    android:drawable="@drawable/ic_mark"
+    android:inset="20%" />
