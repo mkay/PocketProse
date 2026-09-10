@@ -191,4 +191,101 @@
     <string name="settings_move_tags_caption">Verschieben holt deine %1$s aus deinem Text heraus, dorthin wo die App sie nutzen kann.</string>
     <string name="drawer_tags_in_text_why">Pocket Prose hält Schlagwörter aus deinem Text heraus. Verschiebe sie, dann tauchen sie alle hier auf.</string>
 
+    <!-- ===== Der Rest, nachgezogen ===== -->
+
+    <!-- Diese 50 Zeichenketten waren seit jeher unübersetzt; die App bietet Deutsch inzwischen
+         selbst an, also darf sie nicht zur Hälfte englisch sein. Durchgehend: ein Text ist ein
+         "Text" und nie eine "Notiz", ein Tag ist ein "Schlagwort", geduzt wird, Anführung „…“.
+         Die Liste selbst wird nicht benannt — das englische "library" hat hier nie ein Wort
+         gehabt, und die Sätze kommen ohne aus. -->
+
+    <string name="create_failed">Text konnte nicht angelegt werden: %1$s</string>
+
+    <string name="tag_no_hash">Ein Schlagwort kann kein # enthalten.</string>
+    <string name="tag_no_spaces">Ein Schlagwort kann kein Leerzeichen enthalten — nimm einen Bindestrich, etwa meta-info.</string>
+
+    <!-- Schriftgröße und Zeilenabstand. -->
+    <string name="settings_section_size">Größe und Abstand</string>
+    <string name="settings_text_size">Schriftgröße</string>
+    <string name="settings_line_spacing">Zeilenabstand</string>
+    <string name="settings_size_caption">Wie deine Texte auf dem Bildschirm gesetzt sind. Die Schriftgröße deines Telefons wirkt zusätzlich.</string>
+    <string name="size_small">Klein</string>
+    <string name="size_normal">Normal</string>
+    <string name="size_large">Groß</string>
+    <string name="size_larger">Größer</string>
+    <string name="size_largest">Am größten</string>
+    <string name="leading_tight">Eng</string>
+    <string name="leading_normal">Normal</string>
+    <string name="leading_airy">Luftig</string>
+
+    <!-- Startansicht. "Alle Texte" ist bewusst dasselbe Wort wie in der Schlagwortleiste. -->
+    <string name="settings_section_start">Startansicht</string>
+    <string name="settings_start_tag">Gefiltert öffnen nach</string>
+    <string name="settings_start_tag_all">Alle Texte</string>
+    <string name="settings_start_tag_caption">Beim Start siehst du nur Texte mit diesem Schlagwort. Fehlt es beim Start, siehst du alle.</string>
+
+    <!-- Ein Schlagwort umbenennen — die eine Geste, die viele Dateien auf einmal umschreibt. -->
+    <string name="rename_tag_title">%1$s umbenennen</string>
+    <string name="rename_tag_label">Neuer Name</string>
+    <string name="rename_tag_confirm">Umbenennen</string>
+    <string name="rename_tag_confirm_merge">Zusammenführen</string>
+    <string name="rename_tag_merges">%1$s gibt es schon. Die beiden Schlagwörter werden zusammengeführt, und ein Zurückbenennen trennt sie nicht wieder.</string>
+    <plurals name="rename_tag_scope">
+        <item quantity="one">Schreibt das Schlagwort in 1 Text um. Untergeordnete Schlagwörter werden mit umbenannt.</item>
+        <item quantity="other">Schreibt das Schlagwort in %1$d Texten um. Untergeordnete Schlagwörter werden mit umbenannt.</item>
+    </plurals>
+    <string name="rename_tag_working">Das Schlagwort wird in deinen Texten umbenannt</string>
+    <string name="rename_tag_caption">Wird umbenannt…</string>
+    <plurals name="rename_tag_done">
+        <item quantity="one">In 1 Text umbenannt</item>
+        <item quantity="other">In %1$d Texten umbenannt</item>
+    </plurals>
+    <string name="rename_tag_stale">Nichts umbenannt: %1$s wurde inzwischen geändert. Zum Aktualisieren ziehen und noch einmal versuchen.</string>
+    <string name="rename_tag_refused">Nichts umbenannt: %1$s kann nicht sicher gespeichert werden.</string>
+    <string name="rename_tag_partial">%1$d Texte umbenannt, %2$d übrig. Benenne noch einmal um, um fertig zu werden.</string>
+
+    <!-- Schlagwörter (und Titel) aus dem Geschriebenen holen. -->
+    <string name="drawer_no_tags">Noch keine Schlagwörter auf diesen Texten.</string>
+    <plurals name="drawer_tags_in_text">
+        <item quantity="one">Deine Schlagwörter stehen noch in einem deiner Texte.</item>
+        <item quantity="other">Deine Schlagwörter stehen noch in %1$d deiner Texte.</item>
+    </plurals>
+    <string name="move_tags_banner">Deine %1$s stehen mitten in deinen Texten.</string>
+    <plurals name="move_tags_banner_count">
+        <item quantity="one">In 1 Text.</item>
+        <item quantity="other">In %1$d Texten.</item>
+    </plurals>
+    <!-- Endgültig, deshalb nicht „Später“ — das verspräche eine Wiederkehr, die es nicht gibt. -->
+    <string name="move_tags_banner_dismiss">Nein danke</string>
+    <string name="move_tags_dismissed">Du kannst sie später in den Einstellungen verschieben.</string>
+    <string name="move_tags_title">Deine %1$s verschieben</string>
+    <plurals name="move_tags_scope">
+        <item quantity="one">Bei 1 von %2$d Texten stehen %3$s mitten im Text.</item>
+        <item quantity="other">Bei %1$d von %2$d Texten stehen %3$s mitten im Text.</item>
+    </plurals>
+    <plurals name="move_tags_gained">
+        <item quantity="one">Deine Schlagwortliste bekommt 1 Schlagwort dazu.</item>
+        <item quantity="other">Deine Schlagwortliste bekommt %1$d Schlagwörter dazu.</item>
+    </plurals>
+    <plurals name="move_tags_titled">
+        <item quantity="one">1 Text behält den Titel, den er zeigt, als eigenen.</item>
+        <item quantity="other">%1$d Texte behalten die Titel, die sie zeigen, als eigene.</item>
+    </plurals>
+    <!-- Anders als beim Banner wirklich nur vorläufig: der Dialog schließt, das Banner bleibt. -->
+    <string name="move_tags_cancel">Jetzt nicht</string>
+    <string name="move_tags_working">Werden in deine Texte verschoben</string>
+    <string name="move_tags_caption">Wird verschoben…</string>
+    <plurals name="move_tags_done">
+        <item quantity="one">%2$s in 1 Text verschoben</item>
+        <item quantity="other">%2$s in %1$d Texten verschoben</item>
+    </plurals>
+    <string name="move_tags_stale">Nichts verschoben: %1$s wurde inzwischen geändert. Zum Aktualisieren ziehen und noch einmal versuchen.</string>
+    <string name="move_tags_refused">Nichts verschoben: %1$s kann nicht sicher gespeichert werden.</string>
+    <string name="move_tags_partial">%1$d Texte verschoben, %2$d übrig. Versuch es noch einmal, um fertig zu werden.</string>
+    <string name="settings_move_tags">Deine %1$s stehen noch in deinem Text</string>
+    <plurals name="settings_move_tags_subtitle">
+        <item quantity="one">1 Text</item>
+        <item quantity="other">%1$d Texte</item>
+    </plurals>
+
 </resources>
