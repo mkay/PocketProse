@@ -275,6 +275,9 @@ private fun PocketProseApp(settings: Settings) {
     // them is what makes the first read certain, and a quick background-and-return should not queue
     // a second pass either.
     var reading by remember { mutableStateOf<Job?>(null) }
+    // True from a pull until the read it asked for has finished — the pull's own job, or the one
+    // already running that it joined.
+    var refreshing by remember { mutableStateOf(false) }
 
     fun refresh(): Job {
         reading?.let { if (it.isActive) return it }
@@ -963,6 +966,14 @@ private fun PocketProseApp(settings: Settings) {
             folderName = folderName,
             error = error,
             loading = loading,
+            refreshing = refreshing,
+            onRefresh = {
+                refreshing = true
+                scope.launch {
+                    refresh().join()
+                    refreshing = false
+                }
+            },
             loadingSays = when {
                 renameRunning -> R.string.rename_tag_working
                 retagRunning -> R.string.retag_working

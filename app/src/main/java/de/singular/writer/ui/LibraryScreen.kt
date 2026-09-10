@@ -40,6 +40,12 @@ import androidx.compose.material.icons.outlined.Circle
 import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
+import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
@@ -102,6 +108,10 @@ fun LibraryScreen(
     folderName: String?,
     error: VaultFailure?,
     loading: Boolean,
+    // True while a pull is being answered. Not `loading`: that one blanks the list for a folder
+    // being read from nothing, and a pull is a folder being read again behind a list that stays.
+    refreshing: Boolean,
+    onRefresh: () -> Unit,
     // What `loading` is doing, for the drift's description. The library cannot tell a folder being
     // read from a tag being renamed across it, and both stop the list being drawable.
     @StringRes loadingSays: Int,
@@ -354,8 +364,46 @@ fun LibraryScreen(
                         caption = loadingCaption,
                     )
                 }
-            } else if (notes.isEmpty()) {
-                Empty(filters, onChooseFolder)
+            } else {
+            // Pull to refresh, on the list and on the empty state alike — a filter that matches
+            // nothing is still a folder that may have changed. Four messages in the app already
+            // tell the reader to "pull to refresh" after a sync landed mid-write; until 2026-09-10
+            // the gesture they named did not exist, and the only way to re-read was to leave the
+            // app and come back.
+            //
+            // The indicator is drawn in the app's own ink on its own surface rather than Material's
+            // primary-on-primaryContainer, which in this palette is a taupe disc nothing else on
+            // the screen wears.
+            val pullState = rememberPullToRefreshState()
+            PullToRefreshBox(
+                isRefreshing = refreshing,
+                onRefresh = onRefresh,
+                state = pullState,
+                indicator = {
+                    PullToRefreshDefaults.Indicator(
+                        state = pullState,
+                        isRefreshing = refreshing,
+                        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.align(Alignment.TopCenter),
+                    )
+                },
+                modifier = Modifier.fillMaxSize(),
+            ) {
+            if (notes.isEmpty()) {
+                // Scrollable so that the pull has something to pull on: a plain Box swallows the
+                // gesture and the empty state would be the one place a refresh cannot be asked
+                // for.
+                // The scroll makes the height unbounded, so the message is given the screen's own
+                // height back explicitly — otherwise it wraps and sits at the top instead of centred.
+                BoxWithConstraints(Modifier.fillMaxSize()) {
+                    val screen = maxHeight
+                    Box(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+                        Box(Modifier.fillMaxWidth().height(screen)) {
+                            Empty(filters, onChooseFolder)
+                        }
+                    }
+                }
             } else {
                 val listState = rememberLazyListState()
                 // Picking a tag or an order is asking a different question, so the answer starts
@@ -409,6 +457,8 @@ fun LibraryScreen(
                         )
                     }
                 }
+            }
+            }
             }
             }
 
