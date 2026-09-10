@@ -322,17 +322,24 @@ fun LibraryScreen(
                 Empty(query, onChooseFolder)
             } else {
                 val listState = rememberLazyListState()
-                // Picking a tag is asking a different question, so the answer starts at the top.
+                // Picking a tag or an order is asking a different question, so the answer starts
+                // at the top.
                 //
                 // Without this the list keeps its offset: the rows are keyed by uri, so Lazy tries
-                // to hold the note you were looking at, and when that note is not in the filtered
-                // set you land somewhere arbitrary in the middle of a list you have never seen. A
-                // filter of three notes could even open scrolled past all of them.
+                // to hold the note you were looking at. Filtering, that note may not be in the new
+                // set at all and you land somewhere arbitrary in a list you have never seen — a
+                // filter of three notes could open scrolled past all of them. Sorting, it is worse
+                // for being subtler: the note *is* still there, so the list obligingly keeps you
+                // level with it, several screens into an order you chose precisely to see the top
+                // of.
                 //
                 // Instant rather than animated. An animation carries the eye from one place to
-                // another in the same list; here the list itself has been replaced, so there is
-                // nothing in between to travel through.
-                LaunchedEffect(selectedTag) {
+                // another in the same list; here the list has been replaced or reordered under it,
+                // so there is nothing in between to travel through.
+                //
+                // Not on the search text. Every keystroke would fight somebody scrolling a result
+                // set while still typing, and narrowing a list already brings the best matches up.
+                LaunchedEffect(selectedTag, sortBy, sortOrder) {
                     if (notes.isNotEmpty()) listState.scrollToItem(0)
                 }
                 LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
