@@ -187,7 +187,7 @@
     <string name="move_tags_what_both">Schlagwörter und Titel</string>
     <string name="move_tags_banner_action">%1$s verschieben</string>
     <string name="move_tags_confirm">Verschieben</string>
-    <string name="move_tags_body">Pocket Prose hält %1$s aus deinem Text heraus, sodass sie verwendet werden können, ohne im Weg zu sein. Beim Verschieben werden diese aus dem Text entfernt.</string>
+    <string name="move_tags_body">Pocket Prose hält %1$s aus deinem Text heraus, sodass sie verwendet werden können, ohne im Weg zu sein. Beim Verschieben werden diese Dateien neu geschrieben: Die betreffenden Zeilen verschwinden, sonst ändert sich nichts.</string>
     <string name="settings_move_tags_caption">Verschieben holt deine %1$s aus deinem Text heraus, dorthin wo die App sie nutzen kann.</string>
     <string name="drawer_tags_in_text_why">Pocket Prose hält diese aus deinem Text heraus. Verschiebe sie, dann erscheinen sie in der Liste.</string>
 

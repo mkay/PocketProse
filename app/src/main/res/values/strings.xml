@@ -9,9 +9,24 @@
   Format arguments are positional (%1$s, %2$d) so a translation can reorder
   them. Dates are formatted in code and arrive as text.
 
-  A note on vocabulary: this app never says "Markdown", "frontmatter", "tag
-  syntax" or "file". Its users write; they do not edit documents in a markup
-  language. Say "note", "folder", "text".
+  A note on vocabulary: this app never says "Markdown", "frontmatter" or "tag
+  syntax". Its users write; they do not edit documents in a markup language.
+  Say "note", "folder", "text".
+
+  "File" is the one exception, and it is narrower than it used to read here.
+  A note is never called a file — it is a note, and in German a "Text". But
+  where the thing being talked about genuinely *is* the file on disk, the word
+  is the right one and dodging it is worse: this app's premise is that the
+  folder is the archive, its user chose that folder and syncs it themselves,
+  and they know there are files in it. Two strings say it — attachment_no_app,
+  where a PDF is nothing else, and move_tags_body, where "changes those files"
+  is the sentence that states what the move costs.
+
+  German follows the same split: "Text" for the note and for the writing,
+  "Datei" only where English says file. That matters most in move_tags_body,
+  because "deine Texte werden geändert" reads as *your writing will be
+  altered* — the very fear the offer exists to answer — while "diese Dateien
+  werden geändert" is unmistakably the container rather than the words in it.
 -->
 <resources>
 
@@ -479,9 +494,14 @@
     <!-- What the move is for, and the one sentence that also says what it costs. It named a
          destination until 2026-09-10 — "with the note instead of in the text" — which said the same
          thing twice and named a place the reader cannot see either half of. What is left is the part
-         they can check: the words come out clean, and files are rewritten to do it. %1$s is what is
-         being moved. -->
-    <string name="move_tags_body">Pocket Prose keeps %1$s out of your writing, where the app can use them. Moving them changes those files.</string>
+         they can check: the words come out clean, and files are rewritten to do it.
+
+         The cost half ended at "changes those files", which says *that* files change and never how
+         much — and somebody about to let an app rewrite 165 of their own songs is entitled to the
+         second answer. It now names exactly what leaves and closes the door behind it. Keep the
+         "nothing else changes" clause in any translation: it is the sentence, not a flourish on it.
+         %1$s is what is being moved. -->
+    <string name="move_tags_body">Pocket Prose keeps %1$s out of your writing, where the app can use them. Moving them rewrites those files: the lines they are written on come out, and nothing else changes.</string>
     <!-- Only when the tag list actually gains something. %1$d is how many tags are new. -->
     <plurals name="move_tags_gained">
         <item quantity="one">Your tag list gains 1 tag.</item>
