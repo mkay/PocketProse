@@ -98,19 +98,28 @@ fun TagDrawer(
                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp),
                 )
             }
-            items(tree, selected, onSelect, onRename)
-            // Under the tags, not instead of them. Keying this on an empty tree was wrong for a day:
-            // one tag added by hand — or by a sync landing a single note — filled the tree and took
-            // the notice with it, leaving a drawer that showed one tag out of 25 and nothing to say
-            // the other 24 were sitting in the words. A folder with one tag showing looks like the
-            // truth in a way a blank panel never does, so that was the worse of the two states.
+            // Above the tags, not below them, and never instead of them.
             //
-            // The condition is now the one the sentence itself makes: tags are still written in the
-            // text. Empty tree or full, the panel reads "here are your tags, and here are the ones
-            // that are not here yet" — and it goes for good when there is nothing left to move.
+            // Keying this on an empty tree was wrong for a day: one tag added by hand — or by a sync
+            // landing a single note — filled the tree and took the notice with it, leaving a drawer
+            // that showed one tag out of 25 and nothing to say the other 24 were sitting in the
+            // words. A folder with one tag showing looks like the truth in a way a blank panel never
+            // does, so that was the worse of the two states. The condition is therefore the one the
+            // sentence itself makes: tags are still written in the text.
+            //
+            // It sat under the tree until 2026-09-10, which read better — "here are your tags, and
+            // here are the ones that are not here yet" — and worked worse. This archive has 24 tags
+            // and the drawer is a list you scroll, so a notice at the end is a notice below the fold
+            // for exactly the folder that most needs it. Above the tree it costs a scroll on every
+            // open until the move is made; that price is paid by somebody who has been told why they
+            // are paying it, which the old position could not manage at all.
+            //
+            // Under the All notes row rather than over it: that row is the drawer's way out of a
+            // filter and must not move down for anything.
             if (tree.isEmpty() || (tagsInText != null && tagsInText > 0)) {
                 item { EmptyTags(tagsInText, onMoveTags) }
             }
+            items(tree, selected, onSelect, onRename)
         }
     }
 }
@@ -124,8 +133,8 @@ fun TagDrawer(
  * and every one of them is invisible here. Shown the same blank panel, both look like the app not
  * working.
  *
- * The second case does not need the list to be empty, only incomplete, so this appears under a tree
- * with tags in it too. See the call site.
+ * The second case does not need the list to be empty, only incomplete, so this appears above a tree
+ * with tags in it too. See the call site for why above and not below.
  *
  * **The offer belongs here as well as in the banner, and this one does not expire.** The banner is
  * an interruption and is dismissed for good, because re-asking to rewrite somebody's whole folder is
@@ -150,7 +159,8 @@ private fun EmptyTags(tagsInText: Int?, onMoveTags: (() -> Unit)?) {
     //
     // Inset and cornered rather than a full-bleed band. A band across a 300dp panel reads as a
     // section of the drawer, which is what the tag tree will be when there is one; a block that
-    // stops short of the edges reads as a notice sitting in an empty panel, which is what it is.
+    // stops short of the edges reads as a notice sitting in the panel, which is what it is. That
+    // distinction earns its keep now that the notice sits above the tree and has rows under it.
     Column(
         verticalArrangement = Arrangement.spacedBy(2.dp),
         modifier = Modifier
@@ -182,8 +192,17 @@ private fun EmptyTags(tagsInText: Int?, onMoveTags: (() -> Unit)?) {
             // the folder no longer needs it.
             if (onMoveTags != null) {
                 Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
+                    // Always "tags" here, whatever else the folder needs moved. This is the tag
+                    // drawer answering why its list is short; titles are not its subject and naming
+                    // them on this button would answer a question nobody asked here. The confirm it
+                    // opens states the full scope, which is where the full scope belongs.
                     TextButton(onClick = onMoveTags) {
-                        Text(stringResource(R.string.move_tags_banner_action))
+                        Text(
+                            stringResource(
+                                R.string.move_tags_banner_action,
+                                stringResource(R.string.move_tags_what_tags),
+                            ),
+                        )
                     }
                 }
             }

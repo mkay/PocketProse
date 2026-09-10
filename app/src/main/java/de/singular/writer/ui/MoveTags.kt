@@ -143,7 +143,7 @@ fun MoveTagsBanner(
                 )
             }
             TextButton(onClick = onOffer) {
-                Text(stringResource(R.string.move_tags_banner_action))
+                Text(stringResource(R.string.move_tags_banner_action, what))
             }
         }
     }

@@ -250,19 +250,28 @@
          notes" is the whole fact in one go, and "still" is what says this is leftover state rather
          than how things are.
 
-         "Keeps tags with the note" is the dialog's own phrasing, deliberately. Nowhere here says
-         frontmatter, metadata or YAML: the people this is for write songs. And it says the app keeps
-         them elsewhere rather than that it cannot read them where they are — it could, it did until
-         2026-09-09, and it stopped because a # in a song is part of the song.
+         "Out of your writing" is the dialog's own phrasing, deliberately, and it names no place at
+         all. Nowhere here says frontmatter, metadata or YAML: the people this is for write songs,
+         and "with the note" — which this said until 2026-09-10 — is not plainer, it is only shorter.
+         A reader who has never been shown where a note keeps anything learns nothing from it. What
+         they can see is both halves of the outcome: the hashtag line leaves the top of the song, and
+         the tag turns up in this list. And it says the app keeps them elsewhere rather than that it
+         cannot read them where they are — it could, it did until 2026-09-09, and it stopped because
+         a # in a song is part of the song.
 
-         The last sentence opens with the button's own words so the two are read together, but does
-         not quote it: a label in quotation marks beside the button it names is the same thing said
-         twice, and "click" is not what anybody does to a phone. -->
+         The last sentence and the button no longer share their opening word: the button names its
+         object ("Move tags") and the sentence keeps the pronoun, having just supplied it one line
+         earlier. Do not quote the label here — a name in quotation marks beside the button it names
+         is the same thing said twice, and "click" is not what anybody does to a phone. -->
     <plurals name="drawer_tags_in_text">
         <item quantity="one">Your tags are still written in one of your notes.</item>
         <item quantity="other">Your tags are still written in %1$d of your notes.</item>
     </plurals>
-    <string name="drawer_tags_in_text_why">Pocket Prose keeps tags with the note instead. Move them, and they all show up here.</string>
+    <!-- Two visible outcomes and no location: the hashtag line leaves the top of the song, and the
+         tag appears in this list. It said "keeps tags with the note instead" until 2026-09-10, which
+         named a place the reader cannot see and the app has no plain word for — "with the note"
+         means nothing to somebody who has never been shown where a note keeps anything. -->
+    <string name="drawer_tags_in_text_why">Pocket Prose keeps tags out of your writing. Move them, and they all show up here.</string>
     <string name="drawer_collapse">Hide sub-tags</string>
 
     <!-- ===== Search ===== -->
@@ -436,7 +445,11 @@
         <item quantity="one">In 1 note.</item>
         <item quantity="other">In %1$d notes.</item>
     </plurals>
-    <string name="move_tags_banner_action">Move them</string>
+    <!-- Opens the offer. Names what is being moved rather than saying "them": a button read on its
+         own — scanned quickly, or spoken by a screen reader — has no sentence above it to take a
+         pronoun from. %1$s is "tags", "titles" or "tags and titles". Deliberately not the same words
+         as the confirm inside the dialog, which commits: one invites, the other rewrites files. -->
+    <string name="move_tags_banner_action">Move %1$s</string>
     <!-- Declining. Not "Not now", which promises the banner comes back, and it does not — the way
          back is the row in Settings. "No thanks" answers the offer without dating it. -->
     <string name="move_tags_banner_dismiss">No thanks</string>
@@ -452,9 +465,12 @@
         <item quantity="one">1 of your %2$d notes has %3$s written into the text.</item>
         <item quantity="other">%1$d of your %2$d notes have %3$s written into the text.</item>
     </plurals>
-    <!-- What the move is for. "Kept with the note" is the honest description of a tag list and a
-         title the reader never sees while writing. %1$s is what is being moved. -->
-    <string name="move_tags_body">Pocket Prose keeps %1$s with the note instead of in the text, so they stay out of your writing. Moving them changes those files.</string>
+    <!-- What the move is for, and the one sentence that also says what it costs. It named a
+         destination until 2026-09-10 — "with the note instead of in the text" — which said the same
+         thing twice and named a place the reader cannot see either half of. What is left is the part
+         they can check: the words come out clean, and files are rewritten to do it. %1$s is what is
+         being moved. -->
+    <string name="move_tags_body">Pocket Prose keeps %1$s out of your writing, where the app can use them. Moving them changes those files.</string>
     <!-- Only when the tag list actually gains something. %1$d is how many tags are new. -->
     <plurals name="move_tags_gained">
         <item quantity="one">Your tag list gains 1 tag.</item>
@@ -466,6 +482,9 @@
         <item quantity="one">1 note keeps the title it shows, as its own.</item>
         <item quantity="other">%1$d notes keep the titles they show, as their own.</item>
     </plurals>
+    <!-- Committing, inside the dialog. "Them" is right here and only here: the sentences directly
+         above have just said what, how many notes, and that those files change, so the pronoun has
+         its antecedent and the button does not need to repeat the noun a third time. -->
     <string name="move_tags_confirm">Move them</string>
     <!-- Cancelling the confirm, which is genuinely temporary: the dialog closes and the banner is
          still there. So "Not now" is the accurate word here, and deliberately not the banner's own
@@ -500,7 +519,7 @@
         <item quantity="one">1 note</item>
         <item quantity="other">%1$d notes</item>
     </plurals>
-    <string name="settings_move_tags_caption">Moving them puts your %1$s with the note, out of your writing and where the app can use them.</string>
+    <string name="settings_move_tags_caption">Moving them takes your %1$s out of your writing, to where the app can use them.</string>
 
     <!-- ===== About ===== -->
 
