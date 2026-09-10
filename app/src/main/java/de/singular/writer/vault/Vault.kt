@@ -684,6 +684,36 @@ class Vault(context: Context) {
 
 
     /**
+     * Delete every note in [notes], and say honestly how far it got.
+     *
+     * The batch form of [delete], and it exists because a selection can stop half way — see
+     * [DeleteResult]. Each file is removed on its own; one that refuses does not stop the rest,
+     * because a user who ticked five notes and lost one to a sync is better served by four of them
+     * being gone and being told which one is not.
+     *
+     * **No confirmation lives here.** `CLAUDE.md` forbids deleting anything without an explicit yes,
+     * and that yes is asked for in the dialog this is called from — with the count in the question,
+     * because agreeing to remove two notes is not the same act as agreeing to remove twelve.
+     *
+     * There is no trash and no undo, exactly as with [delete]. Whether the sync client kept a copy
+     * is its business and not something this app will imply.
+     */
+    suspend fun deleteAll(notes: List<IndexedNote>): DeleteResult = withContext(Dispatchers.IO) {
+        if (notes.isEmpty()) return@withContext DeleteResult.Deleted(0)
+        rootFolder() ?: return@withContext DeleteResult.Failed("the folder is no longer reachable")
+
+        var gone = 0
+        val left = mutableListOf<String>()
+        for (note in notes) {
+            val ok = runCatching {
+                DocumentsContract.deleteDocument(resolver, note.file.uri)
+            }.getOrDefault(false)
+            if (ok) gone++ else left.add(note.file.name)
+        }
+        if (left.isEmpty()) DeleteResult.Deleted(gone) else DeleteResult.Partial(gone, left)
+    }
+
+    /**
      * Write [newBody] into a **new note beside** [note], leaving both.
      *
      * The answer to a conflict. `CLAUDE.md` forbids overwriting silently and forbids auto-merging,

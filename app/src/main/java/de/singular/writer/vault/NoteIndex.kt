@@ -4,9 +4,27 @@ package de.singular.writer.vault
 
 import de.singular.writer.markdown.Excerpt
 import de.singular.writer.markdown.Note
+import de.singular.writer.markdown.Stats
 import de.singular.writer.markdown.Tags
+import de.singular.writer.SortBy
+import de.singular.writer.SortOrder
 import java.time.Instant
 import java.time.format.DateTimeParseException
+
+/**
+ * What ordering a list of notes actually depends on: a name, a date, a length.
+ *
+ * Named rather than left implicit so the sort can be tested without a note — an [IndexedNote] cannot
+ * be built off a device, its [NoteFile] needing a real `Uri`, and that is why nothing in the vault
+ * package had a test before this one. The alternative was a mocking framework to stand in for a
+ * field the sort never reads, which is a dependency bought to paper over an unstated contract. This
+ * states it instead.
+ */
+interface Sortable {
+    val title: String
+    val updated: Instant?
+    val words: Int
+}
 
 /**
  * One note, read and parsed, with what the library needs to show it.
@@ -35,7 +53,7 @@ data class IndexedNote(
      * the archive today.
      */
     val roundTrips: Boolean,
-) {
+) : Sortable {
     /**
      * The note's title, falling back to the filename without its extension.
      *
@@ -43,13 +61,27 @@ data class IndexedNote(
      * frontmatter to carry a title. It is *not* how the archive works — all 168 notes carry a
      * `title`, and 11 of them end in a `?` that no filename could hold.
      */
-    val title: String
+    override val title: String
         get() = note.title?.takeIf { it.isNotBlank() } ?: file.name.removeSuffix(".md")
 
     val tags: List<String> get() = note.tags
 
     /** The first line or so of prose, or "" for the 40 notes that have none. See [Excerpt]. */
     val excerpt: String get() = Excerpt.of(note)
+
+    /**
+     * How many words the note holds, for the sort that orders by length.
+     *
+     * `by lazy` rather than a `get()`, unlike [excerpt] beside it, because the two are paid at
+     * different times: an excerpt is drawn for every visible row on every frame and is cheap enough
+     * to recompute, while this is asked for once per note when the list is sorted and never again.
+     * Computing it eagerly would count the words of all 168 notes on every read of the folder, for a
+     * sort most readers will never choose.
+     *
+     * `Stats.of` counts the body as it stands, leftover hashtag lines included — see the note there
+     * on why nothing is excused. So the order this produces is the order of what the files hold.
+     */
+    override val words: Int by lazy { Stats.of(note.body).words }
 
     /**
      * When the note was written, from the frontmatter — never the file's timestamp.
@@ -62,7 +94,7 @@ data class IndexedNote(
      */
     val created: Instant? get() = instant(note.frontmatter.created)
 
-    val updated: Instant? get() = instant(note.frontmatter.updated)
+    override val updated: Instant? get() = instant(note.frontmatter.updated)
 
     private fun instant(value: String?): Instant? =
         value?.let { runCatching { Instant.parse(it) }.getOrNull() }
@@ -138,6 +170,53 @@ class NoteIndex(notes: List<IndexedNote>) {
             if (it.file.name == old.file.name) it.copy(file = it.file.copy(uri = uri, name = name)) else it
         },
     )
+
+    /**
+     * [notes] in some other order — the library's sort, applied to a list the index has already
+     * filtered.
+     *
+     * **A view onto the index, never the index's own order.** [notes] stays canonical, because
+     * [replacing] and [renamed] rebuild it and neither has any business knowing what the reader last
+     * picked in a menu. This is called on the filtered list in `MainActivity`, after the tag and the
+     * search, so the sort applies to what is actually on screen.
+     *
+     * Ties break on title in every case, so a list of 39 notes that all hold one word does not
+     * reshuffle itself between two reads of the same folder.
+     */
+    fun <T : Sortable> sorted(notes: List<T>, by: SortBy, order: SortOrder): List<T> {
+        val down = order == SortOrder.DESC
+        val byTitle = compareBy<T, String>(String.CASE_INSENSITIVE_ORDER) { it.title }
+        val comparator = when (by) {
+            SortBy.UPDATED -> {
+                val dates = if (down) {
+                    compareByDescending<T> { it.updated }
+                } else {
+                    compareBy<T> { it.updated }
+                }
+                // **Dateless notes stay last in both directions**, which is why the null test is a
+                // key of its own rather than something the direction gets to flip. An unknown date
+                // is not "the oldest": 40 notes in the archive carry none, and floating them to the
+                // top of an ascending sort would bury the note the reader asked for behind every
+                // note the app knows nothing about.
+                //
+                // Reversing a finished ascending list would have done exactly that — it was written
+                // that way first — and would have flipped the tiebreak with it.
+                compareBy<T> { it.updated == null }.then(dates).then(byTitle)
+            }
+            SortBy.TITLE -> if (down) byTitle.reversed() else byTitle
+            SortBy.WORDS -> {
+                val counts = if (down) {
+                    compareByDescending<T> { it.words }
+                } else {
+                    compareBy<T> { it.words }
+                }
+                // The tiebreak does not turn round with the direction. 39 notes hold one word each,
+                // and A-to-Z among them either way is more use than a block that silently inverts.
+                counts.then(byTitle)
+            }
+        }
+        return notes.sortedWith(comparator)
+    }
 
     /** The tag tree the drawer draws. See [Tags.tree] for why it is built from path segments. */
     val tagTree: List<Tags.Node> by lazy { Tags.tree(this.notes.map { it.tags }) }

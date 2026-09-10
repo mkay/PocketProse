@@ -66,6 +66,7 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalTextToolbar
 import androidx.compose.foundation.text.contextmenu.provider.LocalTextContextMenuDropdownProvider
 import androidx.compose.foundation.text.contextmenu.provider.LocalTextContextMenuToolbarProvider
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -926,6 +927,40 @@ fun DeleteDialog(title: String, onConfirm: () -> Unit, onDismiss: () -> Unit) {
             )
         },
         text = { Text(text = stringResource(R.string.delete_note_body)) },
+        confirmButton = {
+            TextButton(onClick = onConfirm) { Text(text = stringResource(R.string.delete_note)) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(text = stringResource(R.string.action_cancel)) }
+        },
+    )
+}
+
+/**
+ * The same confirmation, for a selection rather than for one note.
+ *
+ * Separate from [DeleteDialog] rather than a parameter on it, because the two ask different
+ * questions. That one names the note, which is the whole of what makes a single delete agreeable:
+ * "delete note" over somebody's writing is not specific enough to say yes to. This one cannot name
+ * twelve, so it names the number instead — and the number is the decision, since agreeing to remove
+ * two is not the same act as agreeing to remove twelve.
+ *
+ * Same heading, same error tint, same plain sentence about what happens and what this app cannot do
+ * about it afterwards. Nothing here implies the sync client kept a copy; that is not something the
+ * app knows.
+ */
+@Composable
+fun DeleteSelectionDialog(count: Int, onConfirm: () -> Unit, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            DialogHeading(
+                icon = Icons.Outlined.DeleteOutline,
+                text = pluralStringResource(R.plurals.delete_notes_confirm, count, count),
+                tint = MaterialTheme.colorScheme.error,
+            )
+        },
+        text = { Text(text = stringResource(R.string.delete_notes_body)) },
         confirmButton = {
             TextButton(onClick = onConfirm) { Text(text = stringResource(R.string.delete_note)) }
         },

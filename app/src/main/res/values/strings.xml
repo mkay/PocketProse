@@ -597,4 +597,53 @@
     <string name="support_generous_action">Support it on Ko-fi</string>
     <string name="support_generous_note">Entirely optional. The app is and stays free either way.</string>
 
+    <!-- ===== How the list behaves ===== -->
+
+    <!-- Opens the menu in the library's bar that holds sorting, row density and multi-select. -->
+    <string name="list_options">List options</string>
+    <!-- The three orders. Each names what comes first at the top of the list, not the field it
+         sorts on: "Last changed" is what a reader is looking for, "updated" is what the file calls
+         it. -->
+    <string name="sort_by_updated">Last changed</string>
+    <string name="sort_by_title">Title</string>
+    <string name="sort_by_length">Length</string>
+    <!-- The direction row, which reads as whatever the chosen sort makes it mean. It listed all
+         three at once until 2026-09-10 — "Newest, Z, longest first" — which made the reader parse
+         three orders to find the one they were in. Six labels, each saying exactly one thing, is
+         the cheaper end of that trade. The arrow beside the row shows which way it currently runs;
+         tapping flips it. -->
+    <string name="sort_updated_desc">Newest first</string>
+    <string name="sort_updated_asc">Oldest first</string>
+    <string name="sort_title_asc">A\u2013Z</string>
+    <string name="sort_title_desc">Z\u2013A</string>
+    <string name="sort_length_desc">Longest first</string>
+    <string name="sort_length_asc">Shortest first</string>
+    <!-- How much of a note a row shows. Compact keeps the tags: four notes share the title
+         "Wer geht vor?" and only their tags tell them apart. -->
+    <string name="density_full">Full rows</string>
+    <string name="density_compact">Compact rows</string>
+    <!-- Enters multi-select. Long-pressing a note does the same thing. -->
+    <string name="select_notes">Select notes</string>
+    <!-- The selection bar. %1$d is how many are ticked. -->
+    <plurals name="selected_count">
+        <item quantity="one">1 selected</item>
+        <item quantity="other">%1$d selected</item>
+    </plurals>
+    <string name="select_all">Select all</string>
+    <string name="selection_end">Done selecting</string>
+    <!-- Deleting a selection. The count is the decision: agreeing to remove 2 notes is not the same
+         act as agreeing to remove 12, so it is in the question and not in the small print. -->
+    <plurals name="delete_notes_confirm">
+        <item quantity="one">Delete 1 note?</item>
+        <item quantity="other">Delete %1$d notes?</item>
+    </plurals>
+    <string name="delete_notes_body">They are removed from your folder. Pocket Prose cannot bring them back.</string>
+    <plurals name="delete_notes_done">
+        <item quantity="one">Deleted 1 note</item>
+        <item quantity="other">Deleted %1$d notes</item>
+    </plurals>
+    <!-- The delete stopped part way, so the folder is in two states at once. %1$d were removed,
+         %2$s names one that was not — the one to go and look at. -->
+    <string name="delete_notes_partial">Deleted %1$d, but %2$s is still there. Pull to refresh and try again.</string>
+
 </resources>

@@ -46,6 +46,32 @@ enum class ProseSize(val scale: Float) {
 }
 
 /**
+ * What the library orders its notes by.
+ *
+ * UPDATED is the list as it has always been and stays the default — what a writing app owes the top
+ * of its list is the thing you were last working on. The other two answer questions recency cannot:
+ * where is the one I can name, and which is the long one.
+ *
+ * WORDS counts words and not bytes. A file's size counts its frontmatter and its image lines, so a
+ * chord sheet with eight pictures would outrank a longer song, and the number would match nothing
+ * the reader has ever been shown. Words are what the details sheet already tells them.
+ */
+enum class SortBy { UPDATED, TITLE, WORDS }
+
+/** Which end of the order comes first. DESC is newest, Z, longest. */
+enum class SortOrder { DESC, ASC }
+
+/**
+ * How much of a note a row shows.
+ *
+ * FULL is title, excerpt, date and tags — the row the app is judged on, because the excerpt is the
+ * note in the writer's own words rather than metadata about it. COMPACT drops the excerpt and the
+ * date and keeps the tags, for the reader who is looking rather than reading: a title alone cannot
+ * tell four notes called "Wer geht vor?" apart and their tags can.
+ */
+enum class RowDensity { FULL, COMPACT }
+
+/**
  * How much air there is between the lines, as a multiple of the leading the chosen face is
  * corrected to.
  *
@@ -155,6 +181,44 @@ class Settings(context: Context) {
      * Stores the full path — `album/debut`, not `debut` — because that is what filtering matches
      * on: a path selects its own notes and everything nested under it.
      */
+    /** What the library sorts by. Same fallback rule as the theme. */
+    private var sort by mutableStateOf(
+        SortBy.entries.firstOrNull { it.name == prefs.getString(KEY_SORT_BY, null) } ?: SortBy.UPDATED,
+    )
+
+    var sortBy: SortBy
+        get() = sort
+        set(value) {
+            sort = value
+            prefs.edit().putString(KEY_SORT_BY, value.name).apply()
+        }
+
+    /** Which end of that order comes first. */
+    private var order by mutableStateOf(
+        SortOrder.entries.firstOrNull { it.name == prefs.getString(KEY_SORT_ORDER, null) }
+            ?: SortOrder.DESC,
+    )
+
+    var sortOrder: SortOrder
+        get() = order
+        set(value) {
+            order = value
+            prefs.edit().putString(KEY_SORT_ORDER, value.name).apply()
+        }
+
+    /** How much of a note a row shows. */
+    private var density by mutableStateOf(
+        RowDensity.entries.firstOrNull { it.name == prefs.getString(KEY_ROW_DENSITY, null) }
+            ?: RowDensity.FULL,
+    )
+
+    var rowDensity: RowDensity
+        get() = density
+        set(value) {
+            density = value
+            prefs.edit().putString(KEY_ROW_DENSITY, value.name).apply()
+        }
+
     private var start by mutableStateOf(prefs.getString(KEY_START_TAG, null))
 
     var startTag: String?
@@ -193,6 +257,9 @@ class Settings(context: Context) {
         const val KEY_PROSE_SIZE = "prose_size"
         const val KEY_PROSE_LEADING = "prose_leading"
         const val KEY_START_TAG = "start_tag"
+        const val KEY_SORT_BY = "sort_by"
+        const val KEY_SORT_ORDER = "sort_order"
+        const val KEY_ROW_DENSITY = "row_density"
         const val KEY_MOVE_TAGS_DECLINED = "move_tags_declined"
     }
 }

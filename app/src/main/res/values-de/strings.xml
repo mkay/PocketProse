@@ -288,4 +288,36 @@
         <item quantity="other">%1$d Texte</item>
     </plurals>
 
+    <!-- ===== Verhalten der Liste ===== -->
+
+    <string name="list_options">Listenoptionen</string>
+    <string name="sort_by_updated">Zuletzt geändert</string>
+    <string name="sort_by_title">Titel</string>
+    <string name="sort_by_length">Länge</string>
+    <string name="sort_updated_desc">Neueste zuerst</string>
+    <string name="sort_updated_asc">Älteste zuerst</string>
+    <string name="sort_title_asc">A\u2013Z</string>
+    <string name="sort_title_desc">Z\u2013A</string>
+    <string name="sort_length_desc">Längste zuerst</string>
+    <string name="sort_length_asc">Kürzeste zuerst</string>
+    <string name="density_full">Volle Zeilen</string>
+    <string name="density_compact">Kompakte Zeilen</string>
+    <string name="select_notes">Texte auswählen</string>
+    <plurals name="selected_count">
+        <item quantity="one">1 ausgewählt</item>
+        <item quantity="other">%1$d ausgewählt</item>
+    </plurals>
+    <string name="select_all">Alle auswählen</string>
+    <string name="selection_end">Auswahl beenden</string>
+    <plurals name="delete_notes_confirm">
+        <item quantity="one">1 Text löschen?</item>
+        <item quantity="other">%1$d Texte löschen?</item>
+    </plurals>
+    <string name="delete_notes_body">Sie werden aus deinem Ordner gelöscht. Pocket Prose kann sie nicht zurückholen.</string>
+    <plurals name="delete_notes_done">
+        <item quantity="one">1 Text gelöscht</item>
+        <item quantity="other">%1$d Texte gelöscht</item>
+    </plurals>
+    <string name="delete_notes_partial">%1$d gelöscht, aber %2$s ist noch da. Zum Aktualisieren ziehen und noch einmal versuchen.</string>
+
 </resources>

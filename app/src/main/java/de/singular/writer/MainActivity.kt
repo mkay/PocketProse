@@ -37,6 +37,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -71,6 +72,7 @@ import de.singular.writer.ui.EditorScreen
 import de.singular.writer.ui.NoteDocument
 import de.singular.writer.ui.ConflictDialog
 import de.singular.writer.ui.DeleteDialog
+import de.singular.writer.ui.DeleteSelectionDialog
 import de.singular.writer.ui.NewNoteDialog
 import de.singular.writer.ui.LibraryScreen
 import de.singular.writer.ui.PocketProseTheme
@@ -83,6 +85,7 @@ import de.singular.writer.vault.IndexedNote
 import de.singular.writer.vault.IndexDump
 import de.singular.writer.vault.NoteIndex
 import de.singular.writer.vault.CreateResult
+import de.singular.writer.vault.DeleteResult
 import de.singular.writer.vault.MigrationResult
 import de.singular.writer.vault.RenameResult
 import de.singular.writer.vault.RenameNoteResult
@@ -412,30 +415,102 @@ private fun PocketProseApp(settings: Settings) {
 
     // Tag first, then text: filtering a tag's notes by a word is the useful order, and it also means
     // a search inside a tag does not silently leave the tag.
-    val shown = remember(index, selectedTag, query) {
+    val shown = remember(index, selectedTag, query, settings.sortBy, settings.sortOrder) {
         val byTag = selectedTag?.let(index::withTag) ?: index.notes
         // The search runs **once**, not once per note. It used to sit inside the filter, where
         // `it in index.search(query).toSet()` scanned all 168 bodies and built a fresh set for every
         // note it was checking — 168 full scans a keystroke, which is why typing was unusable.
-        if (query.isBlank()) {
+        val found = if (query.isBlank()) {
             byTag
         } else {
             val matches = index.search(query).toSet()
             byTag.filter { it in matches }
         }
+        // Sorted last, over what is actually on screen. The index keeps its own recency order —
+        // `replacing` and `renamed` rebuild it and have no business knowing what the reader last
+        // picked in a menu — so the chosen order is a view onto the filtered list, not a property
+        // of the folder.
+        index.sorted(found, settings.sortBy, settings.sortOrder)
+    }
+
+    // Multi-select, held here rather than in the library because Back has to be able to leave it and
+    // the Back handlers live in this composable. A mode you cannot back out of is a trap.
+    var selecting by remember { mutableStateOf(false) }
+    // Note uris, never titles. Four files in the archive are titled "Wer geht vor?" and three more
+    // share another title, so a selection keyed on the name would delete a different note than the
+    // one that was ticked.
+    val selected = remember { mutableStateListOf<String>() }
+    var deletingSelection by remember { mutableStateOf(false) }
+
+    fun endSelecting() {
+        selecting = false
+        selected.clear()
+    }
+
+    // A note that left the folder — synced away, or deleted by the batch below — must not stay in
+    // the selection as a uri nothing resolves to. Pruned against the index rather than cleared, so a
+    // refresh landing mid-selection does not throw away ticks the user made.
+    LaunchedEffect(index) {
+        if (selecting) {
+            val alive = index.notes.mapTo(mutableSetOf()) { it.file.uri.toString() }
+            selected.retainAll { it in alive }
+        }
     }
 
     // Closing the drawer or leaving search is what Back should do before it leaves the app.
     BackHandler(enabled = drawerState.isOpen) { scope.launch { drawerState.close() } }
-    BackHandler(enabled = !drawerState.isOpen && searching) {
+    // Before search and before the tag filter: a selection is the most modal thing on this screen,
+    // and Back out of it must not first close a search that is also open underneath.
+    BackHandler(enabled = !drawerState.isOpen && selecting) { endSelecting() }
+    BackHandler(enabled = !drawerState.isOpen && !selecting && searching) {
         searching = false
         query = ""
     }
-    BackHandler(enabled = !drawerState.isOpen && !searching && selectedTag != null) { selectedTag = null }
+    BackHandler(enabled = !drawerState.isOpen && !selecting && !searching && selectedTag != null) {
+        selectedTag = null
+    }
 
     // Settings is a full screen over the library rather than a destination beside it: it is not a
     // place you navigate *to* while reading, it is a detour. Checked before the editor so that a
     // note left open underneath is still open on the way back.
+    if (deletingSelection) {
+        DeleteSelectionDialog(
+            count = selected.size,
+            onConfirm = {
+                deletingSelection = false
+                scope.launch {
+                    val notes = index.notes.filter { it.file.uri.toString() in selected }
+                    when (val result = vault.deleteAll(notes)) {
+                        is DeleteResult.Deleted -> {
+                            message = context.resources.getQuantityString(
+                                R.plurals.delete_notes_done,
+                                result.count,
+                                result.count,
+                            )
+                            endSelecting()
+                            refresh()
+                        }
+                        // Half the folder moved and half did not, which is a real outcome rather
+                        // than an error — see DeleteResult.Partial. The selection is *kept*, so
+                        // trying again acts on what is left instead of making the user re-tick it.
+                        is DeleteResult.Partial -> {
+                            message = context.getString(
+                                R.string.delete_notes_partial,
+                                result.deleted,
+                                result.remaining.first(),
+                            )
+                            refresh()
+                        }
+                        is DeleteResult.Failed -> {
+                            message = context.getString(R.string.save_failed, result.reason)
+                        }
+                    }
+                }
+            },
+            onDismiss = { deletingSelection = false },
+        )
+    }
+
     if (naming) {
         NewNoteDialog(
             onCreate = { title ->
@@ -762,6 +837,43 @@ private fun PocketProseApp(settings: Settings) {
                 if (!it) query = ""
             },
             selectedTag = selectedTag,
+            sortBy = settings.sortBy,
+            sortOrder = settings.sortOrder,
+            onSortChange = { by, order ->
+                settings.sortBy = by
+                settings.sortOrder = order
+            },
+            density = settings.rowDensity,
+            onDensityChange = { settings.rowDensity = it },
+            selecting = selecting,
+            selected = selected.toSet(),
+            onToggleSelect = { note ->
+                val uri = note.file.uri.toString()
+                if (uri in selected) selected.remove(uri) else selected.add(uri)
+            },
+            onStartSelecting = { note ->
+                selecting = true
+                // Entered by long-press, the note pressed is already ticked — the gesture said
+                // "this one" and then some. Entered from the menu, nothing is.
+                selected.clear()
+                note?.let { selected.add(it.file.uri.toString()) }
+                // A selection over a search is a selection of what the search found, which reads as
+                // fewer notes than the bar's count implies. Leaving search on entry keeps the two
+                // modes from stacking.
+                if (searching) {
+                    searching = false
+                    query = ""
+                }
+            },
+            onSelectAll = {
+                selected.clear()
+                // Everything currently on screen, not everything in the folder. A tag filter is a
+                // statement about which notes are being worked with, and "all" inside it means all
+                // of those.
+                shown.forEach { selected.add(it.file.uri.toString()) }
+            },
+            onEndSelecting = { endSelecting() },
+            onDeleteSelected = { deletingSelection = true },
             // Not while a search or a tag filter is on: the banner counts the whole folder, and a
             // sentence about 165 notes over a list of three reads as being about the three.
             moveTags = inlineTags?.takeIf { !settings.moveTagsDeclined && !searching && selectedTag == null },

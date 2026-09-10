@@ -4,7 +4,10 @@ package de.singular.writer.ui
 
 import androidx.annotation.StringRes
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Spacer
@@ -25,10 +28,20 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.automirrored.filled.Sort
+import androidx.compose.material.icons.filled.ArrowDownward
+import androidx.compose.material.icons.filled.ArrowUpward
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.SelectAll
+import androidx.compose.material.icons.outlined.Circle
+import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -44,7 +57,11 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.foundation.layout.size
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -57,7 +74,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.pluralStringResource
 import de.singular.writer.R
+import de.singular.writer.RowDensity
+import de.singular.writer.SortBy
+import de.singular.writer.SortOrder
 import de.singular.writer.markdown.Migration
 import de.singular.writer.vault.IndexedNote
 import de.singular.writer.vault.VaultFailure
@@ -92,6 +114,23 @@ fun LibraryScreen(
     moveTags: Migration.Survey?,
     onMoveTags: () -> Unit,
     onDismissMoveTags: () -> Unit,
+    // How the list is ordered and how much of a note a row shows. Both live in Settings, so they
+    // survive a restart the way every other preference does; the menu that changes them is in this
+    // screen's own bar because they are facts about this list rather than about the app.
+    sortBy: SortBy,
+    sortOrder: SortOrder,
+    onSortChange: (SortBy, SortOrder) -> Unit,
+    density: RowDensity,
+    onDensityChange: (RowDensity) -> Unit,
+    // Multi-select. Hoisted like `searching` is, because the Back handling lives in MainActivity and
+    // a mode Back cannot leave is a trap.
+    selecting: Boolean,
+    selected: Set<String>,
+    onToggleSelect: (IndexedNote) -> Unit,
+    onStartSelecting: (IndexedNote?) -> Unit,
+    onSelectAll: () -> Unit,
+    onEndSelecting: () -> Unit,
+    onDeleteSelected: () -> Unit,
     onOpenDrawer: () -> Unit,
     onChooseFolder: () -> Unit,
     onOpenNote: (IndexedNote) -> Unit,
@@ -157,7 +196,18 @@ fun LibraryScreen(
             Column(Modifier.windowInsetsPadding(WindowInsets.statusBars)) {
             TopAppBar(
                 title = {
-                    if (searching) {
+                    if (selecting) {
+                        // The count, not the wordmark. While a selection is on, the one thing the
+                        // bar has to say is how much is about to be acted on.
+                        Text(
+                            text = pluralStringResource(
+                                R.plurals.selected_count,
+                                selected.size,
+                                selected.size,
+                            ),
+                            style = MaterialTheme.typography.titleMedium,
+                        )
+                    } else if (searching) {
                         SearchField(query, onQueryChange)
                     } else {
                         // The wordmark is the title of the list, filtered or not. It briefly changed
@@ -175,21 +225,65 @@ fun LibraryScreen(
                     }
                 },
                 navigationIcon = {
-                    IconButton(onClick = onOpenDrawer) {
-                        Icon(
-                            imageVector = Icons.Filled.Menu,
-                            contentDescription = stringResource(R.string.drawer_open),
-                        )
+                    if (selecting) {
+                        // The way out sits where Back would put it, and does what Back does.
+                        IconButton(onClick = onEndSelecting) {
+                            Icon(
+                                imageVector = Icons.Filled.Close,
+                                contentDescription = stringResource(R.string.selection_end),
+                            )
+                        }
+                    } else {
+                        IconButton(onClick = onOpenDrawer) {
+                            Icon(
+                                imageVector = Icons.Filled.Menu,
+                                contentDescription = stringResource(R.string.drawer_open),
+                            )
+                        }
                     }
                 },
                 actions = {
-                    IconButton(onClick = { onSearchingChange(!searching) }) {
-                        Icon(
-                            imageVector = if (searching) Icons.Filled.Close else Icons.Filled.Search,
-                            contentDescription = stringResource(
-                                if (searching) R.string.search_close else R.string.search_open,
-                            ),
-                        )
+                    if (selecting) {
+                        IconButton(onClick = onSelectAll) {
+                            Icon(
+                                imageVector = Icons.Filled.SelectAll,
+                                contentDescription = stringResource(R.string.select_all),
+                            )
+                        }
+                        // Enabled only with something ticked, and tinted `error` — the one colour
+                        // this palette spends on the one thing the app cannot undo. See DeleteDialog.
+                        IconButton(onClick = onDeleteSelected, enabled = selected.isNotEmpty()) {
+                            Icon(
+                                imageVector = Icons.Outlined.DeleteOutline,
+                                contentDescription = stringResource(R.string.delete_note),
+                                tint = if (selected.isEmpty()) {
+                                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
+                                } else {
+                                    MaterialTheme.colorScheme.error
+                                },
+                            )
+                        }
+                    } else {
+                        // Not while searching: the bar is a text field then, and a menu about how
+                        // the list is ordered has nothing to say about a list being typed at.
+                        if (!searching) {
+                            ListOptionsMenu(
+                                sortBy = sortBy,
+                                sortOrder = sortOrder,
+                                onSortChange = onSortChange,
+                                density = density,
+                                onDensityChange = onDensityChange,
+                                onSelectNotes = { onStartSelecting(null) },
+                            )
+                        }
+                        IconButton(onClick = { onSearchingChange(!searching) }) {
+                            Icon(
+                                imageVector = if (searching) Icons.Filled.Close else Icons.Filled.Search,
+                                contentDescription = stringResource(
+                                    if (searching) R.string.search_close else R.string.search_open,
+                                ),
+                            )
+                        }
                     }
                 },
                 // The bar and the strip beneath it share one ground, so the top of the screen reads
@@ -228,7 +322,20 @@ fun LibraryScreen(
             } else {
                 LazyColumn(Modifier.fillMaxSize()) {
                     items(notes, key = { it.file.uri.toString() }) { note ->
-                        NoteRow(note, onClick = { onOpenNote(note) })
+                        val uri = note.file.uri.toString()
+                        NoteRow(
+                            note = note,
+                            density = density,
+                            selecting = selecting,
+                            // Ticked by uri and never by title: four notes in the archive are called
+                            // "Wer geht vor?" and three more share another title, so a selection
+                            // keyed on the name would delete the wrong file.
+                            checked = uri in selected,
+                            onClick = {
+                                if (selecting) onToggleSelect(note) else onOpenNote(note)
+                            },
+                            onLongClick = { if (!selecting) onStartSelecting(note) },
+                        )
                         HorizontalDivider(
                             color = MaterialTheme.colorScheme.outlineVariant,
                             modifier = Modifier.padding(horizontal = 20.dp),
@@ -343,17 +450,157 @@ private fun StatusStrip(count: Int, tag: String?, counted: Boolean) {
  * whole design — a person scanning this list is looking for a song, and a song is recognised by its
  * words far more reliably than by when it was last saved.
  */
+/**
+ * The menu behind the list icon: how this list is ordered, how much of a note it shows, and the way
+ * into multi-select.
+ *
+ * One menu rather than three controls in the bar. All three are "how this list behaves", none of
+ * them is reached often, and the bar of a reading screen is not the place to spend three slots on
+ * settings — the one thing that belongs out in the open there is search.
+ *
+ * The active row carries a check that is **always laid out** and only coloured in, the same rule the
+ * tag sheet's rows follow: a check that appears and disappears shifts every label beside it, and a
+ * menu whose text moves as you read it looks like it reordered itself.
+ */
 @Composable
-private fun NoteRow(note: IndexedNote, onClick: () -> Unit) {
+private fun ListOptionsMenu(
+    sortBy: SortBy,
+    sortOrder: SortOrder,
+    onSortChange: (SortBy, SortOrder) -> Unit,
+    density: RowDensity,
+    onDensityChange: (RowDensity) -> Unit,
+    onSelectNotes: () -> Unit,
+) {
+    var open by remember { mutableStateOf(false) }
+
+    IconButton(onClick = { open = true }) {
+        Icon(
+            imageVector = Icons.AutoMirrored.Filled.Sort,
+            contentDescription = stringResource(R.string.list_options),
+        )
+    }
+    DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+        listOf(
+            SortBy.UPDATED to R.string.sort_by_updated,
+            SortBy.TITLE to R.string.sort_by_title,
+            SortBy.WORDS to R.string.sort_by_length,
+        ).forEach { (value, label) ->
+            CheckableItem(stringResource(label), value == sortBy) {
+                // Picking an order never changes the direction. Somebody who has set the list to
+                // A-to-Z and then switches to length has said nothing about which end they want.
+                onSortChange(value, sortOrder)
+            }
+        }
+
+        HorizontalDivider(Modifier.padding(vertical = 4.dp))
+        // Not a check but a switch, and **it says what the chosen sort makes it mean**. One label
+        // for all three — "Newest, Z, longest first" — was what shipped first, and it made the
+        // reader parse three orders to find the one they were in. A direction has no meaning apart
+        // from the thing it is a direction of.
+        val down = sortOrder == SortOrder.DESC
+        CheckableItem(
+            label = stringResource(
+                when (sortBy) {
+                    SortBy.UPDATED -> if (down) R.string.sort_updated_desc else R.string.sort_updated_asc
+                    SortBy.TITLE -> if (down) R.string.sort_title_desc else R.string.sort_title_asc
+                    SortBy.WORDS -> if (down) R.string.sort_length_desc else R.string.sort_length_asc
+                },
+            ),
+            checked = false,
+            icon = if (down) Icons.Filled.ArrowDownward else Icons.Filled.ArrowUpward,
+        ) {
+            onSortChange(sortBy, if (down) SortOrder.ASC else SortOrder.DESC)
+        }
+
+        HorizontalDivider(Modifier.padding(vertical = 4.dp))
+        listOf(
+            RowDensity.FULL to R.string.density_full,
+            RowDensity.COMPACT to R.string.density_compact,
+        ).forEach { (value, label) ->
+            CheckableItem(stringResource(label), value == density) { onDensityChange(value) }
+        }
+
+        HorizontalDivider(Modifier.padding(vertical = 4.dp))
+        CheckableItem(stringResource(R.string.select_notes), checked = false) {
+            open = false
+            onSelectNotes()
+        }
+    }
+}
+
+/** A menu row with room for a mark on the left, whether or not it is currently wearing one. */
+@Composable
+private fun CheckableItem(
+    label: String,
+    checked: Boolean,
+    icon: ImageVector? = null,
+    onClick: () -> Unit,
+) {
+    DropdownMenuItem(
+        text = { Text(label) },
+        leadingIcon = {
+            Icon(
+                imageVector = icon ?: Icons.Filled.Check,
+                contentDescription = null,
+                tint = if (checked || icon != null) {
+                    MaterialTheme.colorScheme.onSurface
+                } else {
+                    Color.Transparent
+                },
+                modifier = Modifier.size(20.dp),
+            )
+        },
+        onClick = onClick,
+    )
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun NoteRow(
+    note: IndexedNote,
+    density: RowDensity,
+    selecting: Boolean,
+    checked: Boolean,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit,
+) {
     val date = rememberDateFormatter()
     val excerpt = note.excerpt
+    val compact = density == RowDensity.COMPACT
 
-    Column(
-        verticalArrangement = Arrangement.spacedBy(4.dp),
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = 20.dp, vertical = 14.dp),
+            // The same ground a picked tag chip wears, so "selected" looks like one thing across
+            // the app rather than like two ideas that happen to both mean chosen.
+            .background(
+                if (checked) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent,
+            )
+            .combinedClickable(onClick = onClick, onLongClick = onLongClick),
+    ) {
+        if (selecting) {
+            Icon(
+                imageVector = if (checked) Icons.Filled.CheckCircle else Icons.Outlined.Circle,
+                contentDescription = null,
+                tint = if (checked) {
+                    MaterialTheme.colorScheme.onSecondaryContainer
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                },
+                modifier = Modifier.padding(start = 20.dp).size(22.dp),
+            )
+        }
+    Column(
+        verticalArrangement = Arrangement.spacedBy(if (compact) 2.dp else 4.dp),
+        modifier = Modifier
+            .weight(1f)
+            .padding(
+                start = if (selecting) 16.dp else 20.dp,
+                end = 20.dp,
+                top = if (compact) 10.dp else 14.dp,
+                bottom = if (compact) 10.dp else 14.dp,
+            ),
     ) {
         Text(
             text = note.title,
@@ -362,6 +609,11 @@ private fun NoteRow(note: IndexedNote, onClick: () -> Unit) {
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
         )
+        // Compact drops the writing and the date and keeps the tags. Not an arbitrary half: the
+        // excerpt is the tallest part of the row and the least useful when you already know which
+        // note you are after, while the tags are the only thing that tells four notes titled
+        // "Wer geht vor?" apart.
+        if (!compact) {
         Text(
             // 40 of the author's 168 notes have no prose at all — they are a title filed under a
             // tag, which is a legitimate kind of note here and not a defect. A bare dash keeps
@@ -373,6 +625,7 @@ private fun NoteRow(note: IndexedNote, onClick: () -> Unit) {
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
         )
+        }
         // Date left, tags right, on one line — see TagRow, which fits what it can and stands the
         // rest behind a +N chip. A plain Row here was wrong twice over: the tags drifted in from the
         // date rather than landing on an edge, and with five of them the last chip was squeezed
@@ -381,7 +634,7 @@ private fun NoteRow(note: IndexedNote, onClick: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth().padding(top = 2.dp),
         ) {
-            note.updated?.let {
+            if (!compact) note.updated?.let {
                 Text(
                     text = date(it),
                     style = MaterialTheme.typography.labelSmall,
@@ -392,9 +645,10 @@ private fun NoteRow(note: IndexedNote, onClick: () -> Unit) {
                     maxLines = 1,
                 )
             }
-            Spacer(Modifier.width(12.dp))
+            if (!compact) Spacer(Modifier.width(12.dp))
             TagRow(note.tags, Modifier.weight(1f))
         }
+    }
     }
 }
 
