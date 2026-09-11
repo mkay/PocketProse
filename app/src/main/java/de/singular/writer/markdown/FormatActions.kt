@@ -121,6 +121,30 @@ object FormatActions {
         text.lastIndexOf('\n', (at - 1).coerceAtLeast(0)).let { if (it < 0 || at == 0) 0 else it + 1 }
 
     /**
+     * Copy the lines the selection covers and put the copy directly under them.
+     *
+     * A lyric repeats — a refrain sung twice, a chorus that comes back — and the way to write that
+     * with a keyboard is select, copy, go to the end, Enter, paste, four steps for one intention.
+     * Line-based like [quote]: a bare cursor copies its line, a selection every line it touches.
+     *
+     * The selection lands on the copy, so a second tap makes a third, which is what "3x" wants.
+     * The lines' own newlines are kept as they are; a last line without one gets a newline put in
+     * front of its copy instead, and the copy is then the line without one.
+     */
+    fun duplicate(text: String, start: Int, end: Int): Formatted {
+        val from = start.coerceIn(0, text.length)
+        val to = end.coerceIn(from, text.length)
+        val firstLine = lineStart(text, from)
+        val lastLineEnd = text.indexOf('\n', to).let { if (it < 0) text.length else it }
+        val block = text.substring(firstLine, lastLineEnd)
+
+        val inserted = "\n$block"
+        val result = text.substring(0, lastLineEnd) + inserted + text.substring(lastLineEnd)
+        val shift = lastLineEnd + 1 - firstLine
+        return Formatted(result, from + shift, to + shift)
+    }
+
+    /**
      * Put a horizontal rule on a line of its own after the line the cursor is in.
      *
      * Spelled `- - -`, which is what the archive uses: 20 notes carry that form against 2 with a

@@ -134,6 +134,29 @@ class FormatActionsTest {
         assertEquals(listOf(Block.Quote(listOf("eins", "zwei"))), Blocks.parse(text))
     }
 
+    // ===== duplicating =====
+
+    @Test
+    fun `a cursor duplicates its line under itself and moves to the copy`() {
+        val r = FormatActions.duplicate("eins\nzwei\ndrei\n", 6, 6)
+        assertEquals("eins\nzwei\nzwei\ndrei\n", r.text)
+        assertEquals(11, r.selectionStart)
+    }
+
+    @Test
+    fun `a selection duplicates every line it touches and stays over the copy`() {
+        val r = FormatActions.duplicate("eins\nzwei\ndrei\n", 2, 7)
+        assertEquals("eins\nzwei\neins\nzwei\ndrei\n", r.text)
+        assertEquals(12 to 17, r.selectionStart to r.selectionEnd)
+        // Again, from the copy: a third.
+        assertEquals("eins\nzwei\neins\nzwei\neins\nzwei\ndrei\n", FormatActions.duplicate(r.text, r.selectionStart, r.selectionEnd).text)
+    }
+
+    @Test
+    fun `a last line without a newline is duplicated on a new line`() {
+        assertEquals("eins\nzwei\nzwei", FormatActions.duplicate("eins\nzwei", 7, 7).text)
+    }
+
     // ===== the rule =====
 
     @Test

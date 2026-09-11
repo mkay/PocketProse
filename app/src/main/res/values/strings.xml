@@ -85,6 +85,9 @@
     <string name="format_quote">Quotes</string>
     <!-- The bar's indent button. Written to the file as a Markdown blockquote (`> `); the label names what the author is doing, not the syntax. -->
     <string name="format_indent">Indent</string>
+    <string name="format_undo">Undo</string>
+    <string name="format_redo">Redo</string>
+    <string name="format_duplicate">Repeat line</string>
     <!-- The five sizes the heading menu offers, largest first. The parser understands six; the
          first is not offered, because a heading above the note's own title has nothing to head.
          Named by size rather than by number: the audience does not count heading levels. -->

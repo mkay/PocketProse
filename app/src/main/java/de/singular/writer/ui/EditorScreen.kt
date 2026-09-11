@@ -3,6 +3,7 @@
 package de.singular.writer.ui
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.clickable
@@ -26,6 +27,8 @@ import androidx.compose.foundation.text.input.InputTransformation
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Redo
+import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.MoreVert
@@ -67,6 +70,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.LayoutCoordinates
 import de.singular.writer.markdown.Live
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.text.TextLayoutResult
@@ -409,15 +414,17 @@ fun EditorScreen(
         )
     }
 
-    // No floating selection popup anywhere in the editor: it lands on top of the line being
-    // selected, and this screen has a bar of its own for the same job.
+    // Android's floating selection popup goes, and the app's own comes in its place — under the
+    // selection rather than on top of it, in the app's colours, with the bar's buttons. See
+    // SelectionPopup for the mechanism and NoTextToolbar for the two routes Compose has.
     //
-    // Both of Compose's mechanisms are replaced. A text field asks the newer
-    // `LocalTextContextMenuToolbarProvider`, so overriding `LocalTextToolbar` alone did nothing and
-    // the popup kept appearing. See NoTextToolbar.
+    // A text field asks the newer `LocalTextContextMenuToolbarProvider`, which is where the
+    // app's provider goes; the older `LocalTextToolbar` and the mouse-driven dropdown route are
+    // still switched off.
+    val popups = remember { SelectionPopupProvider() }
     CompositionLocalProvider(
         LocalTextToolbar provides NoTextToolbar,
-        LocalTextContextMenuToolbarProvider provides NoTextContextMenu,
+        LocalTextContextMenuToolbarProvider provides popups,
         LocalTextContextMenuDropdownProvider provides NoTextContextMenu,
     ) {
     Column(modifier.fillMaxSize()) {
@@ -557,10 +564,13 @@ fun EditorScreen(
 
         // One scroller for the whole note, with the text fields inside it rather than each
         // scrolling on its own — a note is one page, and images have to move with the words around
-        // them.
+        // them. The box around it is what the selection popup is positioned in: the page, so the
+        // popup never sits over the bar or the keyboard.
+        var page by remember { mutableStateOf<LayoutCoordinates?>(null) }
+        Box(Modifier.weight(1f).onGloballyPositioned { page = it }) {
         Column(
             Modifier
-                .weight(1f)
+                .fillMaxSize()
                 .verticalScroll(rememberScrollState()),
         ) {
             NoteTitleField(
@@ -652,6 +662,18 @@ fun EditorScreen(
                     // second copy of what the foot already shows.
                 }
             }
+        }
+
+        // The selection strip: what the bar offers for a selection, brought to the selection. Only
+        // over a field that can be written to, and only while something is selected — the field
+        // asks for it at the right moments, and the check here is for the moment between a
+        // request and the selection collapsing.
+        val selectedIn = focused?.let(document::bufferAt)?.takeIf { editable && !it.selection.collapsed }
+        if (selectedIn != null) {
+            SelectionPopup(provider = popups, anchor = page) {
+                SelectionStrip(body = selectedIn)
+            }
+        }
         }
 
         if (editingTags) {
@@ -764,6 +786,50 @@ private fun RuleLines(
 }
 
 /**
+ * The strip under a selection: the bar's selection buttons, where the selection is.
+ *
+ * The same buttons as the bar's, doing the same things to the same buffer, so there is one
+ * vocabulary in two places rather than two vocabularies. The bar stays: it is where the cursor
+ * actions and the way out live, and it is reachable with nothing selected.
+ */
+@Composable
+private fun SelectionStrip(body: TextFieldState) {
+    val clipboard = LocalClipboardManager.current
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        shape = MaterialTheme.shapes.medium,
+        shadowElevation = 3.dp,
+    ) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(2.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(horizontal = 4.dp),
+        ) {
+            FormatIcon(R.drawable.ic_format_bold, R.string.format_bold, true) {
+                body.wrapSelection("**")
+            }
+            FormatIcon(R.drawable.ic_format_italic, R.string.format_italic, true) {
+                body.wrapSelection("*")
+            }
+            FormatIcon(R.drawable.ic_format_quote, R.string.format_quote, true) {
+                body.wrapSelection("\"")
+            }
+            BarDivider()
+            FormatIcon(R.drawable.ic_content_cut, R.string.format_cut, true) {
+                clipboard.setText(AnnotatedString(body.selectedText()))
+                body.replaceSelection("")
+            }
+            FormatIcon(R.drawable.ic_content_copy, R.string.format_copy, true) {
+                clipboard.setText(AnnotatedString(body.selectedText()))
+            }
+            FormatIcon(R.drawable.ic_content_paste, R.string.format_paste, true) {
+                clipboard.getText()?.text?.let(body::replaceSelection)
+            }
+        }
+    }
+}
+
+/**
  * The bar over the keyboard: what to do to the words, and the clipboard.
  *
  * **It appears on focus, not on selection**, and that is forced by suppressing Android's floating
@@ -772,9 +838,11 @@ private fun RuleLines(
  * rule anyway: the bar is for the field you are writing in, and it sits above the keyboard rather
  * than over the page, so it costs the writing nothing.
  *
- * Two groups with a rule between them: what changes the words, then what moves them. Everything
- * needing a selection is disabled without one rather than hidden — buttons that come and go under a
- * thumb are worse than buttons visibly not yet available.
+ * **Everything here works at a cursor.** What needs a selection — bold, italic, quotes, cut, copy
+ * — lives in the strip that appears under the selection, see [SelectionStrip]; it was here as
+ * well until 2026-09-12, greyed out most of the time, three disabled buttons announcing a rule the
+ * strip enforces by existing. Three groups with rules between them: undoing, what the bar puts
+ * into the note, and the clipboard.
  *
  * **Every button writes something the parser reads back, or plain text.** Bold, italic and a
  * divider are all in `markdown/Blocks.kt` and `Inline.kt`; the quote button writes `"`, which is
@@ -792,6 +860,7 @@ private fun RuleLines(
  * The row still scrolls rather than wrapping, so that a bar that is sometimes two storeys tall
  * never moves the writing up and down as you work.
  */
+@OptIn(ExperimentalFoundationApi::class) // undoState
 @Composable
 private fun FormatBar(
     body: TextFieldState,
@@ -801,7 +870,6 @@ private fun FormatBar(
     modifier: Modifier = Modifier,
 ) {
     val clipboard = LocalClipboardManager.current
-    val selected = !body.selection.collapsed
     Surface(
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
         modifier = modifier.fillMaxWidth().imePadding(),
@@ -815,19 +883,19 @@ private fun FormatBar(
                 .horizontalScroll(rememberScrollState())
                 .padding(horizontal = 8.dp, vertical = 4.dp),
         ) {
-            FormatIcon(R.drawable.ic_format_bold, R.string.format_bold, selected) {
-                body.wrapSelection("**")
+            // Undo lives in the keyboard on Android, when it lives anywhere — one keyboard has it
+            // in its top row, another has nothing — and every button in this bar rewrites the whole
+            // buffer, so a mis-tap over a selection is a five-line change. The history is the
+            // field's own.
+            FormatVector(Icons.AutoMirrored.Filled.Undo, R.string.format_undo, body.undoState.canUndo) {
+                body.undoState.undo()
             }
-            FormatIcon(R.drawable.ic_format_italic, R.string.format_italic, selected) {
-                body.wrapSelection("*")
+            FormatVector(Icons.AutoMirrored.Filled.Redo, R.string.format_redo, body.undoState.canRedo) {
+                body.undoState.redo()
             }
-            // Straight quotes, because the archive's are: 1474 `"` against 24 `„`. A typographic
-            // pair would need an opening and a closing character chosen per language, and the
-            // author's own keyboard has been settling that question one way for ten years. Toggles
-            // like Bold — the same `wrap`, with a character instead of a mark.
-            FormatIcon(R.drawable.ic_format_quote, R.string.format_quote, selected) {
-                body.wrapSelection("\"")
-            }
+
+            BarDivider()
+
             // An indent, written as a blockquote — see `Block.Quote` for why that is the right
             // Markdown for it. Line-based, so it needs no selection.
             FormatIcon(R.drawable.ic_format_indent_increase, R.string.format_indent, true) {
@@ -845,15 +913,13 @@ private fun FormatBar(
                 FormatIcon(R.drawable.ic_add_photo, R.string.add_image, true, onAddImage)
             }
 
+            // A lyric repeats. Select-copy-Enter-paste is four steps for one intention.
+            FormatIcon(R.drawable.ic_repeat_line, R.string.format_duplicate, true) {
+                body.duplicateLines()
+            }
+
             BarDivider()
 
-            FormatIcon(R.drawable.ic_content_cut, R.string.format_cut, selected) {
-                clipboard.setText(AnnotatedString(body.selectedText()))
-                body.replaceSelection("")
-            }
-            FormatIcon(R.drawable.ic_content_copy, R.string.format_copy, selected) {
-                clipboard.setText(AnnotatedString(body.selectedText()))
-            }
             FormatIcon(R.drawable.ic_content_paste, R.string.format_paste, true) {
                 clipboard.getText()?.text?.let(body::replaceSelection)
             }
@@ -892,6 +958,24 @@ private fun FormatIcon(icon: Int, label: Int, enabled: Boolean, onClick: () -> U
             // file name.
             contentDescription = stringResource(label),
         )
+    }
+}
+
+/** [FormatIcon] for an icon from the Material set rather than from `res/drawable`. */
+@Composable
+private fun FormatVector(icon: ImageVector, label: Int, enabled: Boolean, onClick: () -> Unit) {
+    IconButton(onClick = onClick, enabled = enabled) {
+        Icon(imageVector = icon, contentDescription = stringResource(label))
+    }
+}
+
+/** Applies [FormatActions.duplicate] to the lines the selection covers, moving it to the copy. */
+private fun TextFieldState.duplicateLines() {
+    val range = selection
+    val result = FormatActions.duplicate(text.toString(), range.min, range.max)
+    edit {
+        replace(0, length, result.text)
+        selection = TextRange(result.selectionStart, result.selectionEnd)
     }
 }
 
