@@ -25,7 +25,8 @@ This is the short list, and it is the point of the app rather than a set of miss
 ## What it does
 
 - **Titles from frontmatter**, never derived from the filename — the two often differ, and duplicate titles across files stay separate notes.
-- **A tag tree** built from `/` path segments, kept in sync between the frontmatter list and the inline `#hashtags`, with `F#` in a lyric correctly not being a tag.
+- **A tag tree** built from `/` path segments, read from the frontmatter `tags:` list and nothing else — `F#` in a lyric is a sharp, and a `#hashtag` in a body is text. A folder that still keeps its tags and titles in the body gets a one-time offer to move them into the frontmatter, and the zip export can write them back.
+- **Pinned notes**, by tag. Notes carrying the pin tag — `pinned` unless you rename it — sit at the top of the library, whatever the sort. It is an ordinary tag in every other way, so it syncs with the note and survives the app; a flag stored anywhere else would not.
 - **Relative images and attachments**, resolved against the note's own folder, so `![](attachments/chords.png)` renders and a linked PDF opens in an external viewer.
 - **Dates from the file**, not from when the app first saw it.
 - **Atomic writes** — temp file plus rename, so a sync client never sees a half-written note.
