@@ -130,8 +130,9 @@ object Live {
                 mark = Mark.QUOTE,
                 open = m.range.first until m.range.last + 1,
                 content = m.range.last + 1 until lineEnd,
-                // The newline, when there is one. Always hidden — see `of`.
-                close = lineEnd until (lineEnd + 1).coerceAtMost(text.length),
+                // The line's newline is not the close: which newlines go is decided per block in
+                // `quoteParagraphs`, not per line.
+                close = lineEnd until lineEnd,
             )
         }
 
@@ -187,14 +188,17 @@ object Live {
      * An indented line is pushed right with a paragraph indent, which is the only way a text field
      * indents a wrapped line's continuation as well as its first. Compose makes every range that
      * carries a paragraph style a paragraph of its own, stacked under the one before it — which is
-     * a line break — so the newline ending an indented line would be a *second* break, and an empty
-     * row. It is therefore hidden, always, cursor or no cursor; and so is the newline ending the
-     * line above an indented block, because the block's own paragraph boundary already breaks
-     * there. Worked through for `A / blank / B / C / blank / D` with B and C indented: the shown
-     * text is `A\n` `B` `C` `\nD` in four paragraphs, and the rows come out as the file has them.
+     * a line break — so a newline sitting at a paragraph boundary would be a *second* break, and an
+     * empty row. Exactly one newline per boundary is therefore hidden, and which one is decided in
+     * [quoteParagraphs] so that every line of the file is one row on screen: the paragraph of an
+     * indented line runs on over the blank lines after it when another indented line follows, so
+     * those blank lines are rows inside it and only the last newline before the next block goes.
+     * The first version hid the newline after every indented line and the one before every block,
+     * which for one blank line between two blocks was both of that line's newlines — and the gap
+     * came out doubled.
      *
      * The `> ` itself reveals under the cursor like any marker, and the [Mark.QUOTE] style over the
-     * whole line — marker included when it is showing — is what the transformation turns into the
+     * paragraph — marker included when it is showing — is what the transformation turns into the
      * paragraph indent.
      */
     fun of(text: String, selection: IntRange): LiveText {
@@ -206,19 +210,10 @@ object Live {
         for (s in spans) {
             if (s.mark == Mark.QUOTE) {
                 // The cursor anywhere on the line, its end included, reveals the `> `; the start of
-                // the next line does not, so the reveal edge is the content's end, not the close's.
+                // the next line does not.
                 val touched = selection.first <= s.content.last + 1 && selection.last >= s.open.first
                 if (touched) marked += Triple(s.open, s.mark, s.level to true)
                 else hide += Hidden(s.open.first, s.open.last + 1)
-                if (!s.close.isEmpty()) hide += Hidden(s.close.first, s.close.last + 1)
-                // The newline ending the line above, unless that line is indented too and its own
-                // close already took it.
-                val above = s.open.first - 1
-                if (above >= 0 && text[above] == '\n' && hide.none { it.start == above }) {
-                    hide += Hidden(above, above + 1)
-                }
-                // The paragraph: marker and words together, so a revealed `> ` sits in the indent.
-                marked += Triple(s.open.first..s.content.last, s.mark, s.level to false)
                 continue
             }
             val touched = selection.first <= s.close.last + 1 && selection.last >= s.open.first
@@ -231,6 +226,11 @@ object Live {
                 if (!s.close.isEmpty()) hide += Hidden(s.close.first, s.close.last + 1)
             }
             if (!s.content.isEmpty()) marked += Triple(s.content, s.mark, s.level to false)
+        }
+
+        for ((start, end) in quoteParagraphs(text, spans.filter { it.mark == Mark.QUOTE }, hide)) {
+            // The paragraph: marker and words together, so a revealed `> ` sits in the indent.
+            if (end > start) marked += Triple(start until end, Mark.QUOTE, 0 to false)
         }
 
         hide.sortBy { it.start }
@@ -251,6 +251,78 @@ object Live {
             styles = styles,
             rules = rules.map { (at, revealed) -> Rule(shift(at, hide), revealed) },
         )
+    }
+
+    /**
+     * The paragraph each indented line becomes, as `start until end` in original coordinates, with
+     * the newlines that have to go for the rows to add up put into [hide].
+     *
+     * The arithmetic: a paragraph shows one row per newline in it plus one, and a paragraph boundary
+     * is itself a row break. So for the screen to have exactly one row per line of the file, exactly
+     * one newline must vanish at every boundary — and never a newline that is a row of its own.
+     * Line by line, for an indented line:
+     *
+     * - **Forward.** If the next non-blank line is indented too, this paragraph runs on over the
+     *   blank lines between (each a row inside it) and the last newline before that line is the
+     *   boundary, hidden. If the next non-blank line is ordinary text, this line's own newline is
+     *   the boundary and the blank lines belong to the text's paragraph, which starts with them.
+     *   If only blank lines follow to the end of the note, nothing is hidden and the paragraph runs
+     *   to the end: the newline the note ends with stays a row, the one the cursor sits on.
+     * - **Backward.** The line above being indented is that line's forward case. Otherwise the
+     *   newline ending the line above — text or the last of the blanks under text — is the
+     *   boundary, hidden; the text's paragraph keeps its own newline and so its rows. Blank lines
+     *   only, from the top of the note: the boundary newline goes when two or more of them keep a
+     *   paragraph of their own, and a single one is taken into this paragraph instead, since hiding
+     *   its newline would leave nothing to be a row.
+     */
+    private fun quoteParagraphs(text: String, quotes: List<Span>, hide: MutableList<Hidden>): List<Pair<Int, Int>> {
+        if (quotes.isEmpty()) return emptyList()
+        val starts = ArrayList<Int>()
+        var i = 0
+        while (true) {
+            starts += i
+            val nl = text.indexOf('\n', i)
+            if (nl < 0) break
+            i = nl + 1
+        }
+        fun endOf(line: Int) = if (line + 1 < starts.size) starts[line + 1] - 1 else text.length
+        fun blank(line: Int) = text.substring(starts[line], endOf(line)).isBlank()
+        val quoted = quotes.map { it.open.first }.toSet()
+        fun isQuote(line: Int) = starts[line] in quoted
+        fun hideNewline(at: Int) {
+            if (at < text.length && text[at] == '\n' && hide.none { it.start == at }) hide += Hidden(at, at + 1)
+        }
+
+        val out = ArrayList<Pair<Int, Int>>()
+        for (q in quotes) {
+            val line = starts.indexOf(q.open.first)
+            var start = starts[line]
+            var end = endOf(line)
+
+            var next = line + 1
+            while (next < starts.size && blank(next)) next++
+            when {
+                next >= starts.size -> end = text.length
+                isQuote(next) -> {
+                    end = endOf(next - 1)
+                    hideNewline(end)
+                }
+                else -> hideNewline(end)
+            }
+
+            if (line > 0 && !isQuote(line - 1)) {
+                var above = line - 1
+                while (above >= 0 && blank(above)) above--
+                when {
+                    above >= 0 && isQuote(above) -> Unit
+                    above >= 0 -> hideNewline(endOf(line - 1))
+                    line >= 2 -> hideNewline(endOf(line - 1))
+                    else -> start = 0
+                }
+            }
+            out += start to end
+        }
+        return out
     }
 
     /** [offset] in original coordinates, moved to where it lands once [hide] has been removed. */

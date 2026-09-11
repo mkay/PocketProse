@@ -65,9 +65,11 @@ object FormatActions {
      * the author thinks in, and dragging exactly from the first character to the last is not
      * something anyone does on a phone.
      *
-     * Blank lines are left blank both ways. CommonMark ends a quote at a blank line, so two verses
-     * indented together become two quotes rather than one — which this app draws identically, and
-     * which spares the file the `>` alone on a line that keeping them one block would need.
+     * Blank lines inside a selection are left blank both ways. CommonMark ends a quote at a blank
+     * line, so two verses indented together become two quotes rather than one — which this app
+     * draws identically, and which spares the file the `>` alone on a line that keeping them one
+     * block would need. A bare cursor on a blank line is the exception: that is somebody about to
+     * start an indented block, and the `> ` goes on so what they type next is in it.
      *
      * One button, toggling, as the rest of the bar: all covered lines indented means take it off,
      * anything else means put it on where it is missing. The selection is kept over the same lines
@@ -81,21 +83,25 @@ object FormatActions {
 
         val lines = text.substring(firstLine, lastLineEnd).split('\n')
         val allQuoted = lines.filter { it.isNotBlank() }.let { it.isNotEmpty() && it.all(QUOTE_MARK::containsMatchIn) }
+        val starting = from == to && lines.size == 1 && lines.single().isBlank()
 
         var newFrom = from
         var newTo = to
         var at = firstLine
         val rebuilt = lines.joinToString("\n") { line ->
             val out = when {
+                starting -> QUOTE + line
                 line.isBlank() -> line
                 allQuoted -> QUOTE_MARK.replace(line, "")
                 QUOTE_MARK.containsMatchIn(line) -> line
                 else -> "$QUOTE$line"
             }
             val delta = out.length - line.length
-            // A change on this line moves every selection edge that sits after where the change
-            // happened — the line's start — but never off the line's own start.
-            if (from > at) newFrom = (newFrom + delta).coerceAtLeast(at)
+            // A change on this line moves every selection edge on it — the start edge even when it
+            // sits exactly at the line's start, so a cursor there lands after the mark and the next
+            // character typed goes into the block rather than in front of it — but never off the
+            // line's own start.
+            if (from >= at) newFrom = (newFrom + delta).coerceAtLeast(at)
             if (to > at) newTo = (newTo + delta).coerceAtLeast(at)
             at += line.length + 1
             out

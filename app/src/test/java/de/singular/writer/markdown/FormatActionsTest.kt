@@ -110,6 +110,17 @@ class FormatActionsTest {
     }
 
     @Test
+    fun `a cursor on an empty line starts an indented block there`() {
+        val on = FormatActions.quote("eins\n\nzwei\n", 5, 5)
+        assertEquals("eins\n> \nzwei\n", on.text)
+        assertEquals(7, on.selectionStart)
+        // And a second tap takes it off again.
+        assertEquals("eins\n\nzwei\n", FormatActions.quote(on.text, 7, 7).text)
+        // At the end of a note too, where there is no newline after the cursor.
+        assertEquals("eins\n> ", FormatActions.quote("eins\n", 5, 5).text)
+    }
+
+    @Test
     fun `blank lines stay blank and do not count`() {
         val text = "eins\n\nzwei\n"
         val on = FormatActions.quote(text, 0, text.length - 1)

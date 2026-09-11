@@ -141,6 +141,34 @@ class LiveTextTest {
         assertEquals(listOf("B", "C"), paragraphs("> B\nC"))
         assertEquals(listOf("A", "B"), paragraphs("A\n> B"))
         assertEquals(listOf("B"), paragraphs("> B"))
+        // The newline every note ends with stays: it is the row the cursor sits on.
+        assertEquals(listOf("B\n"), paragraphs("> B\n"))
+    }
+
+    @Test
+    fun `blank lines between two indented blocks are rows inside the first`() {
+        // One blank line, one row — the case that came out doubled.
+        assertEquals(listOf("B\n", "C"), paragraphs("> B\n\n> C"))
+        assertEquals(listOf("B\n\n", "C"), paragraphs("> B\n\n\n> C"))
+    }
+
+    @Test
+    fun `blank lines above an indented block at the top of the note stay rows`() {
+        assertEquals(listOf("\nB"), paragraphs("\n> B"))
+        assertEquals(listOf("\n", "B"), paragraphs("\n\n> B"))
+        assertEquals(listOf("A\n", "B"), paragraphs("A\n\n> B"))
+        assertEquals(listOf("A\n\n", "B"), paragraphs("A\n\n\n> B"))
+    }
+
+    @Test
+    fun `every line of the file is one row on screen`() {
+        // The invariant behind all of the above, over every arrangement of three kinds of line.
+        val kinds = listOf("A", "", "> Q")
+        for (a in kinds) for (b in kinds) for (c in kinds) for (d in kinds) {
+            val text = listOf(a, b, c, d).joinToString("\n")
+            val rows = paragraphs(text).sumOf { it.count { ch -> ch == '\n' } + 1 }
+            assertEquals(text.replace("\n", "⏎"), 4, rows)
+        }
     }
 
     @Test
