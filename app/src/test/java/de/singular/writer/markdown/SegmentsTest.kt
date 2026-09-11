@@ -111,4 +111,31 @@ class SegmentsTest {
         assertEquals(1, Segments.split(body).size)
         assertTrue(Segments.split(body).single() is Segment.Prose)
     }
+
+    // ===== removing a picture =====
+
+    @Test
+    fun `removing the only picture on a line removes the line`() {
+        assertEquals("", Segments.withoutImage("![](attachments/a.png)\n", ImageRef("", "attachments/a.png")))
+    }
+
+    @Test
+    fun `removing one of a run keeps the others and one gap between them`() {
+        val line = "![](a.png) ![](b.png) ![](c.png)\n"
+        assertEquals("![](a.png) ![](c.png)\n", Segments.withoutImage(line, ImageRef("", "b.png")))
+        assertEquals("![](b.png) ![](c.png)\n", Segments.withoutImage(line, ImageRef("", "a.png")))
+        assertEquals("![](a.png) ![](b.png)\n", Segments.withoutImage(line, ImageRef("", "c.png")))
+    }
+
+    @Test
+    fun `words beside a removed picture stay`() {
+        // The one line in the archive that carries text beside its pictures reads "3x".
+        assertEquals("3x\n", Segments.withoutImage("![](a.png) 3x\n", ImageRef("", "a.png")))
+    }
+
+    @Test
+    fun `a picture that is not on the line changes nothing`() {
+        val line = "![](a.png)\n"
+        assertEquals(line, Segments.withoutImage(line, ImageRef("", "z.png")))
+    }
 }

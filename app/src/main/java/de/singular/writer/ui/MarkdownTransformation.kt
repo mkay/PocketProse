@@ -87,6 +87,9 @@ data class MarkdownTransformation(
             Mark.BOLD_ITALIC -> SpanStyle(fontWeight = FontWeight.Bold, fontStyle = FontStyle.Italic)
             Mark.CODE -> SpanStyle(fontFamily = FontFamily.Monospace, color = code)
             Mark.HEADING -> SpanStyle(fontWeight = FontWeight.SemiBold, fontSize = headingSize(level))
+            // A rule has no content to paint: hidden, it is an empty line with a divider drawn
+            // through it (see `RuleLines`); revealed, it is all marker and took the branch above.
+            Mark.RULE -> SpanStyle()
         }
     }
 

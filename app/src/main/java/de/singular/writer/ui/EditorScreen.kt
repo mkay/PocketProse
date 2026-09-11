@@ -26,7 +26,6 @@ import androidx.compose.foundation.text.input.InputTransformation
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.outlined.CallSplit
@@ -58,6 +57,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
@@ -65,6 +65,11 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import de.singular.writer.markdown.Live
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
@@ -89,6 +94,7 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import de.singular.writer.markdown.FormatActions
+import de.singular.writer.markdown.ImageRef
 import de.singular.writer.markdown.LinkRef
 import de.singular.writer.markdown.Segment
 import de.singular.writer.markdown.Segments
@@ -194,10 +200,36 @@ class NoteDocument(val name: String, body: String, tags: List<String>, title: St
 
     fun bufferAt(index: Int): TextFieldState = buffers.getValue(index)
 
+    /**
+     * Image lines as they stand after pictures were removed from them, by segment index.
+     *
+     * The segment list is fixed for the life of the document — the buffers are keyed by it — so a
+     * removal does not take the segment out; it records the line's new bytes here, and [body]
+     * writes those instead. The editor then saves and rebuilds, exactly as it does after inserting
+     * a picture, and the rebuilt document has no such line to begin with.
+     */
+    private val rewritten = mutableStateMapOf<Int, String>()
+
+    /** The image line at [index] as it should currently be shown, or null once nothing is left. */
+    fun imagesAt(index: Int): Segment.Images? {
+        val segment = segments[index] as Segment.Images
+        val raw = rewritten[index] ?: return segment
+        return Segments.split(raw).filterIsInstance<Segment.Images>().firstOrNull()
+    }
+
+    /** Take [ref]'s link off the image line at [index]. Nothing reaches disk until the next save. */
+    fun removeImage(index: Int, ref: ImageRef) {
+        val raw = rewritten[index] ?: segments[index].raw
+        rewritten[index] = Segments.withoutImage(raw, ref)
+    }
+
     /** The whole note again, as bytes to be written — including the gap [opensOnBlankLine] hid. */
     fun body(): String = (if (opensOnBlankLine) "\n" else "") +
         segments.withIndex().joinToString("") { (i, segment) ->
-            if (segment is Segment.Prose) buffers.getValue(i).text.toString() else segment.raw
+            when {
+                segment is Segment.Prose -> buffers.getValue(i).text.toString()
+                else -> rewritten[i] ?: segment.raw
+            }
         }
 
     /** The index of the note's first editable stretch, which is where a placeholder belongs. */
@@ -265,10 +297,11 @@ fun EditorScreen(
      */
     onCopyImage: suspend (android.net.Uri) -> String?,
     /**
-     * Called once a link has been inserted. **The note has to be saved and reopened for the picture
-     * to appear**, and this is what asks for that — see the note on the picker below.
+     * Called once a picture's link has been inserted or removed. **The note has to be saved and
+     * reopened for the change to show**, and this is what asks for that — see the note on the
+     * picker below.
      */
-    onImageInserted: () -> Unit,
+    onImagesChanged: () -> Unit,
     /** Rename the open note's file to this stem, `.md` excluded. */
     onRename: (String) -> Unit,
     /**
@@ -349,7 +382,7 @@ fun EditorScreen(
                 //
                 // Adding a picture is a change to the writing, so the save moving `updated` is
                 // correct — unlike a tag, which is filing.
-                onImageInserted()
+                onImagesChanged()
             }
         }
     }
@@ -519,7 +552,8 @@ fun EditorScreen(
 
             document.segments.forEachIndexed { i, segment ->
                 when (segment) {
-                    is Segment.Prose -> BasicTextField(
+                    is Segment.Prose -> RuleLines(document.bufferAt(i)) { rules ->
+                    BasicTextField(
                         state = document.bufferAt(i),
                         enabled = editable,
                         textStyle = LocalProseStyle.current.copy(color = scheme.onSurface),
@@ -558,10 +592,25 @@ fun EditorScreen(
                                 if (state.isFocused) focused = i
                                 else if (focused == i) focused = null
                             }
-                            .padding(horizontal = 20.dp, vertical = 4.dp),
+                            .padding(horizontal = 20.dp, vertical = 4.dp)
+                            .then(rules.modifier),
+                        onTextLayout = rules.onTextLayout,
                     )
+                    }
 
-                    is Segment.Images -> NoteImages(segment, attachments)
+                    is Segment.Images -> document.imagesAt(i)?.let { images ->
+                        NoteImages(
+                            segment = images,
+                            attachments = attachments,
+                            onRemove = if (!editable) null else { ref ->
+                                document.removeImage(i, ref)
+                                // The same save-and-rebuild as inserting: the line is gone from
+                                // the bytes, and the document built from them has no gap where
+                                // the picture was.
+                                onImagesChanged()
+                            },
+                        )
+                    }
 
                     // Drawn nowhere here: the note's tags are gathered into one chip row at the
                     // foot, so a run in the middle of a note does not interrupt the writing with a
@@ -622,6 +671,55 @@ fun EditorScreen(
     }
 }
 
+/** What [RuleLines] hands its field: where to draw, and how to learn where the lines are. */
+private class RuleDrawing(
+    val modifier: Modifier,
+    val onTextLayout: Density.(() -> TextLayoutResult?) -> Unit,
+)
+
+/**
+ * Draws a horizontal rule across the field wherever the text has one.
+ *
+ * `- - -` is hidden by the transformation like any other marker, which leaves an empty line where
+ * the rule was; this draws a line through that empty line, at the width of the writing, so the
+ * reader sees the divider every other Markdown reader would show rather than three dashes or
+ * nothing. A rule the cursor is on is not drawn: its dashes are back on screen, dimmed, and the
+ * line would sit on top of them.
+ *
+ * The positions come from [Live], in transformed coordinates — the same answer the transformation
+ * paints from, computed once more here because an [OutputTransformation] cannot report back to the
+ * composable that owns it without writing state during layout. The vertical bounds come from the
+ * field's own [TextLayoutResult], read at draw time through the getter [BasicTextField] hands out,
+ * so a wrap or a font change moves the line with the text. Nothing is drawn where there is no rule,
+ * which is 147 of the archive's 168 notes.
+ */
+@Composable
+private fun RuleLines(state: TextFieldState, content: @Composable (RuleDrawing) -> Unit) {
+    var layout by remember { mutableStateOf<(() -> TextLayoutResult?)?>(null) }
+    val colour = MaterialTheme.colorScheme.outlineVariant
+    val text = state.text.toString()
+    val selection = state.selection
+    val rules = remember(text, selection) {
+        Live.of(text, selection.min..selection.max).rules.filter { !it.revealed }
+    }
+    val drawing = remember(rules, colour) {
+        RuleDrawing(
+            modifier = if (rules.isEmpty()) Modifier else Modifier.drawBehind {
+                val result = layout?.invoke() ?: return@drawBehind
+                val stroke = 1.dp.toPx()
+                for (rule in rules) {
+                    if (rule.offset > result.layoutInput.text.length) continue
+                    val line = result.getLineForOffset(rule.offset)
+                    val y = (result.getLineTop(line) + result.getLineBottom(line)) / 2
+                    drawLine(colour, Offset(0f, y), Offset(size.width, y), stroke)
+                }
+            },
+            onTextLayout = { getter -> layout = getter },
+        )
+    }
+    content(drawing)
+}
+
 /**
  * The bar over the keyboard: what to do to the words, and the clipboard.
  *
@@ -635,14 +733,20 @@ fun EditorScreen(
  * needing a selection is disabled without one rather than hidden — buttons that come and go under a
  * thumb are worse than buttons visibly not yet available.
  *
- * **Every button writes something the parser reads back.** Bold, italic, three heading levels, a
- * bullet and a divider are all in `markdown/Blocks.kt` and `Inline.kt`; clearing takes those same
- * marks off. A button writing anything else would put characters into a lyric that come back as
- * literal text, which is the failure this app exists to avoid. Quote, numbered lists, indentation
- * and the two tag symbols have icons waiting in `res/drawable` and no parser behind them yet.
+ * **Every button writes something the parser reads back.** Bold, italic and a divider are all in
+ * `markdown/Blocks.kt` and `Inline.kt`. A button writing anything else would put characters into a
+ * lyric that come back as literal text, which is the failure this app exists to avoid. Quote,
+ * numbered lists, indentation and the two tag symbols have icons waiting in `res/drawable` and no
+ * parser behind them yet.
  *
- * The row scrolls rather than wrapping: eleven buttons do not fit any phone, and a bar that is
- * sometimes two storeys tall moves the writing up and down as you work.
+ * **Deliberately short.** Headings, bullets and a clear-formatting button were here and went on
+ * 2026-09-11: a `#` or a `-` at the start of a line is one keystroke and the parser reads it, and
+ * every emphasis button already toggles, so clearing was a second way to do what tapping Bold again
+ * does. Six heading levels behind a menu was the most machinery in the bar for the least-used
+ * mark in the archive.
+ *
+ * The row still scrolls rather than wrapping, so that a bar that is sometimes two storeys tall
+ * never moves the writing up and down as you work.
  */
 @Composable
 private fun FormatBar(
@@ -672,10 +776,6 @@ private fun FormatBar(
             FormatIcon(R.drawable.ic_format_italic, R.string.format_italic, selected) {
                 body.wrapSelection("*")
             }
-            HeadingControl(body, enabled = true)
-            FormatIcon(R.drawable.ic_format_list_bulleted, R.string.format_bullet, true) {
-                body.prefixLine("- ")
-            }
             FormatIcon(R.drawable.ic_horizontal_rule, R.string.format_rule, true) {
                 body.insertRule()
             }
@@ -685,9 +785,6 @@ private fun FormatBar(
             // the menu is reachable with nothing focused, so the insertion point had to be guessed.
             // Here there is always a cursor, because the bar only exists when there is one.
             FormatIcon(R.drawable.ic_add_photo, R.string.add_image, true, onAddImage)
-            FormatIcon(R.drawable.ic_remove_selection, R.string.format_clear, selected) {
-                body.clearFormatting()
-            }
 
             BarDivider()
 
@@ -703,8 +800,8 @@ private fun FormatBar(
             }
         }
 
-        // **Outside the scrolling row**, so a way out cannot be scrolled off the screen. Eleven
-        // buttons do not fit a phone; the one that ends writing has to be where it always is.
+        // **Outside the scrolling row**, so a way out cannot be scrolled off the screen. The one
+        // that ends writing has to be where it always is.
         //
         // It puts the keyboard away and brings the tags back, which until now needed the system back
         // gesture — the same gesture that leaves the note, so there was no way to stop typing
@@ -718,75 +815,6 @@ private fun FormatBar(
         }
       }
     }
-}
-
-/**
- * The heading control: one button wearing the level of the line under the cursor, and a menu of the
- * five it offers.
- *
- * Five buttons in a row said the same thing in six times the space, and the row already scrolls. One
- * that *shows* the current level says something the five could not: what this line is. A plain line
- * shows H2, which is what tapping through would give it.
- *
- * Picking the level a line already has takes the heading off — the same toggling the rest of the bar
- * does — and the tick beside it in the menu is what says so.
- *
- * H1 is not offered. The parser reads all six, and the archive uses `##` and nothing else; a level
- * above the note's own title is a heading with nothing to be a heading of.
- */
-@Composable
-private fun HeadingControl(body: TextFieldState, enabled: Boolean) {
-    var open by remember { mutableStateOf(false) }
-    val level = FormatActions.headingLevelAt(body.text.toString(), body.selection.min)
-    val shown = if (level in LEVELS) level else LEVELS.first
-
-    Box {
-        FormatIcon(headingIcon(shown), headingLabel(shown), enabled) { open = true }
-        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
-            LEVELS.forEach { candidate ->
-                DropdownMenuItem(
-                    text = { Text(text = stringResource(headingLabel(candidate))) },
-                    leadingIcon = {
-                        Icon(
-                            painter = painterResource(headingIcon(candidate)),
-                            contentDescription = null,
-                        )
-                    },
-                    trailingIcon = {
-                        if (candidate == level) {
-                            Icon(
-                                imageVector = Icons.Filled.Check,
-                                contentDescription = null,
-                            )
-                        }
-                    },
-                    onClick = {
-                        open = false
-                        body.setHeading(candidate)
-                    },
-                )
-            }
-        }
-    }
-}
-
-/** The levels the bar offers. Six exist; the archive uses one. */
-private val LEVELS = 2..6
-
-private fun headingIcon(level: Int): Int = when (level) {
-    2 -> R.drawable.ic_format_h2
-    3 -> R.drawable.ic_format_h3
-    4 -> R.drawable.ic_format_h4
-    5 -> R.drawable.ic_format_h5
-    else -> R.drawable.ic_format_h6
-}
-
-private fun headingLabel(level: Int): Int = when (level) {
-    2 -> R.string.format_heading_2
-    3 -> R.string.format_heading_3
-    4 -> R.string.format_heading_4
-    5 -> R.string.format_heading_5
-    else -> R.string.format_heading_6
 }
 
 /** Separates what changes the words from what moves them. */
@@ -855,15 +883,6 @@ private fun TextFieldState.wrapSelection(marker: String) {
     }
 }
 
-/** Applies [FormatActions.heading], which swaps the line's mark rather than stacking another. */
-private fun TextFieldState.setHeading(level: Int) {
-    val result = FormatActions.heading(text.toString(), selection.min, level)
-    edit {
-        replace(0, length, result.text)
-        selection = TextRange(result.selectionStart, result.selectionEnd)
-    }
-}
-
 /** Applies [FormatActions.rule], which puts a divider on a line of its own after this one. */
 private fun TextFieldState.insertRule() {
     val result = FormatActions.rule(text.toString(), selection.min)
@@ -873,25 +892,6 @@ private fun TextFieldState.insertRule() {
     }
 }
 
-/** Applies [FormatActions.clear] to the selection, keeping the words it leaves behind selected. */
-private fun TextFieldState.clearFormatting() {
-    val range = selection
-    if (range.collapsed) return
-    val result = FormatActions.clear(text.toString(), range.min, range.max)
-    edit {
-        replace(0, length, result.text)
-        selection = TextRange(result.selectionStart, result.selectionEnd)
-    }
-}
-
-/** Applies [FormatActions.prefixLine] to the line the selection starts on. */
-private fun TextFieldState.prefixLine(prefix: String) {
-    val result = FormatActions.prefixLine(text.toString(), selection.min, prefix)
-    edit {
-        replace(0, length, result.text)
-        selection = TextRange(result.selectionStart, result.selectionEnd)
-    }
-}
 
 /**
  * The note's title, at the top of the page and part of it.

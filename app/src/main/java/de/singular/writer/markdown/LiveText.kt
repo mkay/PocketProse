@@ -3,13 +3,14 @@
 package de.singular.writer.markdown
 
 /** What a run of marked-up text is. */
-enum class Mark { BOLD, ITALIC, BOLD_ITALIC, CODE, HEADING }
+enum class Mark { BOLD, ITALIC, BOLD_ITALIC, CODE, HEADING, RULE }
 
 /**
  * One piece of markup found in the text, in **original** coordinates.
  *
  * [open] and [close] are the marker runs — `**`, `_`, `` ` ``, or a heading's `## ` — and [content]
- * is what sits between them. A heading has an empty [close] at the end of its line.
+ * is what sits between them. A heading has an empty [close] at the end of its line. A rule is all
+ * marker: its [open] is the whole line, and [content] and [close] are empty.
  */
 data class Span(
     val mark: Mark,
@@ -26,8 +27,22 @@ data class Hidden(val start: Int, val end: Int)
 /** A styled range, in **transformed** coordinates — what the reader actually sees. */
 data class Styled(val start: Int, val end: Int, val mark: Mark, val level: Int, val isMarker: Boolean)
 
-/** The whole answer for one pass: what to hide, and how to paint what is left. */
-data class LiveText(val hide: List<Hidden>, val styles: List<Styled>)
+/**
+ * A horizontal rule, in **transformed** coordinates: [offset] is somewhere on its line, and
+ * [revealed] says whether the cursor is on it and the dashes are showing.
+ */
+data class Rule(val offset: Int, val revealed: Boolean)
+
+/**
+ * The whole answer for one pass: what to hide, how to paint what is left, and where the rules are.
+ *
+ * [rules] exists because a rule is the one mark that is not painted onto its characters but drawn
+ * across the page in their place. `- - -` is hidden like any other marker, which leaves an empty
+ * line, and the field draws a line through that empty line — the divider every other reader would
+ * show for it, at the full width of the writing. The cursor arriving on the line brings the dashes
+ * back, dimmed, exactly as it brings `**` back, so what is in the file is never out of reach.
+ */
+data class LiveText(val hide: List<Hidden>, val styles: List<Styled>, val rules: List<Rule> = emptyList())
 
 /**
  * Turns the raw text of a note into "hide these characters, paint those ranges" — which is the whole
@@ -84,14 +99,18 @@ object Live {
     /**
      * Scan [text] for everything the editor styles.
      *
-     * Deliberately a small vocabulary — emphasis, code and headings. Links and images arrive in
-     * phase 5 with the rest of the attachment handling. Anything not recognised is left as the
-     * characters the user typed, which is always the safe answer.
+     * Deliberately a small vocabulary — emphasis, code, headings and rules. Links and images are
+     * the segment splitter's business. Anything not recognised is left as the characters the user
+     * typed, which is always the safe answer.
      */
     fun scan(text: String): List<Span> {
         val spans = ArrayList<Span>()
         val ruleLines = RULE_LINE.findAll(text).map { it.range }.toList()
         fun inRule(i: Int) = ruleLines.any { i in it }
+
+        for (r in ruleLines) {
+            spans += Span(mark = Mark.RULE, open = r, content = r.last + 1 until r.last + 1, close = r.last + 1 until r.last + 1)
+        }
 
         for (m in HEADING.findAll(text)) {
             val lineEnd = text.indexOf('\n', m.range.last).let { if (it < 0) text.length else it }
@@ -144,9 +163,11 @@ object Live {
         val spans = scan(text)
         val hide = ArrayList<Hidden>()
         val marked = ArrayList<Triple<IntRange, Mark, Pair<Int, Boolean>>>()
+        val rules = ArrayList<Pair<Int, Boolean>>()
 
         for (s in spans) {
             val touched = selection.first <= s.close.last + 1 && selection.last >= s.open.first
+            if (s.mark == Mark.RULE) rules += s.open.first to touched
             if (touched) {
                 if (!s.open.isEmpty()) marked += Triple(s.open, s.mark, s.level to true)
                 if (!s.close.isEmpty()) marked += Triple(s.close, s.mark, s.level to true)
@@ -170,7 +191,11 @@ object Live {
             }
             .filter { it.end > it.start }
             .sortedBy { it.start }
-        return LiveText(hide, styles)
+        return LiveText(
+            hide = hide,
+            styles = styles,
+            rules = rules.map { (at, revealed) -> Rule(shift(at, hide), revealed) },
+        )
     }
 
     /** [offset] in original coordinates, moved to where it lands once [hide] has been removed. */

@@ -57,32 +57,6 @@ object FormatActions {
     }
 
     /**
-     * Put [prefix] at the start of the line [at] falls on, or take it off again.
-     *
-     * Used for headings. The prefix goes before any text on the line but after nothing else — a
-     * heading marker is only a heading marker at the very start of a line.
-     */
-    fun prefixLine(text: String, at: Int, prefix: String): Formatted {
-        val caret = at.coerceIn(0, text.length)
-        val lineStart = text.lastIndexOf('\n', (caret - 1).coerceAtLeast(0))
-            .let { if (it < 0 || caret == 0) 0 else it + 1 }
-
-        return if (text.startsWith(prefix, lineStart)) {
-            Formatted(
-                text = text.removeRange(lineStart, lineStart + prefix.length),
-                selectionStart = (caret - prefix.length).coerceAtLeast(lineStart),
-                selectionEnd = (caret - prefix.length).coerceAtLeast(lineStart),
-            )
-        } else {
-            Formatted(
-                text = text.substring(0, lineStart) + prefix + text.substring(lineStart),
-                selectionStart = caret + prefix.length,
-                selectionEnd = caret + prefix.length,
-            )
-        }
-    }
-
-    /**
      * Put a horizontal rule on a line of its own after the line the cursor is in.
      *
      * Spelled `- - -`, which is what the archive uses: 20 notes carry that form against 2 with a
@@ -114,61 +88,6 @@ object FormatActions {
         return Formatted(result, caret, caret)
     }
 
-    /**
-     * Take the app's own marks off the selection, and leave everything else exactly as it is.
-     *
-     * Two kinds come off. **Line prefixes** — `## ` and `- ` — go from every line the selection
-     * touches, because they belong to the line rather than to the characters. **Emphasis and code
-     * markers** go from inside the selection only.
-     *
-     * The marker list is [Live]'s own, longest first, so `***` is taken as one mark rather than as a
-     * bold plus a stray asterisk.
-     *
-     * **It removes the marker characters, not the marks it can prove are marks.** An asterisk inside
-     * the selection goes whether or not [Live] would have styled it — `zwei * drei` selected and
-     * cleared becomes `zwei  drei`. Working out which asterisks are load-bearing is what [Live] does
-     * with a whole note in hand, and applying that to an arbitrary selection would make a button
-     * whose result nobody can predict. Blunt and obvious beats clever and surprising here, and the
-     * blast radius is exactly what the user selected.
-     *
-     * Deliberately not a toggle. There is nothing to toggle back to — clearing is the way back.
-     */
-    fun clear(text: String, start: Int, end: Int): Formatted {
-        val from = start.coerceIn(0, text.length)
-        val to = end.coerceIn(from, text.length)
-
-        val head = text.substring(0, from)
-        val body = text.substring(from, to)
-        val tail = text.substring(to)
-
-        val stripped = body.lineSequence().joinToString("\n") { line ->
-            val withoutPrefix = LINE_PREFIX.replace(line, "")
-            MARKERS.fold(withoutPrefix) { acc, marker -> acc.replace(marker, "") }
-        }
-
-        // The line the selection starts on may have begun before it, so its prefix is off the end of
-        // the selection and has to be reached for separately.
-        val lineStart = head.lastIndexOf('\n') + 1
-        val prefix = LINE_PREFIX.find(head.substring(lineStart) + stripped.substringBefore('\n'))
-        val trimmedHead = if (prefix != null && prefix.range.first == 0) {
-            head.substring(0, lineStart) + head.substring(lineStart).removeRange(
-                0,
-                minOf(prefix.value.length, head.length - lineStart),
-            )
-        } else {
-            head
-        }
-
-        val caret = trimmedHead.length
-        return Formatted(trimmedHead + stripped + tail, caret, caret + stripped.length)
-    }
-
-    /** `## ` or `- ` at the start of a line: the marks that belong to the line, not to its words. */
-    private val LINE_PREFIX = Regex("""^(?:#{1,6}[ \t]+|[-*+][ \t]+)""")
-
-    /** [Live]'s emphasis markers, longest first so `***` is one mark and not three. */
-    private val MARKERS = listOf("***", "___", "**", "__", "*", "_", "`")
-
     /** The archive's spelling of a rule. 20 notes use it; 2 use a bare `---`. */
     private const val RULE = "- - -"
 
@@ -181,59 +100,5 @@ object FormatActions {
         if (lineEnd >= text.length) return true
         val next = text.indexOf('\n', lineEnd + 1).let { if (it < 0) text.length else it }
         return text.substring((lineEnd + 1).coerceAtMost(text.length), next).isBlank()
-    }
-
-    /**
-     * The heading level of the line [at] sits on, or 0 for a line that is not a heading.
-     *
-     * What the bar's heading button wears: a control that always showed the same symbol would say
-     * nothing about the line under the cursor, and the whole point of collapsing six levels into one
-     * button is that the button then has room to answer "what is this line?".
-     */
-    fun headingLevelAt(text: String, at: Int): Int {
-        val line = lineAt(text, at)
-        return HEADING_MARK.find(line)?.groupValues?.get(1)?.length ?: 0
-    }
-
-    /**
-     * Make the line [at] sits on a heading of [level], or take the heading off if it already is one.
-     *
-     * A **replacement**, not an addition: `prefixLine` would have turned `## Strophe` into
-     * `### ## Strophe`, because it only knows whether the exact prefix it was given is there. Six
-     * levels in one control means changing one's mind about the level is the ordinary act, so the
-     * old mark comes off as the new one goes on.
-     *
-     * Choosing the level a line already has removes it, which is the way back and is the same
-     * toggling every other button in the bar does. The caret keeps its place in the words, moving by
-     * however much the mark grew or shrank rather than jumping to the start of the line.
-     */
-    fun heading(text: String, at: Int, level: Int): Formatted {
-        val caret = at.coerceIn(0, text.length)
-        val lineStart = lineStart(text, caret)
-        val existing = HEADING_MARK.find(lineAt(text, caret))?.value.orEmpty()
-        val wanted = if (existing.isNotEmpty() && existing.trimEnd().length == level) {
-            ""
-        } else {
-            "#".repeat(level.coerceIn(1, 6)) + " "
-        }
-
-        val result = text.substring(0, lineStart) + wanted +
-            text.substring(lineStart + existing.length)
-        val moved = (caret + wanted.length - existing.length).coerceAtLeast(lineStart)
-        return Formatted(result, moved, moved)
-    }
-
-    /** `## ` at the start of a line — the hashes and the whitespace that closes them. */
-    private val HEADING_MARK = Regex("""^(#{1,6})[ \t]+""")
-
-    /** Where the line holding [at] begins. */
-    private fun lineStart(text: String, at: Int): Int =
-        text.lastIndexOf('\n', (at - 1).coerceAtLeast(0)).let { if (it < 0 || at == 0) 0 else it + 1 }
-
-    /** The line holding [at], without its terminator. */
-    private fun lineAt(text: String, at: Int): String {
-        val start = lineStart(text, at)
-        val end = text.indexOf('\n', start).let { if (it < 0) text.length else it }
-        return text.substring(start, end)
     }
 }

@@ -81,10 +81,12 @@ class LiveTextTest {
     @Test
     fun `a rule is never eaten as emphasis`() {
         // *** is three asterisks and also a horizontal rule. Without the guard the *** spelling
-        // would swallow the rule and everything after it.
-        assertEquals("***\nDu erreichst mich nicht", shown("***\nDu erreichst mich nicht"))
-        assertEquals("- - -\nnoch eine Zeile", shown("- - -\nnoch eine Zeile"))
-        assertEquals("---\ntext", shown("---\ntext"))
+        // would swallow the rule and everything after it. The rule itself is hidden — a line is
+        // drawn in its place — but the text after it is untouched.
+        assertEquals("\nDu erreichst mich nicht", shown("***\nDu erreichst mich nicht"))
+        assertEquals("\nnoch eine Zeile", shown("- - -\nnoch eine Zeile"))
+        assertEquals("\ntext", shown("---\ntext"))
+        assertTrue(Live.of("***\n*nicht* kursiv", IntRange(-5, -5)).styles.any { it.mark == Mark.ITALIC })
     }
 
     @Test
@@ -112,6 +114,37 @@ class LiveTextTest {
         assertEquals("#100", shown("#100"))
         assertEquals("Tarantino für zwei in F# Moll.", shown("Tarantino für zwei in F# Moll."))
         assertEquals("#lyrics/snippet", shown("#lyrics/snippet"))
+    }
+
+    // ===== rules =====
+
+    @Test
+    fun `a rule is hidden and reported where its empty line lands`() {
+        val text = "**eins**\n\n- - -\n\nzwei"
+        val live = Live.of(text, IntRange(-5, -5))
+        assertEquals("eins\n\n\n\nzwei", shown(text))
+        // Offset 6 in what is shown: "eins\n\n" is six characters, and the rule's line begins there.
+        assertEquals(listOf(Rule(offset = 6, revealed = false)), live.rules)
+    }
+
+    @Test
+    fun `a rule the cursor is on shows its dashes and says so`() {
+        val text = "eins\n- - -\nzwei"
+        assertEquals(text, shown(text, cursor = 7))
+        assertEquals(listOf(Rule(offset = 5, revealed = true)), Live.of(text, 7..7).rules)
+        // At either end of the line too, so arriving from above or below reveals it.
+        assertEquals(text, shown(text, cursor = 5))
+        assertEquals(text, shown(text, cursor = 10))
+        // The line after it is somewhere else.
+        assertEquals("eins\n\nzwei", shown(text, cursor = 11))
+    }
+
+    @Test
+    fun `every spelling of a rule is one`() {
+        for (rule in listOf("---", "- - -", "***", "___", "- - - -")) {
+            assertEquals(rule, 1, Live.of("a\n$rule\nb", IntRange(-5, -5)).rules.size)
+            assertEquals(rule, "a\n\nb", shown("a\n$rule\nb"))
+        }
     }
 
     @Test

@@ -2,7 +2,10 @@
 
 package de.singular.writer.ui
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -10,6 +13,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -39,16 +44,28 @@ import de.singular.writer.vault.Attachments
  *
  * Drawn at their natural size rather than stretched. A chord diagram is 151×164 and was drawn to be
  * read at that size; scaling it to the width of a phone would make four of them into a wall.
+ *
+ * **A picture is removed by long-pressing it.** It sits between the text fields rather than in one,
+ * so no cursor can reach it and no backspace can take it out; without this a picture put in by
+ * mistake would be in the note for good. [onRemove] is null when the note cannot be written, and
+ * the press then does nothing. Only the link leaves the note — see [Segments.withoutImage].
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun NoteImages(segment: Segment.Images, attachments: Attachments, modifier: Modifier = Modifier) {
+fun NoteImages(
+    segment: Segment.Images,
+    attachments: Attachments,
+    onRemove: ((ImageRef) -> Unit)?,
+    modifier: Modifier = Modifier,
+) {
     FlowRow(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
         modifier = modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp),
     ) {
-        segment.images.forEach { NoteImage(it, attachments) }
+        segment.images.forEach { ref ->
+            Removable(onRemove?.let { remove -> { remove(ref) } }) { NoteImage(ref, attachments) }
+        }
         // The one line in the archive that carries words beside its pictures reads "3x". It is kept
         // because it is part of the notation, and it is not editable here — a picture line is a
         // block, and cutting one in half to make three characters typable is not worth it.
@@ -57,6 +74,37 @@ fun NoteImages(segment: Segment.Images, attachments: Attachments, modifier: Modi
                 text = segment.trailing,
                 style = LocalProseStyle.current,
                 color = MaterialTheme.colorScheme.onSurface,
+            )
+        }
+    }
+}
+
+/**
+ * Wraps a picture in a long-press that offers to take it out of the note.
+ *
+ * A menu rather than an immediate removal: the press is the same gesture that selects text
+ * everywhere else on the page, and a picture vanishing under a thumb that meant to scroll is the
+ * kind of surprise the editor exists to avoid. One item, and the note's own undo is the save it
+ * has not made yet — nothing here reaches disk until the document is written.
+ */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun Removable(onRemove: (() -> Unit)?, content: @Composable () -> Unit) {
+    var open by remember { mutableStateOf(false) }
+    Box(
+        modifier = if (onRemove == null) Modifier else Modifier.combinedClickable(
+            onClick = {},
+            onLongClick = { open = true },
+        ),
+    ) {
+        content()
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.remove_image)) },
+                onClick = {
+                    open = false
+                    onRemove?.invoke()
+                },
             )
         }
     }

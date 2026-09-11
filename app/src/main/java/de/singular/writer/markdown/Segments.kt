@@ -143,6 +143,26 @@ object Segments {
     fun join(segments: List<Segment>): String = segments.joinToString("") { it.raw }
 
     /**
+     * [raw] — one image line — with the link for [ref] taken out.
+     *
+     * The link goes and nothing else does: the file in `attachments/` stays where it is, because
+     * another note may point at it and deleting a file is a different act with its own confirmation.
+     * A line left with nothing but whitespace goes entirely, newline included, so removing the only
+     * picture on a line does not leave a blank line where it stood; a line that still carries words
+     * or other pictures keeps them, and the space beside the removed link goes with it so two
+     * neighbours do not end up separated by a double gap.
+     */
+    fun withoutImage(raw: String, ref: ImageRef): String {
+        val m = IMAGE.findAll(raw).firstOrNull { it.groupValues[1] == ref.alt && it.groupValues[2] == ref.path }
+            ?: return raw
+        var from = m.range.first
+        var to = m.range.last + 1
+        if (to < raw.length && raw[to] == ' ') to++ else if (from > 0 && raw[from - 1] == ' ') from--
+        val rest = raw.substring(0, from) + raw.substring(to)
+        return if (rest.isBlank()) "" else rest
+    }
+
+    /**
      * Every image a note refers to, in the order it refers to them.
      *
      * Used by the library and by the attachment loader; the editor works from [split] instead,

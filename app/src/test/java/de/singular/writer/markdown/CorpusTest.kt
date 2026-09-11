@@ -428,11 +428,12 @@ class CorpusTest {
     @Test
     fun `live styling never hides a character the author typed`() {
         // The editor hides markup, and only markup. Run every note past the scanner and check that
-        // what disappears is exclusively marker characters — asterisks, underscores, backticks, and
-        // a heading's hashes and the space after them. Anything else vanishing from the screen would
-        // be a word the author wrote going missing while they looked at it.
+        // what disappears is exclusively marker characters — asterisks, underscores, backticks, a
+        // heading's hashes and the space after them, and the dashes of a rule, which is drawn as a
+        // line in their place. Anything else vanishing from the screen would be a word the author
+        // wrote going missing while they looked at it.
         val corpus = corpus()
-        val allowed = setOf('*', '_', '`', '#', ' ', '\t')
+        val allowed = setOf('*', '_', '`', '#', '-', ' ', '\t')
         for ((name, text) in corpus) {
             val body = Note.parse(text).body
             val live = Live.of(body, IntRange(-5, -5))

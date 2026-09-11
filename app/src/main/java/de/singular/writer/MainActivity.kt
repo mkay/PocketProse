@@ -786,7 +786,7 @@ private fun PocketProseApp(settings: Settings) {
                     if (it == null) message = context.getString(R.string.add_image_failed)
                 }
             },
-            onImageInserted = {
+            onImagesChanged = {
                 scope.launch {
                     // Saved first, then rebuilt. The other order hands the editor a document built
                     // from an index that has not seen the link yet, which is the empty-document bug
