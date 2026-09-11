@@ -1,0 +1,5 @@
+First release: a Markdown notebook that reads a folder in place and leaves it as it found it: titles and dates from the frontmatter, a tag tree from the tags: list alone, images and attachments beside the notes, atomic saves, conflicts surfaced not resolved.
+
+Pin by tag, rename a tag across the folder, retag or merge a selection, search and filter. Export the folder as a zip, byte for byte or with tags written back into the text.
+
+Literata or EB Garamond, light and dark, English or German.
