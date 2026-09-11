@@ -5,7 +5,9 @@ package de.singular.writer.ui
 import androidx.compose.foundation.text.input.OutputTransformation
 import androidx.compose.foundation.text.input.TextFieldBuffer
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.ParagraphStyle
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.style.TextIndent
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -65,6 +67,12 @@ data class MarkdownTransformation(
         }
         for (s in live.styles) {
             if (s.start >= s.end || s.end > length) continue
+            // An indented line is a paragraph of its own — see the note on `Live.of` for why its
+            // newline is hidden to make that work — and the indent is that paragraph's.
+            if (s.mark == Mark.QUOTE && !s.isMarker) {
+                addStyle(QUOTE_INDENT, s.start, s.end)
+                continue
+            }
             addStyle(style(s.mark, s.level, s.isMarker), s.start, s.end)
         }
     }
@@ -90,7 +98,17 @@ data class MarkdownTransformation(
             // A rule has no content to paint: hidden, it is an empty line with a divider drawn
             // through it (see `RuleLines`); revealed, it is all marker and took the branch above.
             Mark.RULE -> SpanStyle()
+            // Handled above as a paragraph style; a revealed `> ` is a marker and took that branch.
+            Mark.QUOTE -> SpanStyle()
         }
+    }
+
+    private companion object {
+        /**
+         * How far an indented block is pushed right. In `em` so it follows the prose size, and the
+         * same on the first line as on wrapped ones — a block, not a hanging indent.
+         */
+        val QUOTE_INDENT = ParagraphStyle(textIndent = TextIndent(firstLine = 1.5.em, restLine = 1.5.em))
     }
 
     /**

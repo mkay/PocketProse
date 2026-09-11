@@ -22,6 +22,8 @@
 
     <string name="format_bold">Fett</string>
     <string name="format_italic">Kursiv</string>
+    <string name="format_quote">Anführungszeichen</string>
+    <string name="format_indent">Einrücken</string>
     <string name="format_rule">Trennlinie</string>
     <string name="format_cut">Ausschneiden</string>
     <string name="format_copy">Kopieren</string>

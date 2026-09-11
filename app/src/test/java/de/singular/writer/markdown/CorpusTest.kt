@@ -433,7 +433,7 @@ class CorpusTest {
         // line in their place. Anything else vanishing from the screen would be a word the author
         // wrote going missing while they looked at it.
         val corpus = corpus()
-        val allowed = setOf('*', '_', '`', '#', '-', ' ', '\t')
+        val allowed = setOf('*', '_', '`', '#', '-', '>', ' ', '\t', '\n')
         for ((name, text) in corpus) {
             val body = Note.parse(text).body
             val live = Live.of(body, IntRange(-5, -5))

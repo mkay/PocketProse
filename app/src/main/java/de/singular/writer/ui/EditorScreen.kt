@@ -733,11 +733,12 @@ private fun RuleLines(state: TextFieldState, content: @Composable (RuleDrawing) 
  * needing a selection is disabled without one rather than hidden — buttons that come and go under a
  * thumb are worse than buttons visibly not yet available.
  *
- * **Every button writes something the parser reads back.** Bold, italic and a divider are all in
- * `markdown/Blocks.kt` and `Inline.kt`. A button writing anything else would put characters into a
- * lyric that come back as literal text, which is the failure this app exists to avoid. Quote,
- * numbered lists, indentation and the two tag symbols have icons waiting in `res/drawable` and no
- * parser behind them yet.
+ * **Every button writes something the parser reads back, or plain text.** Bold, italic and a
+ * divider are all in `markdown/Blocks.kt` and `Inline.kt`; the quote button writes `"`, which is
+ * not markup at all and needs no parser. A button writing anything else would put characters into
+ * a lyric that come back as literal text, which is the failure this app exists to avoid. Numbered
+ * lists, indentation and the two tag symbols have icons waiting in `res/drawable` and no parser
+ * behind them yet.
  *
  * **Deliberately short.** Headings, bullets and a clear-formatting button were here and went on
  * 2026-09-11: a `#` or a `-` at the start of a line is one keystroke and the parser reads it, and
@@ -775,6 +776,18 @@ private fun FormatBar(
             }
             FormatIcon(R.drawable.ic_format_italic, R.string.format_italic, selected) {
                 body.wrapSelection("*")
+            }
+            // Straight quotes, because the archive's are: 1474 `"` against 24 `„`. A typographic
+            // pair would need an opening and a closing character chosen per language, and the
+            // author's own keyboard has been settling that question one way for ten years. Toggles
+            // like Bold — the same `wrap`, with a character instead of a mark.
+            FormatIcon(R.drawable.ic_format_quote, R.string.format_quote, selected) {
+                body.wrapSelection("\"")
+            }
+            // An indent, written as a blockquote — see `Block.Quote` for why that is the right
+            // Markdown for it. Line-based, so it needs no selection.
+            FormatIcon(R.drawable.ic_format_indent_increase, R.string.format_indent, true) {
+                body.quoteLines()
             }
             FormatIcon(R.drawable.ic_horizontal_rule, R.string.format_rule, true) {
                 body.insertRule()
@@ -877,6 +890,16 @@ private fun TextFieldState.wrapSelection(marker: String) {
     val range = selection
     if (range.collapsed) return
     val result = FormatActions.wrap(text.toString(), range.min, range.max, marker)
+    edit {
+        replace(0, length, result.text)
+        selection = TextRange(result.selectionStart, result.selectionEnd)
+    }
+}
+
+/** Applies [FormatActions.quote] to the lines the selection covers, keeping them covered. */
+private fun TextFieldState.quoteLines() {
+    val range = selection
+    val result = FormatActions.quote(text.toString(), range.min, range.max)
     edit {
         replace(0, length, result.text)
         selection = TextRange(result.selectionStart, result.selectionEnd)

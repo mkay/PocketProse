@@ -34,6 +34,7 @@ object Excerpt {
                     is Block.Paragraph -> Inline.strip(block.text)
                     is Block.Heading -> Inline.strip(block.text)
                     is Block.Bullets -> block.items.joinToString(" ") { Inline.strip(it) }
+                    is Block.Quote -> block.lines.joinToString(" ") { Inline.strip(it) }
                     Block.Rule -> null
                 }
             }

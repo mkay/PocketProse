@@ -3,14 +3,16 @@
 package de.singular.writer.markdown
 
 /** What a run of marked-up text is. */
-enum class Mark { BOLD, ITALIC, BOLD_ITALIC, CODE, HEADING, RULE }
+enum class Mark { BOLD, ITALIC, BOLD_ITALIC, CODE, HEADING, RULE, QUOTE }
 
 /**
  * One piece of markup found in the text, in **original** coordinates.
  *
  * [open] and [close] are the marker runs — `**`, `_`, `` ` ``, or a heading's `## ` — and [content]
- * is what sits between them. A heading has an empty [close] at the end of its line. A rule is all
- * marker: its [open] is the whole line, and [content] and [close] are empty.
+ * is what sits between them. A heading has an empty [close] at the end of its line. A quote's
+ * [open] is the `> ` and its [close] is the newline ending the line, for the reason given at
+ * [Live.of]. A rule is all marker: its [open] is the whole line, and [content] and [close] are
+ * empty.
  */
 data class Span(
     val mark: Mark,
@@ -89,6 +91,15 @@ object Live {
     private val HEADING = Regex("""^(#{1,6})[ \t]+(?=\S)""", RegexOption.MULTILINE)
 
     /**
+     * `> ` at the start of a line with words after it — the marker of an indented block, see
+     * `Block.Quote`. The content is the rest of the line; the marker hides like a heading's hashes
+     * and comes back under the cursor. A `>` alone on a line is left as the character it is: a
+     * paragraph with nothing in it has nothing to indent, and hiding all of it would make the line
+     * vanish from the screen.
+     */
+    private val QUOTE = Regex("""^ {0,3}>[ \t]?(?=\S)""", RegexOption.MULTILINE)
+
+    /**
      * A line that is a horizontal rule, which must never be read as emphasis.
      *
      * `***` is three asterisks and also a rule, and 20 notes in the archive use `- - -`. Without
@@ -99,7 +110,7 @@ object Live {
     /**
      * Scan [text] for everything the editor styles.
      *
-     * Deliberately a small vocabulary — emphasis, code, headings and rules. Links and images are
+     * Deliberately a small vocabulary — emphasis, code, headings, quotes and rules. Links and images are
      * the segment splitter's business. Anything not recognised is left as the characters the user
      * typed, which is always the safe answer.
      */
@@ -110,6 +121,18 @@ object Live {
 
         for (r in ruleLines) {
             spans += Span(mark = Mark.RULE, open = r, content = r.last + 1 until r.last + 1, close = r.last + 1 until r.last + 1)
+        }
+
+        for (m in QUOTE.findAll(text)) {
+            if (inRule(m.range.first)) continue
+            val lineEnd = text.indexOf('\n', m.range.last + 1).let { if (it < 0) text.length else it }
+            spans += Span(
+                mark = Mark.QUOTE,
+                open = m.range.first until m.range.last + 1,
+                content = m.range.last + 1 until lineEnd,
+                // The newline, when there is one. Always hidden — see `of`.
+                close = lineEnd until (lineEnd + 1).coerceAtMost(text.length),
+            )
         }
 
         for (m in HEADING.findAll(text)) {
@@ -158,6 +181,21 @@ object Live {
      * them, because that is the space the text field paints in. The shift is computed by walking the
      * hidden ranges in order and accumulating their lengths — the one piece of offset arithmetic
      * this app does itself.
+     *
+     * ## Indents are paragraphs, and paragraphs eat newlines
+     *
+     * An indented line is pushed right with a paragraph indent, which is the only way a text field
+     * indents a wrapped line's continuation as well as its first. Compose makes every range that
+     * carries a paragraph style a paragraph of its own, stacked under the one before it — which is
+     * a line break — so the newline ending an indented line would be a *second* break, and an empty
+     * row. It is therefore hidden, always, cursor or no cursor; and so is the newline ending the
+     * line above an indented block, because the block's own paragraph boundary already breaks
+     * there. Worked through for `A / blank / B / C / blank / D` with B and C indented: the shown
+     * text is `A\n` `B` `C` `\nD` in four paragraphs, and the rows come out as the file has them.
+     *
+     * The `> ` itself reveals under the cursor like any marker, and the [Mark.QUOTE] style over the
+     * whole line — marker included when it is showing — is what the transformation turns into the
+     * paragraph indent.
      */
     fun of(text: String, selection: IntRange): LiveText {
         val spans = scan(text)
@@ -166,6 +204,23 @@ object Live {
         val rules = ArrayList<Pair<Int, Boolean>>()
 
         for (s in spans) {
+            if (s.mark == Mark.QUOTE) {
+                // The cursor anywhere on the line, its end included, reveals the `> `; the start of
+                // the next line does not, so the reveal edge is the content's end, not the close's.
+                val touched = selection.first <= s.content.last + 1 && selection.last >= s.open.first
+                if (touched) marked += Triple(s.open, s.mark, s.level to true)
+                else hide += Hidden(s.open.first, s.open.last + 1)
+                if (!s.close.isEmpty()) hide += Hidden(s.close.first, s.close.last + 1)
+                // The newline ending the line above, unless that line is indented too and its own
+                // close already took it.
+                val above = s.open.first - 1
+                if (above >= 0 && text[above] == '\n' && hide.none { it.start == above }) {
+                    hide += Hidden(above, above + 1)
+                }
+                // The paragraph: marker and words together, so a revealed `> ` sits in the indent.
+                marked += Triple(s.open.first..s.content.last, s.mark, s.level to false)
+                continue
+            }
             val touched = selection.first <= s.close.last + 1 && selection.last >= s.open.first
             if (s.mark == Mark.RULE) rules += s.open.first to touched
             if (touched) {

@@ -116,6 +116,58 @@ class LiveTextTest {
         assertEquals("#lyrics/snippet", shown("#lyrics/snippet"))
     }
 
+    // ===== indents =====
+
+    /** The shown text cut at the paragraph boundaries [Live] asks for — one row per entry. */
+    private fun paragraphs(text: String, cursor: Int = -1): List<String> {
+        val sel = if (cursor < 0) IntRange(-5, -5) else cursor..cursor
+        val live = Live.of(text, sel)
+        val visible = shown(text, cursor)
+        val edges = live.styles.filter { it.mark == Mark.QUOTE && !it.isMarker }
+            .flatMap { listOf(it.start, it.end) }
+        val cuts = (listOf(0) + edges + visible.length).distinct().sorted()
+        return cuts.zipWithNext { a, b -> visible.substring(a, b) }
+    }
+
+    @Test
+    fun `an indented block is its own paragraphs and the rows come out as the file has them`() {
+        // A, blank, B, C, blank, D — the case worked through in the note on `Live.of`.
+        val text = "A\n\n> B\n> C\n\nD"
+        assertEquals(listOf("A\n", "B", "C", "\nD"), paragraphs(text))
+    }
+
+    @Test
+    fun `an indented line at either end of the note needs no newline of its own`() {
+        assertEquals(listOf("B", "C"), paragraphs("> B\nC"))
+        assertEquals(listOf("A", "B"), paragraphs("A\n> B"))
+        assertEquals(listOf("B"), paragraphs("> B"))
+    }
+
+    @Test
+    fun `the indent marker comes back under the cursor, inside its paragraph`() {
+        val text = "> eins\n> zwei"
+        assertEquals(listOf("eins", "zwei"), paragraphs(text))
+        assertEquals(listOf("> eins", "zwei"), paragraphs(text, cursor = 3))
+        assertEquals(listOf("eins", "> zwei"), paragraphs(text, cursor = 9))
+        // The end of the line reveals it; the start of the next line does not.
+        assertEquals(listOf("> eins", "zwei"), paragraphs(text, cursor = 6))
+        assertEquals(listOf("eins", "> zwei"), paragraphs(text, cursor = 7))
+    }
+
+    @Test
+    fun `emphasis inside an indented line still works`() {
+        val live = Live.of("> **eins** zwei", IntRange(-5, -5))
+        assertEquals(listOf("eins zwei"), paragraphs("> **eins** zwei"))
+        val bold = live.styles.single { it.mark == Mark.BOLD }
+        assertEquals(0 to 4, bold.start to bold.end)
+    }
+
+    @Test
+    fun `a bare angle bracket is text`() {
+        assertEquals(">", shown(">"))
+        assertEquals("a > b", shown("a > b"))
+    }
+
     // ===== rules =====
 
     @Test
@@ -149,7 +201,7 @@ class LiveTextTest {
 
     @Test
     fun `hidden ranges never overlap and stay inside the text`() {
-        val text = "## Titel\n\n**fett** und *kursiv* und `code`\n\n- - -\n\nEnde"
+        val text = "## Titel\n\n**fett** und *kursiv* und `code`\n\n- - -\n\n> ein\n> zwei\n\nEnde"
         for (cursor in -1 until text.length) {
             val live = Live.of(text, if (cursor < 0) IntRange(-5, -5) else cursor..cursor)
             var last = 0

@@ -73,6 +73,56 @@ class FormatActionsTest {
         }
     }
 
+    @Test
+    fun `quotes go on and come off like any other marker`() {
+        val on = FormatActions.wrap("sag nie nie", 4, 7, "\"")
+        assertEquals("sag \"nie\" nie", on.text)
+        val off = FormatActions.wrap(on.text, on.selectionStart, on.selectionEnd, "\"")
+        assertEquals("sag nie nie", off.text)
+    }
+
+    // ===== the indent =====
+
+    @Test
+    fun `a cursor indents its own line and a second tap takes it off`() {
+        val on = FormatActions.quote("eins\nzwei\ndrei\n", 6, 6)
+        assertEquals("eins\n> zwei\ndrei\n", on.text)
+        assertEquals(8, on.selectionStart)
+        val off = FormatActions.quote(on.text, on.selectionStart, on.selectionEnd)
+        assertEquals("eins\nzwei\ndrei\n", off.text)
+        assertEquals(6, off.selectionStart)
+    }
+
+    @Test
+    fun `a selection indents every line it touches and stays over them`() {
+        val text = "eins\nzwei\ndrei\nvier\n"
+        val on = FormatActions.quote(text, 3, 12)
+        assertEquals("> eins\n> zwei\n> drei\nvier\n", on.text)
+        assertEquals(5, on.selectionStart)
+        assertEquals(18, on.selectionEnd)
+        assertEquals(text, FormatActions.quote(on.text, on.selectionStart, on.selectionEnd).text)
+    }
+
+    @Test
+    fun `a partly indented block is completed, not cleared`() {
+        val text = "> eins\nzwei\n"
+        assertEquals("> eins\n> zwei\n", FormatActions.quote(text, 0, text.length - 1).text)
+    }
+
+    @Test
+    fun `blank lines stay blank and do not count`() {
+        val text = "eins\n\nzwei\n"
+        val on = FormatActions.quote(text, 0, text.length - 1)
+        assertEquals("> eins\n\n> zwei\n", on.text)
+        assertEquals(text, FormatActions.quote(on.text, on.selectionStart, on.selectionEnd).text)
+    }
+
+    @Test
+    fun `what the indent writes is what the parser reads back`() {
+        val text = FormatActions.quote("eins\nzwei\n", 0, 9).text
+        assertEquals(listOf(Block.Quote(listOf("eins", "zwei"))), Blocks.parse(text))
+    }
+
     // ===== the rule =====
 
     @Test

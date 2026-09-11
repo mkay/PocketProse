@@ -28,6 +28,21 @@ sealed interface Block {
     /** A run of `- ` items. */
     data class Bullets(val items: List<String>) : Block
 
+    /**
+     * A run of `> ` lines.
+     *
+     * Used here as an **indent**, not a citation: the author sets blocks of a lyric apart from the
+     * running text, and `>` is the one Markdown construct whose meaning is "set this apart" and
+     * whose rendering, in every reader, is a block pushed right. The alternatives are worse — four
+     * spaces is a code block, and non-breaking spaces are a convention nobody else reads. The
+     * archive contains no `>` line as of 2026-09-11, so this is a clean slate rather than a
+     * reinterpretation of anything.
+     *
+     * Every line carries its own `> `; there is no lazy continuation. That is how every editor
+     * writes it, and it keeps each shown line one-to-one with a line in the file.
+     */
+    data class Quote(val lines: List<String>) : Block
+
 }
 
 /**
@@ -54,10 +69,14 @@ object Blocks {
 
     private val BULLET = Regex("""^ {0,3}[-*+]\s+(.*)$""")
 
+    /** `> ` and the line after it. The space is optional, as CommonMark has it: `>text` is quoted too. */
+    private val QUOTE = Regex("""^ {0,3}>[ \t]?(.*)$""")
+
     fun parse(body: String): List<Block> {
         val out = ArrayList<Block>()
         val paragraph = StringBuilder()
         val bullets = ArrayList<String>()
+        val quote = ArrayList<String>()
 
         fun flushParagraph() {
             if (paragraph.isNotEmpty()) {
@@ -73,9 +92,17 @@ object Blocks {
             }
         }
 
+        fun flushQuote() {
+            if (quote.isNotEmpty()) {
+                out += Block.Quote(quote.toList())
+                quote.clear()
+            }
+        }
+
         fun flush() {
             flushParagraph()
             flushBullets()
+            flushQuote()
         }
 
         for (line in body.lines()) {
@@ -96,11 +123,19 @@ object Blocks {
 
                 BULLET.matches(line) -> {
                     flushParagraph()
+                    flushQuote()
                     bullets += BULLET.find(line)!!.groupValues[1]
+                }
+
+                QUOTE.matches(line) -> {
+                    flushParagraph()
+                    flushBullets()
+                    quote += QUOTE.find(line)!!.groupValues[1]
                 }
 
                 else -> {
                     flushBullets()
+                    flushQuote()
                     // Line breaks inside a paragraph are kept. In prose they would be reflowed; in
                     // a verse they are the verse, and this archive is verses.
                     if (paragraph.isNotEmpty()) paragraph.append('\n')

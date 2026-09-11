@@ -57,6 +57,64 @@ object FormatActions {
     }
 
     /**
+     * Indent the lines the selection covers by putting `> ` in front of each, or take the indent off
+     * again if every one of them already has it.
+     *
+     * Line-based, like a heading and unlike Bold: a collapsed cursor indents the line it sits on,
+     * and a selection indents every line it touches, however little of each. A block is the unit
+     * the author thinks in, and dragging exactly from the first character to the last is not
+     * something anyone does on a phone.
+     *
+     * Blank lines are left blank both ways. CommonMark ends a quote at a blank line, so two verses
+     * indented together become two quotes rather than one — which this app draws identically, and
+     * which spares the file the `>` alone on a line that keeping them one block would need.
+     *
+     * One button, toggling, as the rest of the bar: all covered lines indented means take it off,
+     * anything else means put it on where it is missing. The selection is kept over the same lines
+     * afterwards so a second tap undoes the first.
+     */
+    fun quote(text: String, start: Int, end: Int): Formatted {
+        val from = start.coerceIn(0, text.length)
+        val to = end.coerceIn(from, text.length)
+        val firstLine = lineStart(text, from)
+        val lastLineEnd = text.indexOf('\n', to).let { if (it < 0) text.length else it }
+
+        val lines = text.substring(firstLine, lastLineEnd).split('\n')
+        val allQuoted = lines.filter { it.isNotBlank() }.let { it.isNotEmpty() && it.all(QUOTE_MARK::containsMatchIn) }
+
+        var newFrom = from
+        var newTo = to
+        var at = firstLine
+        val rebuilt = lines.joinToString("\n") { line ->
+            val out = when {
+                line.isBlank() -> line
+                allQuoted -> QUOTE_MARK.replace(line, "")
+                QUOTE_MARK.containsMatchIn(line) -> line
+                else -> "$QUOTE$line"
+            }
+            val delta = out.length - line.length
+            // A change on this line moves every selection edge that sits after where the change
+            // happened — the line's start — but never off the line's own start.
+            if (from > at) newFrom = (newFrom + delta).coerceAtLeast(at)
+            if (to > at) newTo = (newTo + delta).coerceAtLeast(at)
+            at += line.length + 1
+            out
+        }
+        val result = text.substring(0, firstLine) + rebuilt + text.substring(lastLineEnd)
+        return Formatted(result, newFrom, newTo.coerceAtLeast(newFrom))
+    }
+
+    /** What the indent writes. */
+    private const val QUOTE = "> "
+
+    /** `> ` at the start of a line, the space optional, as `Blocks` reads it. */
+    private val QUOTE_MARK = Regex("""^ {0,3}>[ \t]?""")
+
+    /** Where the line holding [at] begins. */
+    private fun lineStart(text: String, at: Int): Int =
+        text.lastIndexOf('\n', (at - 1).coerceAtLeast(0)).let { if (it < 0 || at == 0) 0 else it + 1 }
+
+    /**
      * Put a horizontal rule on a line of its own after the line the cursor is in.
      *
      * Spelled `- - -`, which is what the archive uses: 20 notes carry that form against 2 with a
