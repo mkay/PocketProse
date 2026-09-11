@@ -42,6 +42,7 @@
     <string name="pin_note">Anheften</string>
     <string name="unpin_note">Loslösen</string>
     <string name="share_note">Teilen</string>
+    <string name="show_source">Markdown zeigen</string>
     <string name="delete_note">Löschen</string>
     <string name="delete_note_confirm">„%1$s“ löschen?</string>
     <string name="delete_note_body">Die Text-Datei wird aus deinem Ordner gelöscht. Dies kann nicht rückgängig gemacht werden.</string>
@@ -103,6 +104,9 @@
 
     <string name="settings_section_writing">Schreiben</string>
     <string name="settings_section_appearance">Darstellung</string>
+    <string name="settings_section_bar">Formatleiste</string>
+    <string name="settings_image_button">Bild-Schaltfläche</string>
+    <string name="settings_image_button_caption">Ergänzt die Formatleiste um eine Schaltfläche, die ein Bild vom Telefon in den Text legt. Bilder, die schon in einem Text sind, werden so oder so gezeigt.</string>
     <string name="settings_section_folder">Ordner</string>
 
     <string name="font_system">System</string>

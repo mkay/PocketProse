@@ -43,6 +43,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Tab
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -123,6 +124,8 @@ fun SettingsScreen(
     onStartTagChange: (String?) -> Unit,
     pinTag: String,
     onPinTagChange: (String) -> Unit,
+    imageButton: Boolean,
+    onImageButtonChange: (Boolean) -> Unit,
     /** How many notes carry a tag, for the pin dialog's line about what a name would pin. */
     counting: (String) -> Int,
     tagTree: List<Tags.Node>,
@@ -180,6 +183,8 @@ fun SettingsScreen(
                     onProseSizeChange = onProseSizeChange,
                     proseLeading = proseLeading,
                     onProseLeadingChange = onProseLeadingChange,
+                    imageButton = imageButton,
+                    onImageButtonChange = onImageButtonChange,
                 )
             }
             SettingsTab.SYSTEM -> SettingsPage {
@@ -227,6 +232,8 @@ private fun EditorSettings(
     onProseSizeChange: (ProseSize) -> Unit,
     proseLeading: ProseLeading,
     onProseLeadingChange: (ProseLeading) -> Unit,
+    imageButton: Boolean,
+    onImageButtonChange: (Boolean) -> Unit,
 ) {
     SettingsSectionLabel(R.string.settings_section_writing)
     // The face keeps a sample of its own on every row, and that is not a duplicate of the paragraph
@@ -271,6 +278,17 @@ private fun EditorSettings(
         modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
     )
     SettingsCaption(R.string.settings_size_caption)
+
+    // Under the face and the size, because it is about the same thing: what the editor puts in
+    // front of you while you write.
+    SettingsSectionLabel(R.string.settings_section_bar)
+    SettingSwitchRow(
+        label = R.string.settings_image_button,
+        icon = ImageVector.vectorResource(R.drawable.ic_add_photo),
+        checked = imageButton,
+        onChange = onImageButtonChange,
+    )
+    SettingsCaption(R.string.settings_image_button_caption)
 }
 
 /**
@@ -799,6 +817,29 @@ private fun SettingActionRow(
     icon: ImageVector,
     onClick: () -> Unit,
 ) = SettingActionRow(stringResource(label), subtitle, icon, onClick)
+
+/** A row that is a switch: the label, and the state, and nothing to open. */
+@Composable
+private fun SettingSwitchRow(
+    @StringRes label: Int,
+    icon: ImageVector,
+    checked: Boolean,
+    onChange: (Boolean) -> Unit,
+) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clip(ControlShape)
+            .clickable { onChange(!checked) }
+            .padding(horizontal = 16.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        Spacer(Modifier.width(16.dp))
+        Text(stringResource(label), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+        Switch(checked = checked, onCheckedChange = onChange)
+    }
+}
 
 /** The same row with its label already resolved. See [SettingsCaption] for why the overload. */
 @Composable

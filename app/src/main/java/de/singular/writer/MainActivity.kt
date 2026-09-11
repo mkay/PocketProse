@@ -714,6 +714,8 @@ private fun PocketProseApp(settings: Settings) {
             onStartTagChange = { settings.startTag = it },
             pinTag = settings.pinTag,
             onPinTagChange = { settings.pinTag = it },
+            imageButton = settings.imageButton,
+            onImageButtonChange = { settings.imageButton = it },
             counting = { index.withTag(it).size },
             tagTree = index.tagTree,
             totalNotes = index.size,
@@ -797,6 +799,9 @@ private fun PocketProseApp(settings: Settings) {
                     }
                 }
             },
+            showSource = settings.showSource,
+            onShowSourceChange = { settings.showSource = it },
+            imageButton = settings.imageButton,
             focusOnOpen = focusNewNote,
             onBack = { leave() },
             onShare = {

@@ -181,6 +181,8 @@
     <string name="pin_note">Pin note</string>
     <string name="unpin_note">Unpin note</string>
     <string name="share_note">Share note</string>
+    <!-- Editor menu, a toggle: show the Markdown as written instead of hiding the markers. -->
+    <string name="show_source">Show Markdown</string>
     <!-- The menu entry, and the confirming button in the dialog it opens. -->
     <string name="delete_note">Delete note</string>
     <!-- Title of the confirmation. Names the note so there is no doubt which one; %1$s is its title. -->
@@ -338,6 +340,9 @@
     <!-- Section headings. Shown uppercased by the screen, so write them in sentence case. -->
     <string name="settings_section_writing">Writing</string>
     <string name="settings_section_appearance">Appearance</string>
+    <string name="settings_section_bar">Format bar</string>
+    <string name="settings_image_button">Picture button</string>
+    <string name="settings_image_button_caption">Adds a button to the format bar that puts a picture from your phone into the note. Pictures already in a note are shown either way.</string>
     <!-- The language row, and the dialog it opens. The languages themselves are never listed here:
          each names itself, in itself, so somebody stranded in a language they cannot read can still
          find their own. -->

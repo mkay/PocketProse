@@ -26,9 +26,11 @@ import androidx.compose.foundation.text.input.InputTransformation
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.outlined.CallSplit
+import androidx.compose.material.icons.outlined.Code
 import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.NoteAdd
@@ -305,6 +307,14 @@ fun EditorScreen(
     /** Rename the open note's file to this stem, `.md` excluded. */
     onRename: (String) -> Unit,
     /**
+     * Show the Markdown as written — markers as characters, rules as dashes, picture lines as their
+     * links — instead of what it means. `Settings.showSource`, toggled from the menu here.
+     */
+    showSource: Boolean,
+    onShowSourceChange: (Boolean) -> Unit,
+    /** Whether the format bar offers to add a picture. `Settings.imageButton`. */
+    imageButton: Boolean,
+    /**
      * Put the cursor in the note and raise the keyboard as it opens.
      *
      * True for a note that was just created and false for one being opened to read. A note is opened
@@ -501,6 +511,20 @@ fun EditorScreen(
                     )
                 }
                 DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+                    // A look-only toggle in the menu with the two actions, and in the menu rather
+                    // than the format bar: the bar exists only while a field is focused, and the
+                    // reason to look at the source is usually before touching anything.
+                    DropdownMenuItem(
+                        text = { Text(text = stringResource(R.string.show_source)) },
+                        leadingIcon = { Icon(Icons.Outlined.Code, contentDescription = null) },
+                        trailingIcon = {
+                            if (showSource) Icon(Icons.Filled.Check, contentDescription = null)
+                        },
+                        onClick = {
+                            open = false
+                            onShowSourceChange(!showSource)
+                        },
+                    )
                     DropdownMenuItem(
                         text = { Text(text = stringResource(R.string.share_note)) },
                         leadingIcon = { Icon(Icons.Outlined.Share, contentDescription = null) },
@@ -552,13 +576,14 @@ fun EditorScreen(
 
             document.segments.forEachIndexed { i, segment ->
                 when (segment) {
-                    is Segment.Prose -> RuleLines(document.bufferAt(i)) { rules ->
+                    is Segment.Prose -> RuleLines(document.bufferAt(i), enabled = !showSource) { rules ->
                     BasicTextField(
                         state = document.bufferAt(i),
                         enabled = editable,
                         textStyle = LocalProseStyle.current.copy(color = scheme.onSurface),
                         cursorBrush = SolidColor(scheme.primary),
-                        outputTransformation = transformation,
+                        // Nothing hidden in the source view: the file, as characters.
+                        outputTransformation = if (showSource) null else transformation,
                         // An empty note is a normal kind of note here — 40 of the archive's 168 are
                         // a title and a tag and nothing else — so the blank page says what it is for
                         // rather than looking like a screen that failed to load. Only the note's
@@ -598,7 +623,17 @@ fun EditorScreen(
                     )
                     }
 
-                    is Segment.Images -> document.imagesAt(i)?.let { images ->
+                    // In the source view a picture line is its link, as the file has it. Not a
+                    // field: the segment has no buffer, and a view for looking is not the place
+                    // to grow one.
+                    is Segment.Images -> if (showSource) {
+                        Text(
+                            text = (document.imagesAt(i)?.raw ?: "").trimEnd('\n'),
+                            style = LocalProseStyle.current,
+                            color = scheme.onSurface,
+                            modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp),
+                        )
+                    } else document.imagesAt(i)?.let { images ->
                         NoteImages(
                             segment = images,
                             attachments = attachments,
@@ -652,10 +687,12 @@ fun EditorScreen(
             if (writing && target != null) {
                 FormatBar(
                     body = target,
-                    onAddImage = {
-                        pickImage.launch(
-                            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly),
-                        )
+                    onAddImage = if (!imageButton) null else {
+                        {
+                            pickImage.launch(
+                                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly),
+                            )
+                        }
                     },
                     onDone = { focusManager.clearFocus() },
                 )
@@ -694,13 +731,19 @@ private class RuleDrawing(
  * which is 147 of the archive's 168 notes.
  */
 @Composable
-private fun RuleLines(state: TextFieldState, content: @Composable (RuleDrawing) -> Unit) {
+private fun RuleLines(
+    state: TextFieldState,
+    /** False draws nothing — the source view, where the dashes are on screen. */
+    enabled: Boolean,
+    content: @Composable (RuleDrawing) -> Unit,
+) {
     var layout by remember { mutableStateOf<(() -> TextLayoutResult?)?>(null) }
     val colour = MaterialTheme.colorScheme.outlineVariant
     val text = state.text.toString()
     val selection = state.selection
-    val rules = remember(text, selection) {
-        Live.of(text, selection.min..selection.max).rules.filter { !it.revealed }
+    val rules = remember(text, selection, enabled) {
+        if (!enabled) emptyList()
+        else Live.of(text, selection.min..selection.max).rules.filter { !it.revealed }
     }
     val drawing = remember(rules, colour) {
         RuleDrawing(
@@ -752,7 +795,8 @@ private fun RuleLines(state: TextFieldState, content: @Composable (RuleDrawing) 
 @Composable
 private fun FormatBar(
     body: TextFieldState,
-    onAddImage: () -> Unit,
+    /** Null hides the button — `Settings.imageButton`, off by default. */
+    onAddImage: (() -> Unit)?,
     onDone: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -797,7 +841,9 @@ private fun FormatBar(
             // in two ways — it read as a rare administrative act rather than as part of writing, and
             // the menu is reachable with nothing focused, so the insertion point had to be guessed.
             // Here there is always a cursor, because the bar only exists when there is one.
-            FormatIcon(R.drawable.ic_add_photo, R.string.add_image, true, onAddImage)
+            if (onAddImage != null) {
+                FormatIcon(R.drawable.ic_add_photo, R.string.add_image, true, onAddImage)
+            }
 
             BarDivider()
 

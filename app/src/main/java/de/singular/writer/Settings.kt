@@ -275,8 +275,41 @@ class Settings(context: Context) {
             prefs.edit().putBoolean(KEY_MOVE_TAGS_DECLINED, value).apply()
         }
 
+    /**
+     * Whether the editor shows the Markdown as written — `**`, `> `, `- - -` as characters — rather
+     * than hiding the markers and drawing what they mean.
+     *
+     * Toggled from the editor's own menu and nowhere else, and remembered: someone who wants to see
+     * the markup wants to see it in every note, and a switch that reset on every open would be a
+     * nag. It changes nothing about the files, only about what is drawn over them.
+     */
+    private var source by mutableStateOf(prefs.getBoolean(KEY_SHOW_SOURCE, false))
+
+    var showSource: Boolean
+        get() = source
+        set(value) {
+            source = value
+            prefs.edit().putBoolean(KEY_SHOW_SOURCE, value).apply()
+        }
+
+    /**
+     * Whether the format bar offers to add a picture. Off by default: the archive's pictures were an
+     * experiment the author does not repeat, the system picker offers full-size photos and nothing
+     * else, and a lyric rarely wants one. Pictures already in a note render either way.
+     */
+    private var pictures by mutableStateOf(prefs.getBoolean(KEY_IMAGE_BUTTON, false))
+
+    var imageButton: Boolean
+        get() = pictures
+        set(value) {
+            pictures = value
+            prefs.edit().putBoolean(KEY_IMAGE_BUTTON, value).apply()
+        }
+
     private companion object {
         const val PREFS = "settings"
+        const val KEY_SHOW_SOURCE = "show_source"
+        const val KEY_IMAGE_BUTTON = "image_button"
         const val KEY_THEME_MODE = "theme_mode"
         const val KEY_PROSE_FONT = "prose_font"
         const val KEY_PROSE_SIZE = "prose_size"
