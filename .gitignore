@@ -20,3 +20,6 @@
 # locally with:  adb pull /sdcard/Recordings/Lyrics app/src/test/corpus/
 # The tests skip themselves when it is absent, so a clone without it still builds green.
 /app/src/test/corpus/
+
+# The author's working notes, kept beside the code but not part of it — like CLAUDE.md.
+/PLAN.md

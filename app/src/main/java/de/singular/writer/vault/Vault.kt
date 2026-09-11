@@ -869,12 +869,12 @@ class Vault(context: Context) {
      * The folder as a zip: every note and every attachment, under the folder's own name, written to
      * [destination] — a document the user has just created through `CreateDocument`.
      *
-     * A zip rather than a folder, and the reasons are in `PLAN.md`'s phase 8: one file and one
-     * picker; a failure part way is one file to delete; and a zip entry carries an mtime where a
-     * SAF copy cannot, so each note's entry is stamped with its `updated` and the archive's dates
-     * travel with the files even to a tool that reads mtimes. Entry names are NFC and UTF-8 with
-     * the EFS flag, which is what `ZipOutputStream` writes by default, and they sit under
-     * `<folder name>/` so unpacking does not spray 168 files into wherever it was opened.
+     * A zip rather than a folder, for three reasons: one file and one picker; a failure part way
+     * is one file to delete; and a zip entry carries an mtime where a SAF copy cannot, so each
+     * note's entry is stamped with its `updated` and the archive's dates travel with the files even
+     * to a tool that reads mtimes. Entry names are NFC and UTF-8 with the EFS flag, which is what
+     * `ZipOutputStream` writes by default, and they sit under `<folder name>/` so unpacking does
+     * not spray 168 files into wherever it was opened.
      *
      * With [inline] on, each note goes through `Export.render`, which writes its tags and title
      * back into the body for an editor that reads them there — see that file. A note the parser
