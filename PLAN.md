@@ -4,7 +4,9 @@ A writing app for Android that happens to store Markdown. Package `de.singular.w
 
 The audience does not know what Markdown is and must never be made to care. That single sentence decides most of what follows: the editor hides its syntax, tags are chips rather than hashtags, and the word "Markdown" appears nowhere in the UI.
 
-Read `CLAUDE.md` first — it holds the file-format contract and the prime directive. This file is the route from nothing to an app that satisfies it.
+This is the build log, written as the work went, and it is kept as it was written: a phase's decisions stand here even where a later phase reversed them, because the reasoning is the point. **The one reversal that matters:** phase 6's "both representations stay" (below) was undone on 2026-09-09. The frontmatter `tags:` list is now the only place tags live, a `#` in a body is text, and the inline copy is moved into the frontmatter once, by an offer the app makes — see the README. Read a dated decision here with its date.
+
+`CLAUDE.md`, cited throughout, is the author's private working file — the file-format contract, the prime directive and the measured facts of the archive — and is not in the repository. Everything in it that the code depends on is in the code's own comments.
 
 ## Decisions taken before any code
 
@@ -12,7 +14,7 @@ Read `CLAUDE.md` first — it holds the file-format contract and the prime direc
 
 **One view, always editable.** Tap a note in the library and the cursor is already there. No read mode, no edit button, no mode indicator. Formatting controls exist only as a bar that appears when text is selected. Images render inline in the same view they are edited in.
 
-**Tags are chips; the app keeps both representations in sync.** The user never types or sees a `#`. Adding a chip writes both the frontmatter list and the inline hashtag. This held for every tag except three until phase 6 — see the percent rename below.
+**Tags are chips; the app keeps both representations in sync.** The user never types or sees a `#`. Adding a chip writes both the frontmatter list and the inline hashtag. This held for every tag except three until phase 6 — see the percent rename below. *Reversed on 2026-09-09: the frontmatter list is now the only representation.*
 
 **A note with no prose gets a muted placeholder line** — "Nothing written yet" — where the excerpt would go, keeping every library row the same height. This is not a rare case: see the survey below.
 
@@ -133,7 +135,7 @@ What it cost, honestly: three of the phase's original decisions were elaborate w
 
 Two things phase 6 found and did not fix. Returning to the foreground refreshes the index but **does not rebuild an open note's document**, so a file that changes underneath a note you are looking at is not picked up until you leave the note and come back — defensible while somebody is typing, but currently silent, and phase 7's business. And `NoteDocument` has no unit tests: its two pieces of logic, `chips()` and `toggleTag`, are three lines each and everything underneath them is covered, but they are the only tag logic in the app reached by no test.
 
-**Both representations stay. Decided on 2026-09-07, after the case for dropping them was made and rejected.** The argument against was real and is worth keeping written down: every tag bug this project has had came from the duplication, `TagEdit` is the most delicate code in the app because it edits inside somebody's lyric, and YAML frontmatter is the broader standard — Obsidian, Zettlr, Logseq and Hugo all read `tags:` natively, so inline hashtags are the narrower convention rather than the safer one. Dropping them would have deleted a whole category of bug along with 165 notes' worth of tag lines.
+**Both representations stay. Decided on 2026-09-07, after the case for dropping them was made and rejected — and reversed two days later, on 2026-09-09, once the editor that read the inline copy was out of the picture. The argument below won after all.** The argument against was real and is worth keeping written down: every tag bug this project has had came from the duplication, `TagEdit` is the most delicate code in the app because it edits inside somebody's lyric, and YAML frontmatter is the broader standard — Obsidian, Zettlr, Logseq and Hugo all read `tags:` natively, so inline hashtags are the narrower convention rather than the safer one. Dropping them would have deleted a whole category of bug along with 165 notes' worth of tag lines.
 
 The author kept them anyway. The files are the database, both copies are in the files, and an app that removes one of them because its own code would be simpler has the relationship backwards. So the duplication is a fact of the archive to be preserved, not a defect to be tidied — which is the prime directive applied to the app's own convenience. Do not propose this again without the author raising it first.
 
