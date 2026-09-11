@@ -236,7 +236,7 @@ private val PocketDarkColors = darkColorScheme(
  * with the page would be back to the problem it exists to solve. If the light ramp ever moves, move
  * this with it by hand and re-check both numbers.
  */
-val ImagePaper = Color(0xFFE5DDDF)
+val ImagePaper = Color(0xFFE5DDDF) // Unused since 2026-09-11: the mount left with the size box, see NoteImages. Kept with its numbers for when a transparent drawing next vanishes on the dark page.
 
 /** Controls use a gentle corner rather than the fully-rounded Material default, as in the others. */
 val ControlShape = RoundedCornerShape(5.dp)

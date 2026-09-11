@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -42,8 +41,8 @@ import de.singular.writer.vault.Attachments
  * when the phone is too narrow. Their order is the meaning; a grid that reflowed them arbitrarily
  * would be wrong.
  *
- * Drawn at their natural size rather than stretched. A chord diagram is 151×164 and was drawn to be
- * read at that size; scaling it to the width of a phone would make four of them into a wall.
+ * Drawn at their own size, never wider than the column. A chord diagram is 151×164 and was drawn
+ * to be read at that size; scaling it to the width of a phone would make four of them into a wall.
  *
  * **A picture is removed by long-pressing it.** It sits between the text fields rather than in one,
  * so no cursor can reach it and no backspace can take it out; without this a picture put in by
@@ -128,19 +127,15 @@ private fun NoteImage(ref: ImageRef, attachments: Attachments) {
 
     val image = bitmap
     when {
-        image != null -> Surface(
-            color = ImagePaper,
-            shape = RoundedCornerShape(4.dp),
-        ) {
-            Image(
-                bitmap = image,
-                contentDescription = ref.alt.ifBlank { stringResource(R.string.image_untitled) },
-                contentScale = ContentScale.Fit,
-                modifier = Modifier
-                    .padding(4.dp)
-                    .size(width = image.width.dp / 2, height = image.height.dp / 2),
-            )
-        }
+        // No frame and no size of the app's own. The picture is its pixels, scaled down to fit
+        // the column when it is wider, and nothing else — a phone photo fills the width, a small
+        // drawing stays small. A half-scale box was tried and turned every photo into a tall
+        // letterbox with the picture at the bottom; a mount behind it went with the box.
+        image != null -> Image(
+            bitmap = image,
+            contentDescription = ref.alt.ifBlank { stringResource(R.string.image_untitled) },
+            contentScale = ContentScale.Fit,
+        )
 
         missing -> MissingImage(ref.path)
         // Nothing while it loads. A spinner for a file already on the phone is a flicker, not
