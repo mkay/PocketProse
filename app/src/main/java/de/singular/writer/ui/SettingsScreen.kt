@@ -121,6 +121,10 @@ fun SettingsScreen(
     onProseLeadingChange: (ProseLeading) -> Unit,
     startTag: String?,
     onStartTagChange: (String?) -> Unit,
+    pinTag: String,
+    onPinTagChange: (String) -> Unit,
+    /** How many notes carry a tag, for the pin dialog's line about what a name would pin. */
+    counting: (String) -> Int,
     tagTree: List<Tags.Node>,
     totalNotes: Int,
     folderName: String?,
@@ -184,6 +188,9 @@ fun SettingsScreen(
                     onThemeModeChange = onThemeModeChange,
                     startTag = startTag,
                     onStartTagChange = onStartTagChange,
+                    pinTag = pinTag,
+                    onPinTagChange = onPinTagChange,
+                    counting = counting,
                     tagTree = tagTree,
                     totalNotes = totalNotes,
                     folderName = folderName,
@@ -382,6 +389,9 @@ private fun SystemSettings(
     onThemeModeChange: (ThemeMode) -> Unit,
     startTag: String?,
     onStartTagChange: (String?) -> Unit,
+    pinTag: String,
+    onPinTagChange: (String) -> Unit,
+    counting: (String) -> Int,
     tagTree: List<Tags.Node>,
     totalNotes: Int,
     folderName: String?,
@@ -423,6 +433,29 @@ private fun SystemSettings(
                 picking = false
             },
             onDismiss = { picking = false },
+        )
+    }
+
+    // The tag that pins. Beside the start view because they are the same kind of thing — a tag
+    // standing in for a preference about the list — and the row shows the name for the same reason
+    // the start-view row shows its path: it is what the drawer will call it.
+    var naming by rememberSaveable { mutableStateOf(false) }
+    SettingActionRow(
+        label = R.string.settings_pin_tag,
+        subtitle = pinTag,
+        icon = ImageVector.vectorResource(R.drawable.ic_keep),
+        onClick = { naming = true },
+    )
+    SettingsCaption(R.string.settings_pin_tag_caption)
+    if (naming) {
+        PinTagDialog(
+            tag = pinTag,
+            counting = counting,
+            onSelect = {
+                onPinTagChange(it)
+                naming = false
+            },
+            onDismiss = { naming = false },
         )
     }
 

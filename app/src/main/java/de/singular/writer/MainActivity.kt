@@ -480,7 +480,7 @@ private fun PocketProseApp(settings: Settings) {
 
     // Tag first, then text: filtering a tag's notes by a word is the useful order, and it also means
     // a search inside a tag does not silently leave the tag.
-    val shown = remember(index, filters, settings.sortBy, settings.sortOrder) {
+    val shown = remember(index, filters, settings.sortBy, settings.sortOrder, settings.pinTag) {
         // One pass over the notes for all three questions — see `NoteIndex.matching`. The text used
         // to be checked with `it in index.search(query).toSet()` *inside* a filter, which scanned
         // all 168 bodies and built a fresh set for every note it checked: 168 full scans a
@@ -490,7 +490,12 @@ private fun PocketProseApp(settings: Settings) {
         // `replacing` and `renamed` rebuild it and have no business knowing what the reader last
         // picked in a menu — so the chosen order is a view onto the filtered list, not a property
         // of the folder.
-        val sorted = index.sorted(found, settings.sortBy, settings.sortOrder)
+        // The pinned notes on top of that, within whatever is shown: a pinned note that does not
+        // match the search does not appear above the results.
+        val sorted = index.pinnedFirst(
+            index.sorted(found, settings.sortBy, settings.sortOrder),
+            settings.pinTag,
+        )
         // Duplicates sit together. The chosen sort still decides where each group lands — at the
         // position of its first member — and the order inside a group; the stable sort by group
         // only pulls the partners up to it. Four "Wer geht vor?" spread across a list sorted by
@@ -707,6 +712,9 @@ private fun PocketProseApp(settings: Settings) {
             onProseLeadingChange = { settings.proseLeading = it },
             startTag = settings.startTag,
             onStartTagChange = { settings.startTag = it },
+            pinTag = settings.pinTag,
+            onPinTagChange = { settings.pinTag = it },
+            counting = { index.withTag(it).size },
             tagTree = index.tagTree,
             totalNotes = index.size,
             folderName = folderName,
@@ -767,6 +775,7 @@ private fun PocketProseApp(settings: Settings) {
             // The gate from phase 2: a note whose bytes the parser cannot reproduce is never
             // written, because writing it would corrupt it. It is false for no note in the archive.
             knownTags = index.allTags,
+            pinTag = settings.pinTag,
             editable = openNote.roundTrips,
             created = openNote.created,
             updated = openNote.updated,
@@ -955,6 +964,11 @@ private fun PocketProseApp(settings: Settings) {
                                     settings.startTag = Tags.rename(listOf(start), tag, target).single()
                                 }
                             }
+                            // The pin tag likewise — and this is also how it gets translated:
+                            // rename `pinned` to `oben` in the drawer and the setting comes along.
+                            if (Tags.isUnder(settings.pinTag, tag)) {
+                                settings.pinTag = Tags.rename(listOf(settings.pinTag), tag, target).single()
+                            }
                             context.resources.getQuantityString(R.plurals.rename_tag_done, result.count, result.count)
                         }
                         is RenameResult.Stale ->
@@ -1060,6 +1074,7 @@ private fun PocketProseApp(settings: Settings) {
             onClearFilters = { filters = Filters() },
             sortBy = settings.sortBy,
             sortOrder = settings.sortOrder,
+            pinTag = settings.pinTag,
             onSortChange = { by, order ->
                 settings.sortBy = by
                 settings.sortOrder = order

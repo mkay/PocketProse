@@ -44,6 +44,8 @@
     <string name="new_note_create">Anlegen</string>
     <string name="action_cancel">Abbrechen</string>
     <string name="editor_menu">Mehr</string>
+    <string name="pin_note">Anheften</string>
+    <string name="unpin_note">Loslösen</string>
     <string name="share_note">Teilen</string>
     <string name="delete_note">Löschen</string>
     <string name="delete_note_confirm">„%1$s“ löschen?</string>
@@ -242,6 +244,14 @@
     <string name="settings_start_tag">Filter beim Start</string>
     <string name="settings_start_tag_all">Alle Texte</string>
     <string name="settings_start_tag_caption">Schlagwort, nach dem die Ansicht beim Start filtert. Ist nichts gesetzt, wird die Ansicht ungefiltert angezeigt.</string>
+    <string name="settings_pin_tag">Schlagwort zum Anheften</string>
+    <string name="settings_pin_tag_caption">Texte mit diesem Schlagwort stehen in der Bibliothek ganz oben. Sonst ist es ein Schlagwort wie jedes andere: Es erscheint in der Seitenleiste, solange ein Text es trägt, und wird es dort umbenannt, gilt der neue Name auch hier.</string>
+    <string name="pin_tag_label">Schlagwort</string>
+    <plurals name="pin_tag_scope">
+        <item quantity="one">1 Text trägt dieses Schlagwort und stünde ganz oben.</item>
+        <item quantity="other">%1$d Texte tragen dieses Schlagwort und stünden ganz oben.</item>
+    </plurals>
+    <string name="pin_tag_confirm">Übernehmen</string>
 
     <!-- Ein Schlagwort umbenennen — die eine Geste, die viele Dateien auf einmal umschreibt. -->
     <string name="rename_tag_title">%1$s umbenennen</string>
@@ -375,6 +385,7 @@
     <string name="add_image_failed">Das Bild konnte nicht in deinen Ordner gelegt werden</string>
 
     <string name="note_has_attachments">Enthält Anhänge</string>
+    <string name="note_pinned">Angeheftet</string>
 
     <!-- ===== Kombinierte Suche ===== -->
 

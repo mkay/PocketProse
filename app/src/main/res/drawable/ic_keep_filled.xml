@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Material Symbols "keep", FILL1. Derived from the FILL0 export beside it (ic_keep.xml): the filled
+  glyph is the outline's outer subpath alone, without the inner cutout.
+
+  Drawn in white and tinted at the call site, the same way the wordmark is. Do not hand-edit the path
+  data — re-derive from a fresh export.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="960"
+    android:viewportHeight="960">
+    <group android:translateX="-0" android:translateY="960">
+        <path
+            android:pathData="m640-480 80 80v80H520v240l-40 40-40-40v-240H240v-80l80-80v-280h-40v-80h400v80h-40v280Z"
+            android:fillColor="#FFFFFFFF" />
+    </group>
+</vector>

@@ -229,6 +229,31 @@ class Settings(context: Context) {
         }
 
     /**
+     * The tag whose notes sit at the top of the library, whatever the sort.
+     *
+     * A tag and not a flag of its own, because a flag would have to live somewhere: in this store,
+     * where it dies with the app and never reaches the other devices the folder is synced to, or in
+     * the frontmatter as a key nobody else reads. A tag is written into the file the way every other
+     * tag is — it syncs, it survives an uninstall as a perfectly ordinary tag, another editor sees it
+     * for what it is, and taking it off is unpinning. Adding one is a frontmatter-only edit, so
+     * `updated` stays put.
+     *
+     * A default rather than a constant. The name is one literal across every device and language —
+     * localising it would split a folder into `pinned` and `angepinnt` the first time two phones with
+     * different locales each pinned something — but which literal is the user's to choose, and the
+     * tag drawer's rename follows it, see `MainActivity`. It costs the folder nothing until the first
+     * pin: an unused default imposes no convention on anyone's files.
+     */
+    private var pin by mutableStateOf(prefs.getString(KEY_PIN_TAG, null) ?: DEFAULT_PIN_TAG)
+
+    var pinTag: String
+        get() = pin
+        set(value) {
+            pin = value
+            prefs.edit().putString(KEY_PIN_TAG, value).apply()
+        }
+
+    /**
      * Whether the user has waved away the offer to move their inline tags into their notes.
      *
      * Permanent, and it has to be: the offer is about the user's own filing, which is theirs. A
@@ -257,6 +282,8 @@ class Settings(context: Context) {
         const val KEY_PROSE_SIZE = "prose_size"
         const val KEY_PROSE_LEADING = "prose_leading"
         const val KEY_START_TAG = "start_tag"
+        const val KEY_PIN_TAG = "pin_tag"
+        const val DEFAULT_PIN_TAG = "pinned"
         const val KEY_SORT_BY = "sort_by"
         const val KEY_SORT_ORDER = "sort_order"
         const val KEY_ROW_DENSITY = "row_density"

@@ -382,6 +382,22 @@ class NoteIndex(notes: List<IndexedNote>) {
         return notes.sortedWith(comparator)
     }
 
+    /**
+     * [notes] with the ones filed under [tag] moved to the front, each half in the order it came.
+     *
+     * The pin. It is applied to the sorted list rather than folded into the comparator, so a pinned
+     * block and the rest of the list are each in the chosen order — a pinned note does not stop
+     * being the newest just because it also sits on top. `Tags.isUnder`, as the filter reads it, so
+     * a pin tag that is a parent takes its children with it.
+     *
+     * A stable partition, and applied *before* the duplicate grouping in the library: a group lands
+     * where its first member does, so a pinned "Wer geht vor?" brings its three partners up with it
+     * rather than leaving them scattered below. Sitting together is the stronger promise when that
+     * filter is on.
+     */
+    fun <T : Filterable> pinnedFirst(notes: List<T>, tag: String): List<T> =
+        if (tag.isEmpty()) notes else notes.sortedBy { note -> note.tags.none { Tags.isUnder(it, tag) } }
+
     /** The tag tree the drawer draws. See [Tags.tree] for why it is built from path segments. */
     val tagTree: List<Tags.Node> by lazy { Tags.tree(this.notes.map { it.tags }) }
 

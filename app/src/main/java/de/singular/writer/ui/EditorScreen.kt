@@ -232,6 +232,12 @@ fun EditorScreen(
     links: List<LinkRef>,
     missingLinks: Set<String>,
     knownTags: Set<String>,
+    /**
+     * The tag that puts a note at the top of the library — `Settings.pinTag`. The bar's pin button
+     * is sugar over the tag sheet: it toggles this one tag on the document, and the save that
+     * writes the body writes it, on the same terms as any other tag.
+     */
+    pinTag: String,
     onOpenLink: (LinkRef) -> Unit,
     editable: Boolean,
     /**
@@ -387,9 +393,26 @@ fun EditorScreen(
                 }
             },
             actions = {
-                // Out in the bar rather than in the menu, and it is the only thing that gets to be:
-                // it writes nothing. The menu below holds the irreversible thing, and mixing a
-                // look-only action into it would make opening that menu feel like less than it is.
+                // The pin, out in the bar and showing its state: it began as a menu entry and was
+                // too hidden there, since whether a note is pinned is something to see, not only to
+                // change. It writes one tag, on the same terms as the tag sheet, so it sits behind
+                // the same gate — a note that cannot be written cannot be pinned.
+                if (editable) {
+                    val pinned = document.tags.any { Tags.isUnder(it, pinTag) }
+                    IconButton(onClick = { document.toggleTag(pinTag) }) {
+                        Icon(
+                            painter = painterResource(
+                                if (pinned) R.drawable.ic_keep_filled else R.drawable.ic_keep,
+                            ),
+                            contentDescription = stringResource(
+                                if (pinned) R.string.unpin_note else R.string.pin_note,
+                            ),
+                        )
+                    }
+                }
+                // Out in the bar rather than in the menu: it writes nothing. The menu below holds
+                // the irreversible thing, and mixing a look-only action into it would make opening
+                // that menu feel like less than it is.
                 var informing by remember(document) { mutableStateOf(false) }
                 IconButton(onClick = { informing = true }) {
                     Icon(

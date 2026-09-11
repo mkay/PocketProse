@@ -181,6 +181,9 @@
     <!-- Opens the menu in the editor's bar. -->
     <string name="editor_menu">More</string>
     <!-- Hands the note's file to another app through the share sheet. One note at a time. -->
+    <!-- The editor menu's pin entry: puts the pin tag on the note, or takes it off. -->
+    <string name="pin_note">Pin note</string>
+    <string name="unpin_note">Unpin note</string>
     <string name="share_note">Share note</string>
     <!-- The menu entry, and the confirming button in the dialog it opens. -->
     <string name="delete_note">Delete note</string>
@@ -405,6 +408,23 @@
     <!-- Under the start-view row. Says what happens when the tag is gone, because that is the one
          behaviour a user cannot discover by trying it. -->
     <string name="settings_start_tag_caption">The library opens showing only this tag. If the tag is missing when the app starts, it opens showing everything.</string>
+
+    <!-- The row that names the tag whose notes sit at the top of the library. The default is
+         "pinned" and it is one literal across every language — it is written into the files, and a
+         translated default would split a synced folder into two pins. -->
+    <string name="settings_pin_tag">Pin tag</string>
+    <!-- Under that row. The tag is ordinary in every other way, and the caption says so, because a
+         reader who unpins their last note will watch it leave the drawer. -->
+    <string name="settings_pin_tag_caption">Notes carrying this tag sit at the top of the library. It is an ordinary tag in every other way: it appears in the drawer while a note carries it, and renaming it there renames it here.</string>
+    <!-- The field in the pin-tag dialog. -->
+    <string name="pin_tag_label">Tag</string>
+    <!-- Under the field: how many notes carry the typed name now, which is how many would be on top
+         the moment it is confirmed. Zero is the ordinary answer for a tag that does not exist yet. -->
+    <plurals name="pin_tag_scope">
+        <item quantity="one">1 note carries this tag and would sit on top.</item>
+        <item quantity="other">%1$d notes carry this tag and would sit on top.</item>
+    </plurals>
+    <string name="pin_tag_confirm">Use</string>
 
     <!-- Under the folder row, before any folder has been chosen. -->
     <string name="settings_folder_none">No folder chosen yet</string>
@@ -747,6 +767,8 @@
          rather than images: three notes in the archive embed pictures and four link PDFs, and the
          row that most wants marking is the one with an Anhänge section at the end of it. -->
     <string name="note_has_attachments">Has attachments</string>
+    <!-- The mark beside it on a row that carries the pin tag. -->
+    <string name="note_pinned">Pinned</string>
 
     <!-- ===== Combined search ===== -->
 

@@ -89,6 +89,7 @@ import de.singular.writer.RowDensity
 import de.singular.writer.SortBy
 import de.singular.writer.SortOrder
 import de.singular.writer.markdown.Migration
+import de.singular.writer.markdown.Tags
 import de.singular.writer.vault.AttachmentFilter
 import de.singular.writer.vault.Filters
 import de.singular.writer.vault.IndexedNote
@@ -134,6 +135,9 @@ fun LibraryScreen(
     sortBy: SortBy,
     sortOrder: SortOrder,
     onSortChange: (SortBy, SortOrder) -> Unit,
+    // The tag that puts a note on top — see `Settings.pinTag`. The caller has already ordered the
+    // list; the screen only needs to know which rows to mark.
+    pinTag: String,
     density: RowDensity,
     onDensityChange: (RowDensity) -> Unit,
     // Multi-select. Hoisted like `searching` is, because the Back handling lives in MainActivity and
@@ -441,6 +445,7 @@ fun LibraryScreen(
                             // will be judged by. Shown only here: on an ordinary list it is a
                             // second, less readable title under every row.
                             showFileName = filters.duplicates,
+                            pinned = note.tags.any { Tags.isUnder(it, pinTag) },
                             selecting = selecting,
                             // Ticked by uri and never by title: four notes in the archive are called
                             // "Wer geht vor?" and three more share another title, so a selection
@@ -721,6 +726,7 @@ private fun NoteRow(
     note: IndexedNote,
     density: RowDensity,
     showFileName: Boolean,
+    pinned: Boolean,
     selecting: Boolean,
     checked: Boolean,
     onClick: () -> Unit,
@@ -785,6 +791,17 @@ private fun NoteRow(
                 Icon(
                     painter = painterResource(R.drawable.ic_attach_file),
                     contentDescription = stringResource(R.string.note_has_attachments),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                    modifier = Modifier.padding(start = 8.dp, top = 3.dp).size(16.dp),
+                )
+            }
+            // The pin on the outer edge, so it is the one mark that always sits in the same column:
+            // it is the reason the row is where it is, and the eye looks for it at the top of the
+            // list rather than scanning every row for it.
+            if (pinned) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_keep),
+                    contentDescription = stringResource(R.string.note_pinned),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                     modifier = Modifier.padding(start = 8.dp, top = 3.dp).size(16.dp),
                 )
