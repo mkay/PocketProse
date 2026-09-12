@@ -57,6 +57,20 @@ class ExcerptTest {
     }
 
     @Test
+    fun `scratch lines are left out, a spaced plus is a bullet and stays`() {
+        // The row quotes the draft, as the editor's draft view does. `+Marie` is set aside;
+        // `+ Marie` is a CommonMark bullet and is text like any other.
+        val note = Note.parse("---\ntitle: \"x\"\ntags: []\n---\n\n+Marie, nie\nDu erreichst mich nicht\n+ oder doch\n")
+        assertEquals("Du erreichst mich nicht oder doch", Excerpt.of(note))
+    }
+
+    @Test
+    fun `a note that is nothing but scratch lines excerpts to nothing`() {
+        val note = Note.parse("---\ntitle: \"x\"\ntags: []\n---\n\n+Marie\n+nie\n")
+        assertEquals("", Excerpt.of(note))
+    }
+
+    @Test
     fun `a long note is cut on a word boundary and marked`() {
         val body = "wort ".repeat(80)
         val note = Note.parse("---\ntitle: \"x\"\ntags: []\n---\n\n$body\n")

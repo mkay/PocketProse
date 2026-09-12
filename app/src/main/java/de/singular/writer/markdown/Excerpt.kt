@@ -8,6 +8,8 @@ package de.singular.writer.markdown
  * What it leaves out is the point. Tag lines are gone, because tags are chips in that row already
  * and repeating them as text would waste the only line a note gets. Rules are gone. Images are gone.
  * Headings are kept, because `## Strophe` at the top of a note is genuinely the first thing in it.
+ * Scratch lines are gone too, since 2026-09-12: the row quotes the draft, and a `+Marie, nie` the
+ * writer set aside is not the song's first words — see `Scratch`.
  *
  * **A blank result is a normal answer, not a failure.** 36 of the author's 168 notes have a body
  * that is nothing but their tag line — `Die Eule.md` is 15 bytes of body, all of it `#lyrics/titel`.
@@ -28,7 +30,7 @@ object Excerpt {
      * cut falls on a word boundary where one is near enough, and an ellipsis marks it.
      */
     fun of(note: Note, length: Int = DEFAULT_LENGTH): String {
-        val text = note.blocks
+        val text = Blocks.parse(Scratch.strip(note.body))
             .mapNotNull { block ->
                 when (block) {
                     is Block.Paragraph -> Inline.strip(block.text)

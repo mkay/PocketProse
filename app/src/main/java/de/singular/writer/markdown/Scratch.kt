@@ -14,11 +14,11 @@ package de.singular.writer.markdown
  * **The file is never changed on its account.** The app writes no `+` of its own and removes none.
  * While editing, a scratch line is on screen, dimmed like a marker, so what is in the file is
  * never out of sight; the draft view — see `EditorScreen` — is a read-only look at the note with
- * these lines and their newlines left out, and nothing else in the app omits them. The library's
- * excerpt in particular quotes them like any other line, by its own rule of skipping nothing. This
- * is the one line-hiding rule the app has, and it is opt-in, per line, by a mark the writer put
- * there — not a guess at what a line looks like, which is the machinery `CLAUDE.md` records
- * deleting for the hashtag lines.
+ * these lines and their newlines left out, and the library's excerpt (`Excerpt`) quotes the note
+ * the same way, so a row introduces a song by its words and not by a line set aside. Nothing else
+ * omits them — not the export, not the source view. This is the one line-hiding rule the app has,
+ * and it is opt-in, per line, by a mark the writer put there — not a guess at what a line looks
+ * like, which is the machinery `CLAUDE.md` records deleting for the hashtag lines.
  */
 object Scratch {
 
