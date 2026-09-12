@@ -1,6 +1,10 @@
-Pocket Prose is a writing app for Android that reads a folder. Point it at a directory of Markdown files — or an empty one — and it lists, reads, edits and searches them in place, through the system file picker, so it needs no storage permission of its own. Notes are filed by tags in their frontmatter — nested with /, filtered from a drawer, renamed across the folder — and that list is the only place the app reads them from. The files stay the database. Uninstall it and the folder is byte-identical to how it found it, apart from edits you actually made.
+Pocket Prose is a writing app for Android. If you write and don't know what Markdown is, this app might be for you. If you're looking for a Markdown editor with a preview pane, it might not.
 
-It was built for a personal archive of lyrics and prose, a couple of hundred notes written over years and synced between devices, which is why it is opinionated about leaving things alone.
+Point it at a directory full of Markdown files or start building your notebook from scratch — no storage permission needed. Notes are filed by the tags in their frontmatter, nested with /, and nowhere else.
+
+Uninstall it and the folder is byte-identical to how it found it, apart from edits you actually made.
+
+It was built for a personal archive of lyrics and prose, a couple of hundred notes written over years, which is why it is opinionated about leaving things alone.
 
 Early-stage release — expect rough edges. Feedback and bug reports welcome via Issues.
 
@@ -25,8 +29,8 @@ This is the point of the app rather than a list of missing features.
 * Titles come from the frontmatter, never from the file name — the two often differ, and duplicate titles across files stay separate notes.
 * Dates come from the file. A note written in 2015 is dated 2015, not the day the app first saw it, and re-filing a note under another tag does not move its date; only writing does.
 * Relative images and attachments resolve against the note's own folder, so a chord diagram in attachments/ renders and a linked PDF opens in an external viewer. Add an image and it is written beside the note, not into the app.
-* A plain editor that writes ordinary Markdown and rewrites none of yours. Selecting text brings up a small strip of its own — bold, italic, quotes, cut, copy, paste — and the bar at the foot has undo, indent, a rule and repeat line. A source view shows the note with nothing hidden. Headings render as headings, and a --- under a line of text stays a rule rather than turning the line into a heading.
-* Scratch lines. Start a line with a + glued to the text — +an alternative line, +a comment — and it shows dimmed while you write — the crossed-out eye in the formatting bar marks the selected lines for you; the eye button in the note's bar reads the note without them. It is plain text in the file and in every other editor, and the app never adds or removes one.
+* A plain editor that writes ordinary Markdown and rewrites none of yours. A source view shows the note with nothing hidden. Headings render as headings, and a --- under a line of text stays a rule rather than turning the line into a heading.
+* Scratch lines: start a line with a + glued to the text and it shows dimmed while you write; an eye button reads the note without them. It is plain text in the file, and the app never adds or removes one.
 * Saves are atomic — temp file plus rename — so a sync client never sees a half-written note.
 
 <b>The library</b>
@@ -39,12 +43,8 @@ This is the point of the app rather than a list of missing features.
 
 <b>Reading comfort</b>
 
-* Literata or EB Garamond for the notes, or the system font; five text sizes and three line spacings, with a live preview in Settings.
-* Light, dark or system theme. English and German — on Android 13 and up that is the per-app language in Android's own Settings.
-
-<b>Permissions</b>
-
-None. Folder access is granted once through the system picker. No internet permission at all — the Support dialog's links open in your browser, which fetches in its own process.
+* Literata or EB Garamond for the notes, or the system font; five text sizes and three line spacings.
+* Light, dark or system theme. English and German.
 
 <b>License</b>
 
