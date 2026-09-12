@@ -1,0 +1,7 @@
+The editor grows up: a selection strip of its own with bold, italic, quotes and the clipboard; indent, rules drawn as lines, repeat line, undo and redo in the bar; a source view; a clipboard strip for the title.
+
+Scratch lines: begin a line with + to set it aside, and read the draft without them.
+
+Sort the library by created, the archive's own timeline. Share text into a new note. Long-press the icon for New note and Search.
+
+The picture button is now a setting, off by default.
