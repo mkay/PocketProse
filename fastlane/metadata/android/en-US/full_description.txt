@@ -26,7 +26,7 @@ This is the point of the app rather than a list of missing features.
 * Dates come from the file. A note written in 2015 is dated 2015, not the day the app first saw it, and re-filing a note under another tag does not move its date; only writing does.
 * Relative images and attachments resolve against the note's own folder, so a chord diagram in attachments/ renders and a linked PDF opens in an external viewer. Add an image and it is written beside the note, not into the app.
 * A plain editor with a small formatting bar — bold, italic, bullets, a rule — that writes ordinary Markdown and rewrites none of yours. Headings render as headings, and a --- under a line of text stays a rule rather than turning the line into a heading.
-* Scratch lines. Start a line with a + glued to the text — +an alternative line, +a comment — and it shows dimmed while you write; the eye button in the note's bar reads the note without them. It is plain text in the file and in every other editor, and the app never adds or removes one.
+* Scratch lines. Start a line with a + glued to the text — +an alternative line, +a comment — and it shows dimmed while you write — the crossed-out eye in the formatting bar marks the selected lines for you; the eye button in the note's bar reads the note without them. It is plain text in the file and in every other editor, and the app never adds or removes one.
 * Saves are atomic — temp file plus rename — so a sync client never sees a half-written note.
 
 <b>The library</b>

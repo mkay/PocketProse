@@ -1000,6 +1000,12 @@ private fun FormatBar(
             FormatIcon(R.drawable.ic_format_indent_increase, R.string.format_indent, true) {
                 body.quoteLines()
             }
+            // Scratch, the same kind of line-based toggle as the indent, with the bar's eye
+            // crossed out: these lines are the ones that eye leaves out. Here rather than typed
+            // because the `+` has to be the line's first character, which is a hard place to hit.
+            FormatVector(Icons.Outlined.VisibilityOff, R.string.format_scratch, true) {
+                body.scratchLines()
+            }
             FormatIcon(R.drawable.ic_horizontal_rule, R.string.format_rule, true) {
                 body.insertRule()
             }
@@ -1129,6 +1135,16 @@ private fun TextFieldState.wrapSelection(marker: String) {
 private fun TextFieldState.quoteLines() {
     val range = selection
     val result = FormatActions.quote(text.toString(), range.min, range.max)
+    edit {
+        replace(0, length, result.text)
+        selection = TextRange(result.selectionStart, result.selectionEnd)
+    }
+}
+
+/** Applies [FormatActions.scratch] to the lines the selection covers, keeping them covered. */
+private fun TextFieldState.scratchLines() {
+    val range = selection
+    val result = FormatActions.scratch(text.toString(), range.min, range.max)
     edit {
         replace(0, length, result.text)
         selection = TextRange(result.selectionStart, result.selectionEnd)

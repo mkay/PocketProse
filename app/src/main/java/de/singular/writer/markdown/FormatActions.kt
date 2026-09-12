@@ -75,14 +75,28 @@ object FormatActions {
      * anything else means put it on where it is missing. The selection is kept over the same lines
      * afterwards so a second tap undoes the first.
      */
-    fun quote(text: String, start: Int, end: Int): Formatted {
+    fun quote(text: String, start: Int, end: Int): Formatted = prefixLines(text, start, end, QUOTE, QUOTE_MARK)
+
+    /**
+     * Mark the lines the selection covers as scratch by putting `+` in front of each, or take the
+     * mark off again if every one of them has it — see `Scratch` for the convention. The same
+     * line-based toggle as [quote], for the same reason: hitting exactly the first character of a
+     * line is not something anyone does on a phone, and that is the one place the `+` can go.
+     */
+    fun scratch(text: String, start: Int, end: Int): Formatted = prefixLines(text, start, end, SCRATCH, SCRATCH_MARK)
+
+    /**
+     * The toggle behind [quote] and [scratch]: [mark] goes in front of every covered line that
+     * [marked] does not already match, or comes off every line if all of them match.
+     */
+    private fun prefixLines(text: String, start: Int, end: Int, mark: String, marked: Regex): Formatted {
         val from = start.coerceIn(0, text.length)
         val to = end.coerceIn(from, text.length)
         val firstLine = lineStart(text, from)
         val lastLineEnd = text.indexOf('\n', to).let { if (it < 0) text.length else it }
 
         val lines = text.substring(firstLine, lastLineEnd).split('\n')
-        val allQuoted = lines.filter { it.isNotBlank() }.let { it.isNotEmpty() && it.all(QUOTE_MARK::containsMatchIn) }
+        val allMarked = lines.filter { it.isNotBlank() }.let { it.isNotEmpty() && it.all(marked::containsMatchIn) }
         val starting = from == to && lines.size == 1 && lines.single().isBlank()
 
         var newFrom = from
@@ -90,11 +104,11 @@ object FormatActions {
         var at = firstLine
         val rebuilt = lines.joinToString("\n") { line ->
             val out = when {
-                starting -> QUOTE + line
+                starting -> mark + line
                 line.isBlank() -> line
-                allQuoted -> QUOTE_MARK.replace(line, "")
-                QUOTE_MARK.containsMatchIn(line) -> line
-                else -> "$QUOTE$line"
+                allMarked -> marked.replace(line, "")
+                marked.containsMatchIn(line) -> line
+                else -> "$mark$line"
             }
             val delta = out.length - line.length
             // A change on this line moves every selection edge on it — the start edge even when it
@@ -115,6 +129,15 @@ object FormatActions {
 
     /** `> ` at the start of a line, the space optional, as `Blocks` reads it. */
     private val QUOTE_MARK = Regex("""^ {0,3}>[ \t]?""")
+
+    /** What the scratch button writes: the `+` alone, glued to the line — `+ ` would be a bullet. */
+    private const val SCRATCH = "+"
+
+    /**
+     * A scratch line's mark, as `Scratch` reads it — plus a `+` alone on a line, which the toggle
+     * left there on an empty line and should be able to take back.
+     */
+    private val SCRATCH_MARK = Regex("""^\+(?!\s)""")
 
     /** Where the line holding [at] begins. */
     private fun lineStart(text: String, at: Int): Int =

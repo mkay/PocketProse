@@ -110,6 +110,17 @@ class FormatActionsTest {
     }
 
     @Test
+    fun `scratch goes on every covered line, glued, and a second tap takes it off`() {
+        val text = "eins\nzwei\n\ndrei\n"
+        val on = FormatActions.scratch(text, 2, 12)
+        assertEquals("+eins\n+zwei\n\n+drei\n", on.text)
+        assertEquals("ns\n+zwei\n\n+d", on.text.substring(on.selectionStart, on.selectionEnd))
+        assertEquals(text, FormatActions.scratch(on.text, on.selectionStart, on.selectionEnd).text)
+        // A partly marked block is completed; a bullet is not a scratch line, so it gets its own.
+        assertEquals("+eins\n++ zwei", FormatActions.scratch("+eins\n+ zwei", 0, 12).text)
+    }
+
+    @Test
     fun `a cursor on an empty line starts an indented block there`() {
         val on = FormatActions.quote("eins\n\nzwei\n", 5, 5)
         assertEquals("eins\n> \nzwei\n", on.text)

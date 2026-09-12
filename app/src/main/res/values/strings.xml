@@ -85,6 +85,8 @@
     <string name="format_quote">Quotes</string>
     <!-- The bar's indent button. Written to the file as a Markdown blockquote (`> `); the label names what the author is doing, not the syntax. -->
     <string name="format_indent">Indent</string>
+    <!-- The bar's toggle that puts a "+" in front of the covered lines, see markdown/Scratch.kt. -->
+    <string name="format_scratch">Scratch</string>
     <string name="format_undo">Undo</string>
     <string name="format_redo">Redo</string>
     <string name="format_duplicate">Repeat line</string>

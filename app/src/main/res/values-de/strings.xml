@@ -24,6 +24,7 @@
     <string name="format_italic">Kursiv</string>
     <string name="format_quote">Anführungszeichen</string>
     <string name="format_indent">Einrücken</string>
+    <string name="format_scratch">Notiz</string>
     <string name="format_undo">Rückgängig</string>
     <string name="format_redo">Wiederholen</string>
     <string name="format_duplicate">Zeile wiederholen</string>
