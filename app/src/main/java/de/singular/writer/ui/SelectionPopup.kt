@@ -80,9 +80,11 @@ fun SelectionPopup(
     val request = provider.request ?: return
     if (anchor == null || !anchor.isAttached) return
     val selection = request.contentBounds(anchor)
-    val gap = with(LocalDensity.current) { 8.dp.roundToPx() }
+    // The bounds are the text's; the handles hang under the line, 25dp of them in Compose's
+    // foundation, so the gap below clears the handles and the gap above only the words.
+    val (gap, handles) = with(LocalDensity.current) { 8.dp.roundToPx() to 25.dp.roundToPx() }
 
-    Popup(popupPositionProvider = BelowSelection(selection, gap)) {
+    Popup(popupPositionProvider = BelowSelection(selection, gap, handles)) {
         content()
     }
 }
@@ -94,7 +96,12 @@ fun SelectionPopup(
  * [selection] is in the page's coordinates and [anchorBounds] is the page in the window's, so the
  * sum is the selection in the window's — the space a popup is positioned in.
  */
-private class BelowSelection(private val selection: Rect, private val gap: Int) : PopupPositionProvider {
+private class BelowSelection(
+    private val selection: Rect,
+    private val gap: Int,
+    /** What the handles under the selection take, added to [gap] when the popup goes below. */
+    private val handles: Int,
+) : PopupPositionProvider {
     override fun calculatePosition(
         anchorBounds: IntRect,
         windowSize: IntSize,
@@ -105,7 +112,7 @@ private class BelowSelection(private val selection: Rect, private val gap: Int) 
         val x = (centre - popupContentSize.width / 2)
             .coerceIn(anchorBounds.left, (anchorBounds.right - popupContentSize.width).coerceAtLeast(anchorBounds.left))
 
-        val below = anchorBounds.top + selection.bottom.toInt() + gap
+        val below = anchorBounds.top + selection.bottom.toInt() + handles + gap
         val above = anchorBounds.top + selection.top.toInt() - gap - popupContentSize.height
         val y = when {
             below + popupContentSize.height <= anchorBounds.bottom -> below
