@@ -354,6 +354,9 @@ fun EditorScreen(
     // images has several fields, and "the first with a selection" was a guess at which one the
     // writer meant.
     var focused by remember(document) { mutableStateOf<Int?>(null) }
+    // The title is not one of those stretches: the bar never acts on it, and a selection in it gets
+    // a strip of its own — see the popup below.
+    var titleFocused by remember(document) { mutableStateOf(false) }
     val focusManager = LocalFocusManager.current
     val editorScope = rememberCoroutineScope()
 
@@ -582,6 +585,7 @@ fun EditorScreen(
                 // page jumped to the foot of the note, and starting it at the top would mean the
                 // next thing typed landed in front of the first line of the lyric.
                 onDone = { focusManager.clearFocus() },
+                onFocusChanged = { titleFocused = it },
             )
 
             document.segments.forEachIndexed { i, segment ->
@@ -672,6 +676,16 @@ fun EditorScreen(
         if (selectedIn != null) {
             SelectionPopup(provider = popups, anchor = page) {
                 SelectionStrip(body = selectedIn)
+            }
+        }
+
+        // The title's strip: the clipboard and nothing else, since the bar does not serve the title
+        // and the formatting buttons would write markup into `title:`. Not gated on a selection —
+        // the field asks for a menu at a collapsed cursor too, and that request is the only way
+        // paste reaches a title, which the prose gets from the bar.
+        if (titleFocused && editable) {
+            SelectionPopup(provider = popups, anchor = page) {
+                TitleStrip(title = document.titleBuffer)
             }
         }
         }
@@ -830,6 +844,40 @@ private fun SelectionStrip(body: TextFieldState) {
             }
             FormatIcon(R.drawable.ic_content_paste, R.string.format_paste, true) {
                 clipboard.getText()?.text?.let(body::replaceSelection)
+            }
+        }
+    }
+}
+
+/**
+ * The strip under the title's cursor or selection: the clipboard, in the same shape as
+ * [SelectionStrip] and nothing from the format bar. Cut and copy need a selection; paste needs
+ * only the cursor, and a pasted line break becomes a space, the rule [SingleLine] applies to
+ * typed input — a programmatic edit goes past the input transformation.
+ */
+@Composable
+private fun TitleStrip(title: TextFieldState) {
+    val clipboard = LocalClipboardManager.current
+    val selected = !title.selection.collapsed
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        shape = MaterialTheme.shapes.medium,
+        shadowElevation = 3.dp,
+    ) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(2.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(horizontal = 4.dp),
+        ) {
+            FormatIcon(R.drawable.ic_content_cut, R.string.format_cut, selected) {
+                clipboard.setText(AnnotatedString(title.selectedText()))
+                title.replaceSelection("")
+            }
+            FormatIcon(R.drawable.ic_content_copy, R.string.format_copy, selected) {
+                clipboard.setText(AnnotatedString(title.selectedText()))
+            }
+            FormatIcon(R.drawable.ic_content_paste, R.string.format_paste, true) {
+                clipboard.getText()?.text?.let { title.replaceSelection(oneLine(it)) }
             }
         }
     }
@@ -1073,7 +1121,12 @@ private fun TextFieldState.insertRule() {
  * stray key after it. Pasting two lines here joins them with a space instead.
  */
 @Composable
-private fun NoteTitleField(document: NoteDocument, editable: Boolean, onDone: () -> Unit) {
+private fun NoteTitleField(
+    document: NoteDocument,
+    editable: Boolean,
+    onDone: () -> Unit,
+    onFocusChanged: (Boolean) -> Unit,
+) {
     val scheme = MaterialTheme.colorScheme
     val prose = LocalProseStyle.current
     val style = prose.copy(
@@ -1108,6 +1161,7 @@ private fun NoteTitleField(document: NoteDocument, editable: Boolean, onDone: ()
         },
         modifier = Modifier
             .fillMaxWidth()
+            .onFocusChanged { onFocusChanged(it.isFocused) }
             .padding(horizontal = 20.dp, vertical = 8.dp),
     )
 }
@@ -1127,6 +1181,9 @@ private val SingleLine = InputTransformation {
         if (text[i] == '\n' || text[i] == '\r') replace(i, i + 1, " ")
     }
 }
+
+/** [SingleLine]'s rule for text that does not pass through it: a paste into the title. */
+private fun oneLine(text: String): String = text.replace('\n', ' ').replace('\r', ' ')
 
 /**
  * The dialog that starts a note: a title, and nothing else.
