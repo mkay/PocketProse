@@ -2,10 +2,10 @@
 <!-- SPDX-License-Identifier: GPL-3.0-only -->
 <resources>
 
-    <string name="app_tagline">Schreiben, bewahren, Inspiration festhalten</string>
+    <string name="app_tagline">Schreiben, festhalten</string>
 
     <string name="welcome_title">Deine Texte liegen in einem Ordner</string>
-    <string name="welcome_body">Zeig Pocket Prose den Ordner, in dem deine Texte schon liegen. Es wird nichts kopiert und nichts verschoben — alles bleibt, wo es ist.</string>
+    <string name="welcome_body">Zeig Pocket Prose den Ordner, in dem deine Texte liegen (oder liegen werden). Nichts wird kopiert oder verschoben — alles bleibt, wo es ist.</string>
     <string name="welcome_choose">Ordner wählen</string>
 
     <string name="folder_gone_title">Dieser Ordner existiert nicht mehr</string>
@@ -38,7 +38,7 @@
     <string name="editor_readonly_body">Pocket Prose kann nicht sicher sein, diesen Text unverändert zu speichern, und ändert ihn deshalb gar nicht. Du kannst ihn hier lesen und anderswo bearbeiten.</string>
 
     <string name="new_note">Neuer Text</string>
-    <string name="new_note_title">Wie heißt er?</string>
+    <string name="new_note_title">Wie lautet der Titel?</string>
     <string name="new_note_label">Titel</string>
     <string name="new_note_create">Anlegen</string>
     <string name="action_cancel">Abbrechen</string>
@@ -49,15 +49,15 @@
     <string name="show_source">Markdown zeigen</string>
     <string name="show_draft">Nur den Entwurf zeigen</string>
     <string name="show_all_lines">Alle Zeilen zeigen</string>
-    <string name="draft_hint">Nichts auszulassen. Eine Zeile, die mit + beginnt, bleibt aus dem Entwurf draußen, etwa +eine Alternative.</string>
+    <string name="draft_hint">Nichts auszulassen. Zeilen, die mit + beginnen, bleiben aus dem Entwurf , wie zB +eine Alternative Zeile.</string>
     <string name="delete_note">Löschen</string>
     <string name="delete_note_confirm">„%1$s“ löschen?</string>
     <string name="delete_note_body">Die Text-Datei wird aus deinem Ordner gelöscht. Dies kann nicht rückgängig gemacht werden.</string>
     <string name="delete_failed">Die Text-Datei konnte nicht gelöscht werden</string>
 
-    <string name="note_tags_edit">Schlagwörter bearbeiten</string>
+    <string name="note_tags_edit">Schlagworte bearbeiten</string>
     <string name="note_tags_none">Schlagwort hinzufügen</string>
-    <string name="tag_sheet_title">Schlagwörter</string>
+    <string name="tag_sheet_title">Schlagworte</string>
     <string name="tag_sheet_new">Neues Schlagwort</string>
     <string name="tag_sheet_add">Hinzufügen</string>
     <string name="tag_sheet_done">Fertig</string>
@@ -73,6 +73,26 @@
 
     <string name="save_failed">Nicht gespeichert: %1$s</string>
 
+    <string name="failure_folder_unreachable">der Ordner ist nicht mehr erreichbar</string>
+    <string name="failure_folder_unlistable">der Ordner ließ sich nicht auflisten</string>
+    <string name="failure_note_unreadable">der Text ließ sich nicht erneut lesen</string>
+    <string name="failure_temp_file_not_made">es ließ sich keine temporäre Datei anlegen</string>
+    <string name="failure_write_incomplete">der Text wurde nicht vollständig geschrieben</string>
+    <string name="failure_not_put_in_place">der Text ließ sich nicht an seinen Platz zurücklegen</string>
+    <string name="failure_title_missing">ein Text braucht einen Titel</string>
+    <string name="failure_merge_needs_two">zum Zusammenführen braucht es zwei Texte</string>
+    <string name="failure_note_not_made">der Text ließ sich nicht anlegen</string>
+    <string name="failure_note_not_written">der Text ließ sich nicht schreiben</string>
+    <string name="failure_note_not_renamed">der Text ließ sich nicht umbenennen</string>
+    <string name="failure_renamed_differently">dein Ordner hat ihn stattdessen „%1$s“ genannt</string>
+    <string name="failure_zip_not_written">das Zip ließ sich nicht schreiben</string>
+    <string name="failure_zip_not_written_detail">das Zip ließ sich nicht schreiben (%1$s)</string>
+    <string name="failure_copy_not_made">die Kopie ließ sich nicht anlegen</string>
+    <string name="failure_copy_incomplete">die Kopie wurde nicht vollständig geschrieben</string>
+    <string name="failure_batch_conflict">ein Text hat sich währenddessen geändert</string>
+    <string name="failure_batch_refused">ein Text ließ sich nicht Byte für Byte reproduzieren</string>
+    <string name="failure_batch_stopped">es ist mittendrin stehen geblieben</string>
+
     <string name="image_untitled">Bild in diesem Text</string>
     <string name="image_missing">Bild nicht gefunden: %1$s</string>
 
@@ -80,11 +100,11 @@
     <string name="attachment_no_app">Dieses Gerät kann diese Datei nicht öffnen</string>
     <string name="attachment_missing">fehlt</string>
 
-    <string name="drawer_open">Schlagwörter anzeigen</string>
+    <string name="drawer_open">Schlagworte anzeigen</string>
     <string name="drawer_all_notes">Alle Texte</string>
-    <string name="drawer_tags">Schlagwörter</string>
-    <string name="drawer_expand">Unterschlagwörter anzeigen</string>
-    <string name="drawer_collapse">Unterschlagwörter ausblenden</string>
+    <string name="drawer_tags">Schlagworte</string>
+    <string name="drawer_expand">Verschachtelte Schlagworte anzeigen</string>
+    <string name="drawer_collapse">Verschachtelte Schlagworte ausblenden</string>
 
     <string name="search_open">Suche</string>
     <string name="search_no_results">Nichts passt zu „%1$s“</string>
@@ -94,7 +114,7 @@
     <string name="tag_overflow">+%1$d</string>
     <plurals name="tag_overflow_description">
         <item quantity="one">%1$d weiteres Schlagwort</item>
-        <item quantity="other">%1$d weitere Schlagwörter</item>
+        <item quantity="other">%1$d weitere Schlagworte</item>
     </plurals>
 
     <plurals name="note_count">
@@ -133,7 +153,7 @@
     <string name="about_version_copied">Version kopiert</string>
 
     <string name="about_section_about">Über</string>
-    <string name="about_body_about">Ich habe Pocket Prose für mich selbst erstellt. Texte, die in einem frei wählbaren Ordner liegen.</string>
+    <string name="about_body_about">Ich habe Pocket Prose für mein eigenes Archiv an Texten erstellt — Texte, die über Jahre von Editor zu Editor gezogen sind. Ich denke, nun haben sie ihr Zuhause gefunden.</string>
     <string name="about_section_website">Website</string>
     <string name="about_body_website">Die App wohnt hier:</string>
     <string name="about_section_bugs">Fehler</string>
@@ -182,16 +202,16 @@
     <string name="rename_note_confirm">Umbenennen</string>
     <string name="rename_note_failed">Umbenennen nicht möglich: %1$s</string>
 
-    <!-- Schlagwörter aus dem Text holen. "Text" trägt hier beide Bedeutungen — der Text als Notiz
+    <!-- Schlagworte aus dem Text holen. "Text" trägt hier beide Bedeutungen — der Text als Notiz
          und der Text als das Geschriebene — was dem englischen "out of your writing" genau
          entspricht, ohne eine steife Ersatzkonstruktion zu brauchen.
 
          move_tags_what_* stehen hier, weil move_tags_banner_action sie einsetzt: ohne sie stünde
          auf einem deutschen Knopf "tags verschieben". Sie gehören zum unübersetzten Rest, werden
          aber von einer übersetzten Zeile gebraucht. -->
-    <string name="move_tags_what_tags">Schlagwörter</string>
+    <string name="move_tags_what_tags">Schlagworte</string>
     <string name="move_tags_what_titles">Titel</string>
-    <string name="move_tags_what_both">Schlagwörter und Titel</string>
+    <string name="move_tags_what_both">Schlagworte und Titel</string>
     <string name="move_tags_banner_action">%1$s verschieben</string>
     <string name="move_tags_confirm">Verschieben</string>
     <string name="move_tags_body">Pocket Prose hält %1$s aus deinem Text heraus, sodass sie verwendet werden können, ohne im Weg zu sein. Beim Verschieben werden diese Dateien neu geschrieben: Die betreffenden Zeilen verschwinden, sonst ändert sich nichts.</string>
@@ -203,7 +223,7 @@
         <item quantity="one">Ein Zip mit deinem 1 Text und seinen Anhängen, wie sie jetzt sind. Zum Wiederherstellen entpackst du es in deinen Ordner – Pocket Prose übernimmt das nicht.</item>
         <item quantity="other">Ein Zip mit deinen %1$d Texten und ihren Anhängen, wie sie jetzt sind. Zum Wiederherstellen entpackst du es in deinen Ordner – Pocket Prose übernimmt das nicht.</item>
     </plurals>
-    <string name="export_inline">Schlagwörter und Titel in den Text schreiben</string>
+    <string name="export_inline">Schlagworte und Titel in den Text schreiben</string>
     <string name="export_inline_caption">Für Editoren, die sie dort lesen. Dein Ordner bleibt, wie er ist.</string>
     <string name="export_confirm">Exportieren</string>
     <string name="export_done">%1$s und %2$s exportiert</string>
@@ -264,10 +284,10 @@
     <string name="rename_tag_label">Neuer Name</string>
     <string name="rename_tag_confirm">Umbenennen</string>
     <string name="rename_tag_confirm_merge">Zusammenführen</string>
-    <string name="rename_tag_merges">%1$s gibt es schon. Die beiden Schlagwörter werden zusammengeführt, und ein Zurückbenennen trennt sie nicht wieder.</string>
+    <string name="rename_tag_merges">%1$s gibt es schon. Die beiden Schlagworte werden zusammengeführt, und ein Zurückbenennen trennt sie nicht wieder.</string>
     <plurals name="rename_tag_scope">
-        <item quantity="one">Schreibt das Schlagwort in 1 Text um. Untergeordnete Schlagwörter werden mit umbenannt.</item>
-        <item quantity="other">Schreibt das Schlagwort in %1$d Texten um. Untergeordnete Schlagwörter werden mit umbenannt.</item>
+        <item quantity="one">Schreibt das Schlagwort in 1 Text um. Untergeordnete Schlagworte werden mit umbenannt.</item>
+        <item quantity="other">Schreibt das Schlagwort in %1$d Texten um. Untergeordnete Schlagworte werden mit umbenannt.</item>
     </plurals>
     <string name="rename_tag_working">Das Schlagwort wird in deinen Texten umbenannt</string>
     <string name="rename_tag_caption">Wird umbenannt…</string>
@@ -279,11 +299,11 @@
     <string name="rename_tag_refused">Nichts umbenannt: %1$s kann nicht sicher gespeichert werden.</string>
     <string name="rename_tag_partial">%1$d Texte umbenannt, %2$d übrig. Benenne noch einmal um, um fertig zu werden.</string>
 
-    <!-- Schlagwörter (und Titel) aus dem Geschriebenen holen. -->
-    <string name="drawer_no_tags">Noch keine Schlagwörter auf diesen Texten.</string>
+    <!-- Schlagworte (und Titel) aus dem Geschriebenen holen. -->
+    <string name="drawer_no_tags">Noch keine Schlagworte auf diesen Texten.</string>
     <plurals name="drawer_tags_in_text">
-        <item quantity="one">Einer deiner Texte enthält noch Schlagwörter.</item>
-        <item quantity="other">Deine Schlagwörter stehen noch in %1$d deiner Texte.</item>
+        <item quantity="one">Einer deiner Texte enthält noch Schlagworte.</item>
+        <item quantity="other">Deine Schlagworte stehen noch in %1$d deiner Texte.</item>
     </plurals>
     <string name="move_tags_banner">Deine %1$s stehen mitten in deinen Texten.</string>
     <plurals name="move_tags_banner_count">
@@ -300,7 +320,7 @@
     </plurals>
     <plurals name="move_tags_gained">
         <item quantity="one">Deine Schlagwortliste bekommt 1 Schlagwort dazu.</item>
-        <item quantity="other">Deine Schlagwortliste bekommt %1$d Schlagwörter dazu.</item>
+        <item quantity="other">Deine Schlagwortliste bekommt %1$d Schlagworte dazu.</item>
     </plurals>
     <plurals name="move_tags_titled">
         <item quantity="one">1 Text behält den Titel, den er zeigt, als eigenen.</item>
@@ -360,20 +380,20 @@
     <string name="delete_notes_partial">%1$d gelöscht, aber %2$s ist noch da. Zum Aktualisieren ziehen und noch einmal versuchen.</string>
     <string name="retag_selection">Ausgewählte Texte verschlagworten</string>
     <plurals name="retag_title">
-        <item quantity="one">Schlagwörter für 1 Text</item>
-        <item quantity="other">Schlagwörter für %1$d Texte</item>
+        <item quantity="one">Schlagworte für 1 Text</item>
+        <item quantity="other">Schlagworte für %1$d Texte</item>
     </plurals>
     <string name="retag_apply">Anwenden</string>
     <string name="retag_on_selection">Auf diesen Texten</string>
-    <string name="retag_working">Die Schlagwörter der ausgewählten Texte werden geändert</string>
+    <string name="retag_working">Die Schlagworte der ausgewählten Texte werden geändert</string>
     <string name="retag_caption">Wird verschlagwortet…</string>
     <plurals name="retag_done">
-        <item quantity="one">Schlagwörter in 1 Text geändert</item>
-        <item quantity="other">Schlagwörter in %1$d Texten geändert</item>
+        <item quantity="one">Schlagworte in 1 Text geändert</item>
+        <item quantity="other">Schlagworte in %1$d Texten geändert</item>
     </plurals>
     <string name="retag_stale">Nichts geändert: %1$s wurde inzwischen geändert. Zum Aktualisieren ziehen und noch einmal versuchen.</string>
     <string name="retag_refused">Nichts geändert: %1$s kann nicht sicher gespeichert werden.</string>
-    <string name="retag_partial">Schlagwörter in %1$d Texten geändert, %2$d übrig. Noch einmal anwenden, um fertig zu werden.</string>
+    <string name="retag_partial">Schlagworte in %1$d Texten geändert, %2$d übrig. Noch einmal anwenden, um fertig zu werden.</string>
     <string name="merge_notes">Zu einem Text zusammenführen</string>
     <plurals name="merge_notes_title">
         <item quantity="one">1 Text zusammenführen</item>

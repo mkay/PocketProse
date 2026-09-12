@@ -205,7 +205,7 @@ class Vault(context: Context) {
      * in total, less than a single photo, and the alternative is trusting a timestamp.
      *
      * **Change is detected by content, never by mtime.** `CLAUDE.md` says so and the reason is
-     * Syncthing: a sync client rewrites modification times whenever it feels like it, so a note can
+     * sync: a sync client rewrites modification times whenever it feels like it, so a note can
      * have a new mtime and identical bytes, or — worse, and this is the one that loses work — the
      * same mtime after a genuine change made on another device within the same second. A SHA-256 of
      * the bytes answers the only question that matters, and hashing 107 KB costs less than the
@@ -322,17 +322,17 @@ class Vault(context: Context) {
             val text = updated.render()
 
             val current = read(note.file.uri)
-                ?: return@withContext SaveResult.Failed("the note could not be re-read")
+                ?: return@withContext SaveResult.Failed(Failure.NoteUnreadable)
             if (sha256(current) != note.contentHash) {
                 return@withContext SaveResult.Conflict(current)
             }
 
             val parent = rootFolder()
-                ?: return@withContext SaveResult.Failed("the folder is no longer reachable")
+                ?: return@withContext SaveResult.Failed(Failure.FolderUnreachable)
             val tempName = note.file.name + TEMP_SUFFIX
             val temp = runCatching {
                 createNamed(parent, tempName)
-            }.getOrNull() ?: return@withContext SaveResult.Failed("no temporary file could be made")
+            }.getOrNull() ?: return@withContext SaveResult.Failed(Failure.TempFileNotMade)
 
             val bytes = text.toByteArray(Charsets.UTF_8)
             val written = runCatching {
@@ -343,7 +343,7 @@ class Vault(context: Context) {
             }.getOrDefault(false)
             if (!written) {
                 runCatching { DocumentsContract.deleteDocument(resolver, temp) }
-                return@withContext SaveResult.Failed("the note could not be written in full")
+                return@withContext SaveResult.Failed(Failure.WriteIncomplete)
             }
 
             val swapped = runCatching {
@@ -351,7 +351,7 @@ class Vault(context: Context) {
                 DocumentsContract.renameDocument(resolver, temp, note.file.name)
             }.getOrNull()
             if (swapped == null) {
-                return@withContext SaveResult.Failed("the note could not be put back in place")
+                return@withContext SaveResult.Failed(Failure.NotPutInPlace)
             }
             parseCache[sha256(text)] = updated
             SaveResult.Saved(swapped, text, sha256(text))
@@ -418,10 +418,10 @@ class Vault(context: Context) {
                     else -> {
                         val remaining = affected.drop(i).map { it.file.name }
                         val reason = when (result) {
-                            is SaveResult.Conflict -> "a note changed while the rename was running"
+                            is SaveResult.Conflict -> Failure.BatchConflict
                             is SaveResult.Failed -> result.reason
-                            SaveResult.Refused -> "a note could not be reproduced byte for byte"
-                            else -> "the rename stopped"
+                            SaveResult.Refused -> Failure.BatchRefused
+                            else -> Failure.BatchStopped
                         }
                         return@withContext RenameResult.Partial(written, remaining, reason)
                     }
@@ -472,10 +472,10 @@ class Vault(context: Context) {
                     else -> {
                         val remaining = affected.drop(i).map { it.file.name }
                         val reason = when (result) {
-                            is SaveResult.Conflict -> "a note changed while the tags were being written"
+                            is SaveResult.Conflict -> Failure.BatchConflict
                             is SaveResult.Failed -> result.reason
-                            SaveResult.Refused -> "a note could not be reproduced byte for byte"
-                            else -> "the change stopped"
+                            SaveResult.Refused -> Failure.BatchRefused
+                            else -> Failure.BatchStopped
                         }
                         return@withContext RenameResult.Partial(written, remaining, reason)
                     }
@@ -552,10 +552,10 @@ class Vault(context: Context) {
                     else -> {
                         val remaining = planned.drop(i).map { it.first.file.name }
                         val reason = when (result) {
-                            is SaveResult.Conflict -> "a note changed while the move was running"
+                            is SaveResult.Conflict -> Failure.BatchConflict
                             is SaveResult.Failed -> result.reason
-                            SaveResult.Refused -> "a note could not be reproduced byte for byte"
-                            else -> "the move stopped"
+                            SaveResult.Refused -> Failure.BatchRefused
+                            else -> Failure.BatchStopped
                         }
                         return@withContext MigrationResult.Partial(written, remaining, reason)
                     }
@@ -642,7 +642,7 @@ class Vault(context: Context) {
     suspend fun create(title: String, body: String = "", now: Instant = Instant.now()): CreateResult =
         withContext(Dispatchers.IO) {
             val clean = title.trim()
-            if (clean.isEmpty()) return@withContext CreateResult.Failed("a note needs a title")
+            if (clean.isEmpty()) return@withContext CreateResult.Failed(Failure.TitleMissing)
             createNamedAfter(clean, newNoteText(clean, now, body))
         }
 
@@ -667,8 +667,8 @@ class Vault(context: Context) {
     suspend fun merge(notes: List<IndexedNote>, title: String, now: Instant = Instant.now()): CreateResult =
         withContext(Dispatchers.IO) {
             val clean = title.trim()
-            if (clean.isEmpty()) return@withContext CreateResult.Failed("a note needs a title")
-            if (notes.size < 2) return@withContext CreateResult.Failed("a merge needs two notes")
+            if (clean.isEmpty()) return@withContext CreateResult.Failed(Failure.TitleMissing)
+            if (notes.size < 2) return@withContext CreateResult.Failed(Failure.MergeNeedsTwo)
             createNamedAfter(clean, mergedNoteText(clean, notes.map { it.note }, now))
         }
 
@@ -676,7 +676,7 @@ class Vault(context: Context) {
     private suspend fun createNamedAfter(title: String, text: String): CreateResult =
         withContext(Dispatchers.IO) {
             val parent = rootFolder()
-                ?: return@withContext CreateResult.Failed("the folder is no longer reachable")
+                ?: return@withContext CreateResult.Failed(Failure.FolderUnreachable)
 
             val taken = list().files.map { normalizedName(it.name) }.toSet()
             val stem = fileStem(title)
@@ -686,7 +686,7 @@ class Vault(context: Context) {
 
             val created = runCatching {
                 createNamed(parent, name)
-            }.getOrNull() ?: return@withContext CreateResult.Failed("the note could not be made")
+            }.getOrNull() ?: return@withContext CreateResult.Failed(Failure.NoteNotMade)
 
             val written = runCatching {
                 resolver.openOutputStream(created, "wt")?.use {
@@ -696,7 +696,7 @@ class Vault(context: Context) {
             }.getOrDefault(false)
             if (!written) {
                 runCatching { DocumentsContract.deleteDocument(resolver, created) }
-                return@withContext CreateResult.Failed("the note could not be written")
+                return@withContext CreateResult.Failed(Failure.NoteNotWritten)
             }
             CreateResult.Made(created, text)
         }
@@ -733,7 +733,7 @@ class Vault(context: Context) {
 
             val listing = list()
             if (listing.error != null) {
-                return@withContext RenameNoteResult.Failed("the folder is no longer reachable")
+                return@withContext RenameNoteResult.Failed(Failure.FolderUnreachable)
             }
             // Compared normalised, because a name that came off a Mac is decomposed and would
             // otherwise look free while the provider knows it is taken — and then the rename fails
@@ -744,14 +744,14 @@ class Vault(context: Context) {
 
             val renamed = runCatching {
                 DocumentsContract.renameDocument(resolver, note.file.uri, name)
-            }.getOrNull() ?: return@withContext RenameNoteResult.Failed("the note could not be renamed")
+            }.getOrNull() ?: return@withContext RenameNoteResult.Failed(Failure.NoteNotRenamed)
 
             // A provider that renamed the file but called it something else has made a note this app
             // may not be able to find again — `.md` is what `list` looks for. Say so rather than
             // report a success the folder does not agree with.
             val actual = displayName(renamed)
             if (actual != null && normalizedName(actual) != normalizedName(name)) {
-                return@withContext RenameNoteResult.Failed("your folder named it “$actual” instead")
+                return@withContext RenameNoteResult.Failed(Failure.RenamedDifferently(actual))
             }
             RenameNoteResult.Renamed(renamed, name)
         }
@@ -894,11 +894,11 @@ class Vault(context: Context) {
      */
     suspend fun exportZip(destination: Uri, inline: Boolean): ExportResult =
         withContext(Dispatchers.IO) {
-            val folder = rootFolder() ?: return@withContext ExportResult.Failed("the folder is no longer reachable")
+            val folder = rootFolder() ?: return@withContext ExportResult.Failed(Failure.FolderUnreachable)
             val name = rootName() ?: "notes"
             val listing = list()
             if (listing.error != null && listing.error != VaultFailure.FOLDER_EMPTY) {
-                return@withContext ExportResult.Failed("the folder could not be listed")
+                return@withContext ExportResult.Failed(Failure.FolderUnlistable)
             }
 
             var notes = 0
@@ -937,7 +937,7 @@ class Vault(context: Context) {
             written.exceptionOrNull()?.let { failure ->
                 // A truncated zip is worse than none: somebody unpacks it later and trusts it.
                 runCatching { DocumentsContract.deleteDocument(resolver, destination) }
-                return@withContext ExportResult.Failed(failure.message ?: "the zip could not be written")
+                return@withContext ExportResult.Failed(Failure.ZipNotWritten(failure.message))
             }
             ExportResult.Exported(notes, attachments, verbatim)
         }
@@ -1012,7 +1012,7 @@ class Vault(context: Context) {
      */
     suspend fun deleteAll(notes: List<IndexedNote>): DeleteResult = withContext(Dispatchers.IO) {
         if (notes.isEmpty()) return@withContext DeleteResult.Deleted(0)
-        rootFolder() ?: return@withContext DeleteResult.Failed("the folder is no longer reachable")
+        rootFolder() ?: return@withContext DeleteResult.Failed(Failure.FolderUnreachable)
 
         var gone = 0
         val left = mutableListOf<String>()
@@ -1047,7 +1047,7 @@ class Vault(context: Context) {
         withContext(Dispatchers.IO) {
             if (!note.roundTrips) return@withContext SaveResult.Refused
             val parent = rootFolder()
-                ?: return@withContext SaveResult.Failed("the folder is no longer reachable")
+                ?: return@withContext SaveResult.Failed(Failure.FolderUnreachable)
 
             val stem = note.file.name.removeSuffix(".md")
             val taken = list().files.map { it.name }.toSet()
@@ -1062,7 +1062,7 @@ class Vault(context: Context) {
 
             val created = runCatching {
                 createNamed(parent, name)
-            }.getOrNull() ?: return@withContext SaveResult.Failed("the copy could not be made")
+            }.getOrNull() ?: return@withContext SaveResult.Failed(Failure.CopyNotMade)
 
             val ok = runCatching {
                 resolver.openOutputStream(created, "wt")?.use {
@@ -1072,7 +1072,7 @@ class Vault(context: Context) {
             }.getOrDefault(false)
             if (!ok) {
                 runCatching { DocumentsContract.deleteDocument(resolver, created) }
-                return@withContext SaveResult.Failed("the copy could not be written in full")
+                return@withContext SaveResult.Failed(Failure.CopyIncomplete)
             }
             SaveResult.Saved(created, text, sha256(text))
         }

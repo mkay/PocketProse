@@ -37,6 +37,6 @@ sealed interface RenameNoteResult {
      */
     data object Taken : RenameNoteResult
 
-    /** The provider would not do it, or would not say what it did. [reason] is shown as given. */
-    data class Failed(val reason: String) : RenameNoteResult
+    /** The provider would not do it, or would not say what it did — [reason] says which. */
+    data class Failed(val reason: Failure) : RenameNoteResult
 }

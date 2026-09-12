@@ -11,5 +11,5 @@ sealed interface CreateResult {
     data class Made(val uri: Uri, val text: String) : CreateResult
 
     /** Nothing was created, and nothing was left behind. */
-    data class Failed(val reason: String) : CreateResult
+    data class Failed(val reason: Failure) : CreateResult
 }

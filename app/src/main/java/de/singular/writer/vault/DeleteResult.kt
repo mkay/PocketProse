@@ -32,5 +32,5 @@ sealed interface DeleteResult {
     data class Partial(val deleted: Int, val remaining: List<String>) : DeleteResult
 
     /** Nothing was attempted, because the folder itself is not reachable. */
-    data class Failed(val reason: String) : DeleteResult
+    data class Failed(val reason: Failure) : DeleteResult
 }

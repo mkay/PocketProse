@@ -55,5 +55,5 @@ sealed interface MigrationResult {
      * as chips and others still show them as text. [migrated] and [remaining] say exactly where it
      * stopped, so the message can be about finishing rather than about starting.
      */
-    data class Partial(val migrated: Int, val remaining: List<String>, val reason: String) : MigrationResult
+    data class Partial(val migrated: Int, val remaining: List<String>, val reason: Failure) : MigrationResult
 }

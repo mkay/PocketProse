@@ -103,7 +103,7 @@ fun RenameNoteDialog(
                     onValueChange = { typed = it },
                     singleLine = true,
                     label = { Text(stringResource(R.string.rename_note_label)) },
-                    suffix = { Text(".md") },
+                    suffix = { Text(stringResource(R.string.rename_note_suffix)) },
                     isError = collides,
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                     keyboardActions = KeyboardActions(onDone = { if (valid) onRename(stem) }),

@@ -7,7 +7,7 @@
 
         The notes are reached through the Storage Access Framework, which grants access by the user
         picking a folder rather than by a permission — so there is no READ_EXTERNAL_STORAGE here and
-        no MANAGE_EXTERNAL_STORAGE either. Nextcloud does the syncing; this app never opens a socket,
+        no MANAGE_EXTERNAL_STORAGE either. Whatever syncs the folder is not this app; it never opens a socket,
         so there is no INTERNET permission for it to abuse. If a permission ever appears in this
         file, that is a change worth arguing about.
     -->

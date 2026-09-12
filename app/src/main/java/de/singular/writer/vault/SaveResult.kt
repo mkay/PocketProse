@@ -37,5 +37,5 @@ sealed interface SaveResult {
     data object Refused : SaveResult
 
     /** The write failed. The note on disk is unchanged. */
-    data class Failed(val reason: String) : SaveResult
+    data class Failed(val reason: Failure) : SaveResult
 }

@@ -2,6 +2,7 @@
 
 package de.singular.writer
 
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
@@ -66,6 +67,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import de.singular.writer.ui.DrawerWidth
 import de.singular.writer.ui.ExportDialog
 import de.singular.writer.vault.ExportResult
+import de.singular.writer.vault.Failure
 import de.singular.writer.markdown.Migration
 import de.singular.writer.markdown.Segments
 import de.singular.writer.markdown.Tags
@@ -400,7 +402,10 @@ private fun PocketProseApp(settings: Settings, incoming: MutableState<Incoming?>
             is SaveResult.Conflict -> { conflict = true; false }
             // Wrapped here rather than at the snackbar: this is the one message in the app that
             // arrives as a bare fragment, and the screen showing it cannot know that.
-            is SaveResult.Failed -> { message = context.getString(R.string.save_failed, result.reason); false }
+            is SaveResult.Failed -> {
+                message = context.getString(R.string.save_failed, context.describe(result.reason))
+                false
+            }
         }
     }
 
@@ -437,7 +442,7 @@ private fun PocketProseApp(settings: Settings, incoming: MutableState<Incoming?>
             RenameNoteResult.Unchanged -> Unit
             RenameNoteResult.Taken -> message = context.getString(R.string.rename_note_taken)
             is RenameNoteResult.Failed ->
-                message = context.getString(R.string.rename_note_failed, result.reason)
+                message = context.getString(R.string.rename_note_failed, context.describe(result.reason))
         }
     }
 
@@ -469,7 +474,7 @@ private fun PocketProseApp(settings: Settings, incoming: MutableState<Incoming?>
      */
     fun createNote(title: String, body: String = "") = scope.launch {
         when (val result = vault.create(title, body)) {
-            is CreateResult.Failed -> message = context.getString(R.string.create_failed, result.reason)
+            is CreateResult.Failed -> message = context.getString(R.string.create_failed, context.describe(result.reason))
             is CreateResult.Made -> {
                 refresh().join()
                 focusNewNote = true
@@ -499,7 +504,7 @@ private fun PocketProseApp(settings: Settings, incoming: MutableState<Incoming?>
                     context.resources.getQuantityString(R.plurals.export_done_notes, result.notes, result.notes),
                     context.resources.getQuantityString(R.plurals.export_done_attachments, result.attachments, result.attachments),
                 )
-                is ExportResult.Failed -> context.getString(R.string.export_failed, result.reason)
+                is ExportResult.Failed -> context.getString(R.string.export_failed, context.describe(result.reason))
             }
         }
     }
@@ -518,7 +523,7 @@ private fun PocketProseApp(settings: Settings, incoming: MutableState<Incoming?>
         }
     }
 
-    // Re-read on every return to the foreground. The folder is synced by Syncthing, so it changes
+    // Re-read on every return to the foreground. A sync client may own the folder, so it changes
     // underneath us while the app is not looking; readAll compares content rather than timestamps,
     // so a refresh that finds nothing changed re-parses nothing.
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -655,7 +660,7 @@ private fun PocketProseApp(settings: Settings, incoming: MutableState<Incoming?>
                             refresh()
                         }
                         is DeleteResult.Failed -> {
-                            message = context.getString(R.string.save_failed, result.reason)
+                            message = context.getString(R.string.save_failed, context.describe(result.reason))
                         }
                     }
                 }
@@ -718,7 +723,7 @@ private fun PocketProseApp(settings: Settings, incoming: MutableState<Incoming?>
                 scope.launch {
                     when (val result = vault.merge(notes, title)) {
                         is CreateResult.Failed ->
-                            message = context.getString(R.string.create_failed, result.reason)
+                            message = context.getString(R.string.create_failed, context.describe(result.reason))
                         is CreateResult.Made -> {
                             // The originals go only once the merge is on disk: a delete that ran
                             // first, or ran when the merge had failed, would be the one outcome
@@ -740,7 +745,7 @@ private fun PocketProseApp(settings: Settings, incoming: MutableState<Incoming?>
                                     removal.remaining.first(),
                                 )
                                 is DeleteResult.Failed ->
-                                    context.getString(R.string.save_failed, removal.reason)
+                                    context.getString(R.string.save_failed, context.describe(removal.reason))
                             }
                             refresh()
                         }
@@ -931,7 +936,7 @@ private fun PocketProseApp(settings: Settings, incoming: MutableState<Incoming?>
                         )
                         conflict = false
                         if (result is SaveResult.Failed) {
-                            message = context.getString(R.string.save_failed, result.reason)
+                            message = context.getString(R.string.save_failed, context.describe(result.reason))
                         } else {
                             refresh()
                             openNoteUri = null
@@ -1257,4 +1262,33 @@ private fun DrawerActionRow(
             color = MaterialTheme.colorScheme.onSurface,
         )
     }
+}
+
+/**
+ * The words for a [Failure], in the screen's language.
+ *
+ * The one place the vault's reasons become sentences — a fragment each, wrapped by `save_failed`
+ * and its siblings at the call site. See the note on [Failure] for why it is not a `toString`.
+ */
+private fun Context.describe(failure: Failure): String = when (failure) {
+    Failure.FolderUnreachable -> getString(R.string.failure_folder_unreachable)
+    Failure.FolderUnlistable -> getString(R.string.failure_folder_unlistable)
+    Failure.NoteUnreadable -> getString(R.string.failure_note_unreadable)
+    Failure.TempFileNotMade -> getString(R.string.failure_temp_file_not_made)
+    Failure.WriteIncomplete -> getString(R.string.failure_write_incomplete)
+    Failure.NotPutInPlace -> getString(R.string.failure_not_put_in_place)
+    Failure.TitleMissing -> getString(R.string.failure_title_missing)
+    Failure.MergeNeedsTwo -> getString(R.string.failure_merge_needs_two)
+    Failure.NoteNotMade -> getString(R.string.failure_note_not_made)
+    Failure.NoteNotWritten -> getString(R.string.failure_note_not_written)
+    Failure.NoteNotRenamed -> getString(R.string.failure_note_not_renamed)
+    is Failure.RenamedDifferently -> getString(R.string.failure_renamed_differently, failure.actual)
+    is Failure.ZipNotWritten ->
+        if (failure.detail.isNullOrBlank()) getString(R.string.failure_zip_not_written)
+        else getString(R.string.failure_zip_not_written_detail, failure.detail)
+    Failure.CopyNotMade -> getString(R.string.failure_copy_not_made)
+    Failure.CopyIncomplete -> getString(R.string.failure_copy_incomplete)
+    Failure.BatchConflict -> getString(R.string.failure_batch_conflict)
+    Failure.BatchRefused -> getString(R.string.failure_batch_refused)
+    Failure.BatchStopped -> getString(R.string.failure_batch_stopped)
 }

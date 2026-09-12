@@ -158,6 +158,8 @@
     <string name="rename_note_title">Rename note</string>
     <!-- Label on the field. The ".md" is shown beside it and cannot be typed away. -->
     <string name="rename_note_label">Name in the folder</string>
+    <!-- The extension shown after the name field. A file suffix, not a word, so it is not translated. -->
+    <string name="rename_note_suffix" translatable="false">.md</string>
     <!-- Shown while the typed name would work. Says the thing a person renaming a file is most
          likely to assume wrongly: the note's title is a separate thing and stays as it is. -->
     <string name="rename_note_keeps_title">The note keeps its title. Only its name in the folder changes.</string>
@@ -245,8 +247,35 @@
 
     <!-- Shown briefly after something went wrong while saving. %1$s is a short reason. -->
     <string name="save_failed">Couldn\'t save: %1$s</string>
-    <!-- Shown when a new note could not be made. %1$s is a lowercase fragment from CreateResult. -->
+    <!-- Shown when a new note could not be made. %1$s is a failure_* fragment. -->
     <string name="create_failed">Couldn\'t make the note: %1$s</string>
+
+    <!--
+        The reasons a write can fail, one per vault.Failure. Each is a lowercase fragment that
+        save_failed, create_failed, rename_note_failed and export_failed wrap: "Couldn't save: the
+        folder is no longer reachable". Kept as fragments so the four sentences read as one voice.
+    -->
+    <string name="failure_folder_unreachable">the folder is no longer reachable</string>
+    <string name="failure_folder_unlistable">the folder could not be listed</string>
+    <string name="failure_note_unreadable">the note could not be re-read</string>
+    <string name="failure_temp_file_not_made">no temporary file could be made</string>
+    <string name="failure_write_incomplete">the note could not be written in full</string>
+    <string name="failure_not_put_in_place">the note could not be put back in place</string>
+    <string name="failure_title_missing">a note needs a title</string>
+    <string name="failure_merge_needs_two">a merge needs two notes</string>
+    <string name="failure_note_not_made">the note could not be made</string>
+    <string name="failure_note_not_written">the note could not be written</string>
+    <string name="failure_note_not_renamed">the note could not be renamed</string>
+    <!-- %1$s is the name the folder gave the file instead of the one asked for. -->
+    <string name="failure_renamed_differently">your folder named it “%1$s” instead</string>
+    <string name="failure_zip_not_written">the zip could not be written</string>
+    <!-- %1$s is the error text the system gave, untranslated. -->
+    <string name="failure_zip_not_written_detail">the zip could not be written (%1$s)</string>
+    <string name="failure_copy_not_made">the copy could not be made</string>
+    <string name="failure_copy_incomplete">the copy could not be written in full</string>
+    <string name="failure_batch_conflict">a note changed while this was running</string>
+    <string name="failure_batch_refused">a note could not be reproduced byte for byte</string>
+    <string name="failure_batch_stopped">it stopped part way</string>
 
     <!-- Spoken by a screen reader for a picture in a note that has no description of its own.
          Every image in the author's archive is a chord diagram with an empty alt text. -->
@@ -627,7 +656,7 @@
     <string name="about_version_copied">Version copied</string>
 
     <string name="about_section_about">About</string>
-    <string name="about_body_about">I built Pocket Prose for my own lyrics, which live in a folder and are going to stay there. Maybe your writing does too.</string>
+    <string name="about_body_about">I built Pocket Prose for my own archive of texts — notes I had been juggling from editor to editor. I guess now they found their home.</string>
     <string name="about_section_website">Website</string>
     <string name="about_body_website">The app lives here:</string>
     <string name="about_section_bugs">Bugs</string>

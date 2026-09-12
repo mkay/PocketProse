@@ -20,5 +20,5 @@ sealed interface ExportResult {
     data class Exported(val notes: Int, val attachments: Int, val verbatim: Int) : ExportResult
 
     /** Nothing usable was written; the destination was removed. */
-    data class Failed(val reason: String) : ExportResult
+    data class Failed(val reason: Failure) : ExportResult
 }

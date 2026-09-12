@@ -19,7 +19,7 @@ This is the short list, and it is the point of the app rather than a set of miss
 
 - No renaming files to match their titles or headings, no injecting IDs or app-owned keys into frontmatter, no rewriting frontmatter it did not itself change.
 - No importing into an internal database. No required subfolder layout, naming scheme, or index file.
-- No auto-deleting a note because a file vanished, and no auto-merging when one changes underneath it — the folder is synced by Syncthing, so that happens. Conflicts are surfaced, never resolved for you.
+- No auto-deleting a note because a file vanished, and no auto-merging when one changes underneath it — a synced folder does that. Conflicts are surfaced, never resolved for you.
 - No cloud account, no telemetry, no network permission.
 
 ## What it does

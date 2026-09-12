@@ -56,5 +56,5 @@ sealed interface RenameResult {
      * writes nothing for a note whose tags already say what they should. That is why the recovery
      * offered to the user is "try again" rather than anything cleverer.
      */
-    data class Partial(val renamed: Int, val remaining: List<String>, val reason: String) : RenameResult
+    data class Partial(val renamed: Int, val remaining: List<String>, val reason: Failure) : RenameResult
 }
