@@ -34,6 +34,8 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.outlined.CallSplit
 import androidx.compose.material.icons.outlined.Code
+import androidx.compose.material.icons.outlined.Visibility
+import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.NoteAdd
@@ -73,6 +75,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.LayoutCoordinates
 import de.singular.writer.markdown.Live
+import de.singular.writer.markdown.Scratch
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.geometry.Offset
@@ -169,6 +172,11 @@ class NoteDocument(val name: String, body: String, tags: List<String>, title: St
 
     /** The title as it stands, for the save path. */
     fun title(): String = titleBuffer.text.toString()
+
+    /** Whether any stretch of the note has a line the draft view would leave out. See `Scratch`. */
+    fun hasScratch(): Boolean = segments.indices.any { i ->
+        segments[i] is Segment.Prose && Scratch.LINE.containsMatchIn(bufferAt(i).text)
+    }
 
 /**
      * The tags on this note, as the chip row shows them and the sheet edits them.
@@ -357,6 +365,10 @@ fun EditorScreen(
     // The title is not one of those stretches: the bar never acts on it, and a selection in it gets
     // a strip of its own — see the popup below.
     var titleFocused by remember(document) { mutableStateOf(false) }
+    // The draft view: the note with its scratch lines left out, for reading only — see `Scratch`
+    // for the convention and `draftOf` below for what is shown. Per note and not persisted: it is
+    // a look, taken and put down, not a mode the app stays in.
+    var draft by remember(document) { mutableStateOf(false) }
     val focusManager = LocalFocusManager.current
     val editorScope = rememberCoroutineScope()
 
@@ -462,6 +474,27 @@ fun EditorScreen(
                             ),
                         )
                     }
+                }
+                // The draft view, showing its state like the pin: an open eye while everything is
+                // on the page, a closed one while the scratch lines are out. In the bar and not
+                // the menu because it is reached for mid-writing, several times over one note.
+                // Switching it on with nothing to leave out says how to mark a line, which is the
+                // one place the convention is explained in the app, at the moment somebody
+                // reaches for it.
+                val hint = stringResource(R.string.draft_hint)
+                IconButton(onClick = {
+                    draft = !draft
+                    if (draft) {
+                        focusManager.clearFocus()
+                        if (!document.hasScratch()) editorScope.launch { snackbar.showSnackbar(hint) }
+                    }
+                }) {
+                    Icon(
+                        imageVector = if (draft) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility,
+                        contentDescription = stringResource(
+                            if (draft) R.string.show_all_lines else R.string.show_draft,
+                        ),
+                    )
                 }
                 // Out in the bar rather than in the menu: it writes nothing. The menu below holds
                 // the irreversible thing, and mixing a look-only action into it would make opening
@@ -578,7 +611,7 @@ fun EditorScreen(
         ) {
             NoteTitleField(
                 document = document,
-                editable = editable,
+                editable = editable && !draft,
                 // The keyboard's key puts the title down: focus goes, the keyboard goes, the note
                 // stays where it is. Moving the cursor into the note instead was tried and is
                 // worse in both directions — a buffer's cursor sits at the end of its text, so the
@@ -590,10 +623,20 @@ fun EditorScreen(
 
             document.segments.forEachIndexed { i, segment ->
                 when (segment) {
-                    is Segment.Prose -> RuleLines(document.bufferAt(i), enabled = !showSource) { rules ->
+                    is Segment.Prose -> {
+                    // In the draft view the field shows a copy of the text with the scratch lines
+                    // gone, and cannot be written in: hiding lines inside the live buffer would
+                    // have the cursor walk over text that is not on screen and a Backspace delete
+                    // a line nobody can see. The copy is built from the buffer as it stands and
+                    // dropped when the view is, so the buffer is what saves either way.
+                    val buffer = document.bufferAt(i)
+                    val shown = if (!draft) buffer else remember(buffer.text.toString()) {
+                        TextFieldState(Scratch.strip(buffer.text.toString()))
+                    }
+                    RuleLines(shown, enabled = !showSource) { rules ->
                     BasicTextField(
-                        state = document.bufferAt(i),
-                        enabled = editable,
+                        state = shown,
+                        enabled = editable && !draft,
                         textStyle = LocalProseStyle.current.copy(color = scheme.onSurface),
                         cursorBrush = SolidColor(scheme.primary),
                         // Nothing hidden in the source view: the file, as characters.
@@ -635,6 +678,7 @@ fun EditorScreen(
                             .then(rules.modifier),
                         onTextLayout = rules.onTextLayout,
                     )
+                    }
                     }
 
                     // In the source view a picture line is its link, as the file has it. Not a

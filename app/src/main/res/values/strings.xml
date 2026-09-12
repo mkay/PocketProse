@@ -186,6 +186,14 @@
     <string name="share_note">Share note</string>
     <!-- Editor menu, a toggle: show the Markdown as written instead of hiding the markers. -->
     <string name="show_source">Show Markdown</string>
+    <!-- The eye button in the editor's bar, a toggle: read the note without its scratch lines —
+         lines beginning with a "+" glued to the text, see markdown/Scratch.kt. The two strings
+         are its descriptions in each state. -->
+    <string name="show_draft">Show the draft only</string>
+    <string name="show_all_lines">Show every line</string>
+    <!-- Shown when the draft view is switched on in a note that has no scratch lines: the one
+         place the convention is explained. Keep the "+" glued to the word; "+ word" is a bullet. -->
+    <string name="draft_hint">No lines to leave out. Start a line with + to keep it out of the draft, like +an alternative.</string>
     <!-- The menu entry, and the confirming button in the dialog it opens. -->
     <string name="delete_note">Delete note</string>
     <!-- Title of the confirmation. Names the note so there is no doubt which one; %1$s is its title. -->

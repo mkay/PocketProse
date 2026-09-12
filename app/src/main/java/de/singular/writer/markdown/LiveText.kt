@@ -3,7 +3,7 @@
 package de.singular.writer.markdown
 
 /** What a run of marked-up text is. */
-enum class Mark { BOLD, ITALIC, BOLD_ITALIC, CODE, HEADING, RULE, QUOTE }
+enum class Mark { BOLD, ITALIC, BOLD_ITALIC, CODE, HEADING, RULE, QUOTE, SCRATCH }
 
 /**
  * One piece of markup found in the text, in **original** coordinates.
@@ -12,7 +12,8 @@ enum class Mark { BOLD, ITALIC, BOLD_ITALIC, CODE, HEADING, RULE, QUOTE }
  * is what sits between them. A heading has an empty [close] at the end of its line. A quote's
  * [open] is the `> ` and its [close] is the newline ending the line, for the reason given at
  * [Live.of]. A rule is all marker: its [open] is the whole line, and [content] and [close] are
- * empty.
+ * empty. A scratch line is all content: nothing of it is hidden, the `+` included, and the whole
+ * line is dimmed — see `Scratch`.
  */
 data class Span(
     val mark: Mark,
@@ -110,7 +111,7 @@ object Live {
     /**
      * Scan [text] for everything the editor styles.
      *
-     * Deliberately a small vocabulary — emphasis, code, headings, quotes and rules. Links and images are
+     * Deliberately a small vocabulary — emphasis, code, headings, quotes, rules and scratch lines. Links and images are
      * the segment splitter's business. Anything not recognised is left as the characters the user
      * typed, which is always the safe answer.
      */
@@ -133,6 +134,15 @@ object Live {
                 // The line's newline is not the close: which newlines go is decided per block in
                 // `quoteParagraphs`, not per line.
                 close = lineEnd until lineEnd,
+            )
+        }
+
+        for (m in Scratch.LINE.findAll(text)) {
+            spans += Span(
+                mark = Mark.SCRATCH,
+                open = m.range.first until m.range.first,
+                content = m.range,
+                close = m.range.last + 1 until m.range.last + 1,
             )
         }
 

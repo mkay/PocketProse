@@ -100,6 +100,10 @@ data class MarkdownTransformation(
             Mark.RULE -> SpanStyle()
             // Handled above as a paragraph style; a revealed `> ` is a marker and took that branch.
             Mark.QUOTE -> SpanStyle()
+            // A scratch line wears the marker colour whole, `+` included: on the page, and visibly
+            // not the song. Painted first, being the line's outermost span, so emphasis inside it
+            // keeps its weight and takes the dimming.
+            Mark.SCRATCH -> SpanStyle(color = marker)
         }
     }
 

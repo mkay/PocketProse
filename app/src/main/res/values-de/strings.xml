@@ -46,6 +46,9 @@
     <string name="unpin_note">Loslösen</string>
     <string name="share_note">Teilen</string>
     <string name="show_source">Markdown zeigen</string>
+    <string name="show_draft">Nur den Entwurf zeigen</string>
+    <string name="show_all_lines">Alle Zeilen zeigen</string>
+    <string name="draft_hint">Nichts auszulassen. Eine Zeile, die mit + beginnt, bleibt aus dem Entwurf draußen, etwa +eine Alternative.</string>
     <string name="delete_note">Löschen</string>
     <string name="delete_note_confirm">„%1$s“ löschen?</string>
     <string name="delete_note_body">Die Text-Datei wird aus deinem Ordner gelöscht. Dies kann nicht rückgängig gemacht werden.</string>
