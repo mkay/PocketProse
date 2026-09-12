@@ -1,0 +1,5 @@
+Error messages are now translated in full: when a save, a rename or an export fails, the reason arrives in the language of the rest of the screen instead of in English.
+
+The German drawer says "Verschachtelte Schlagworte", and "Schlagworte" throughout. The About text is rewritten.
+
+Store description shortened to F-Droid's limit.
