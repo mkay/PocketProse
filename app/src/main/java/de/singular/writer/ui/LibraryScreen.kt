@@ -94,6 +94,7 @@ import de.singular.writer.vault.AttachmentFilter
 import de.singular.writer.vault.Filters
 import de.singular.writer.vault.IndexedNote
 import de.singular.writer.vault.VaultFailure
+import java.time.Instant
 
 /**
  * The list of notes — the app's home, and the screen it is judged on.
@@ -440,6 +441,12 @@ fun LibraryScreen(
                         NoteRow(
                             note = note,
                             density = density,
+                            // The date a row carries is the one the list is in the order of.
+                            // Ordered by creation and captioned with the last edit, the dates
+                            // would run out of sequence down the page and the reader could not
+                            // tell the sort was working. `updated` for every other sort, as
+                            // before: a list by title still says when the note was last touched.
+                            date = if (sortBy == SortBy.CREATED) note.created else note.updated,
                             // The file name is what tells four notes titled "Wer geht vor?" apart
                             // when the tags do not, and it is the one thing a merge or a delete
                             // will be judged by. Shown only here: on an ordinary list it is a
@@ -644,6 +651,7 @@ private fun ListOptionsMenu(
     DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
         listOf(
             SortBy.UPDATED to R.string.sort_by_updated,
+            SortBy.CREATED to R.string.sort_by_created,
             SortBy.TITLE to R.string.sort_by_title,
             SortBy.WORDS to R.string.sort_by_length,
         ).forEach { (value, label) ->
@@ -663,7 +671,7 @@ private fun ListOptionsMenu(
         CheckableItem(
             label = stringResource(
                 when (sortBy) {
-                    SortBy.UPDATED -> if (down) R.string.sort_updated_desc else R.string.sort_updated_asc
+                    SortBy.UPDATED, SortBy.CREATED -> if (down) R.string.sort_updated_desc else R.string.sort_updated_asc
                     SortBy.TITLE -> if (down) R.string.sort_title_desc else R.string.sort_title_asc
                     SortBy.WORDS -> if (down) R.string.sort_length_desc else R.string.sort_length_asc
                 },
@@ -725,6 +733,7 @@ private fun CheckableItem(
 private fun NoteRow(
     note: IndexedNote,
     density: RowDensity,
+    date: Instant?,
     showFileName: Boolean,
     pinned: Boolean,
     selecting: Boolean,
@@ -732,7 +741,7 @@ private fun NoteRow(
     onClick: () -> Unit,
     onLongClick: () -> Unit,
 ) {
-    val date = rememberDateFormatter()
+    val format = rememberDateFormatter()
     val excerpt = note.excerpt
     val compact = density == RowDensity.COMPACT
 
@@ -841,9 +850,9 @@ private fun NoteRow(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth().padding(top = 2.dp),
         ) {
-            if (!compact) note.updated?.let {
+            if (!compact) date?.let {
                 Text(
-                    text = date(it),
+                    text = format(it),
                     style = MaterialTheme.typography.labelSmall,
                     // A step quieter than the excerpt above it. The date is the least useful thing
                     // in the row for finding a note, so it reads as a footnote to the tags beside

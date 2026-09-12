@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The launcher shortcut's icon: the app's own tile with a search glyph, so the long-press
+     menu reads as the app's and not as a stranger's. Adaptive, like the launcher icon, so the
+     launcher masks it the same way. -->
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@drawable/ic_launcher_background" />
+    <foreground android:drawable="@drawable/ic_shortcut_search_foreground" />
+</adaptive-icon>

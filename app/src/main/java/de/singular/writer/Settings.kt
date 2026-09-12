@@ -49,14 +49,20 @@ enum class ProseSize(val scale: Float) {
  * What the library orders its notes by.
  *
  * UPDATED is the list as it has always been and stays the default — what a writing app owes the top
- * of its list is the thing you were last working on. The other two answer questions recency cannot:
+ * of its list is the thing you were last working on. The others answer questions recency cannot:
  * where is the one I can name, and which is the long one.
+ *
+ * CREATED is the archive's own timeline. Its dates run from 2015 to 2025 and `CLAUDE.md` calls that
+ * span the thing the collection is kept for, yet until 2026-09-12 the library could only order by
+ * the date that moves when a typo is fixed. Ordering by when a note was begun is how a ten-year
+ * archive is read as one — and the row shows that date while this sort is on, since a list ordered
+ * by one date and captioned with another would be a list the reader cannot check.
  *
  * WORDS counts words and not bytes. A file's size counts its frontmatter and its image lines, so a
  * chord sheet with eight pictures would outrank a longer song, and the number would match nothing
  * the reader has ever been shown. Words are what the details sheet already tells them.
  */
-enum class SortBy { UPDATED, TITLE, WORDS }
+enum class SortBy { UPDATED, CREATED, TITLE, WORDS }
 
 /** Which end of the order comes first. DESC is newest, Z, longest. */
 enum class SortOrder { DESC, ASC }

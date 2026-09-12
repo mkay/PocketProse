@@ -49,6 +49,31 @@ class NewNoteTest {
     }
 
     @Test
+    fun `shared text goes in whole, after the gap, and round-trips`() {
+        val text = Vault.newNoteText("Marie", now, "Marie, nie\r\nDu erreichst mich nicht")
+        assertTrue(text.endsWith("---\n\nMarie, nie\nDu erreichst mich nicht\n"))
+        val note = Note.parse(text)
+        assertEquals(text, note.render())
+        assertEquals("Marie", note.title)
+    }
+
+    @Test
+    fun `a shared body opening on a rule does not become frontmatter`() {
+        val text = Vault.newNoteText("x", now, "---\nnoch was\n")
+        val note = Note.parse(text)
+        assertEquals(text, note.render())
+        assertEquals("x", note.title)
+        assertEquals("---\nnoch was\n", note.body.removePrefix("\n"))
+    }
+
+    @Test
+    fun `the proposed title is the subject, else the first line with words on it`() {
+        assertEquals("Betreff", Vault.proposedTitle("erste Zeile\n", "Betreff"))
+        assertEquals("erste Zeile", Vault.proposedTitle("\n  \nerste Zeile\nzweite", "  "))
+        assertEquals("", Vault.proposedTitle("\n", null))
+    }
+
+    @Test
     fun `the title keeps what a filename could not`() {
         // 11 notes in the archive are titled with a trailing `?`, which no filename can hold. A new
         // one may be too: the title is authoritative and is never derived from the name.

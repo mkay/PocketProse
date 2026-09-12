@@ -635,13 +635,15 @@ class Vault(context: Context) {
      * no marker — the prime directive's second prohibition.
      *
      * The body is a single blank line, which is what every note in the archive has between its
-     * frontmatter and its first word.
+     * frontmatter and its first word — or, when [body] is given, that gap and then the text, as
+     * the share sheet hands it in. What was shared is written whole, so the title the dialog
+     * proposed from its first line is a proposal and never a cut.
      */
-    suspend fun create(title: String, now: Instant = Instant.now()): CreateResult =
+    suspend fun create(title: String, body: String = "", now: Instant = Instant.now()): CreateResult =
         withContext(Dispatchers.IO) {
             val clean = title.trim()
             if (clean.isEmpty()) return@withContext CreateResult.Failed("a note needs a title")
-            createNamedAfter(clean, newNoteText(clean, now))
+            createNamedAfter(clean, newNoteText(clean, now, body))
         }
 
     /**
@@ -1149,14 +1151,15 @@ class Vault(context: Context) {
          * second prohibition and the thing every editor the author tried got wrong.
          *
          * The body is one blank line, which is what sits between frontmatter and first word
-         * everywhere in the archive.
+         * everywhere in the archive, and then [body] if there is one — normalised to LF and given
+         * the trailing newline every note has, and otherwise as it came.
          *
          * Pure and separate so it can be tested, because it has to satisfy something easy to get
          * wrong: a note whose bytes the parser cannot reproduce is refused by `Vault.save`. Emit
          * this slightly off and every new note is born read-only, which would look like a mystery
          * rather than like a bug.
          */
-        fun newNoteText(title: String, now: Instant): String {
+        fun newNoteText(title: String, now: Instant, body: String = ""): String {
             val stamp = Note.stamp(now)
             return buildString {
                 append("---\n")
@@ -1165,8 +1168,20 @@ class Vault(context: Context) {
                 append("updated: ").append(stamp).append('\n')
                 append("tags: []\n")
                 append("---\n\n")
+                val text = body.replace("\r\n", "\n").replace('\r', '\n')
+                if (text.isNotEmpty()) append(text).also { if (!text.endsWith('\n')) append('\n') }
             }
         }
+
+        /**
+         * The title a new note made of [text] is offered with: the share's subject if it has one,
+         * otherwise the first line with anything on it. A proposal for the dialog's field — the
+         * reader can retype it — and never what decides what is saved, which is [text] whole.
+         */
+        fun proposedTitle(text: String, subject: String?): String =
+            subject?.trim()?.takeIf { it.isNotEmpty() }
+                ?: text.lineSequence().map { it.trim() }.firstOrNull { it.isNotEmpty() }
+                ?: ""
 
         /**
          * The bytes a merged note is made of: [notes]' writing, one after another, under one block.

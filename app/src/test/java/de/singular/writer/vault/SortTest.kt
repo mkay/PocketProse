@@ -27,6 +27,7 @@ class SortTest {
         override val title: String,
         override val updated: Instant?,
         override val words: Int = 1,
+        override val created: Instant? = null,
     ) : Sortable
 
     private fun at(iso: String) = Instant.parse(iso)
@@ -42,6 +43,19 @@ class SortTest {
         )
         assertEquals(listOf("neu", "alt"), order(rows, SortBy.UPDATED, SortOrder.DESC))
         assertEquals(listOf("alt", "neu"), order(rows, SortBy.UPDATED, SortOrder.ASC))
+    }
+
+    @Test
+    fun `by creation, the archive's timeline, with the same null rule`() {
+        // A note begun in 2015 and edited last week is a 2015 note in this order — the sort reads
+        // `created` and nothing about `updated` moves it.
+        val rows = listOf(
+            Row("ohne", at("2025-01-01T00:00:00Z"), created = null),
+            Row("neu", at("2020-01-01T00:00:00Z"), created = at("2025-01-01T00:00:00Z")),
+            Row("alt", at("2026-09-01T00:00:00Z"), created = at("2015-01-01T00:00:00Z")),
+        )
+        assertEquals(listOf("neu", "alt", "ohne"), order(rows, SortBy.CREATED, SortOrder.DESC))
+        assertEquals(listOf("alt", "neu", "ohne"), order(rows, SortBy.CREATED, SortOrder.ASC))
     }
 
     @Test

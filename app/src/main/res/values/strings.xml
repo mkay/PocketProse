@@ -668,6 +668,9 @@
          sorts on: "Last changed" is what a reader is looking for, "updated" is what the file calls
          it. -->
     <string name="sort_by_updated">Last changed</string>
+    <!-- Orders by the frontmatter's `created`, the archive's own timeline; the row shows that date
+         while it is on. -->
+    <string name="sort_by_created">Created</string>
     <string name="sort_by_title">Title</string>
     <string name="sort_by_length">Length</string>
     <!-- The direction row, which reads as whatever the chosen sort makes it mean. It listed all

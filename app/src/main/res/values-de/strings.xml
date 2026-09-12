@@ -327,6 +327,7 @@
 
     <string name="list_options">Listenoptionen</string>
     <string name="sort_by_updated">Zuletzt geändert</string>
+    <string name="sort_by_created">Erstellt</string>
     <string name="sort_by_title">Titel</string>
     <string name="sort_by_length">Länge</string>
     <string name="sort_updated_desc">Neueste zuerst</string>

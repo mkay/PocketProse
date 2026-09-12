@@ -40,15 +40,31 @@
                 android:value="true" />
         </service>
 
+        <!--
+            singleTask, so that text shared into a running app reaches it through onNewIntent
+            rather than starting a second copy of the activity — two Vaults over one folder, and
+            two editors that could be on the same note. The launcher and the share sheet both land
+            in the one instance there is.
+        -->
         <activity
             android:name=".MainActivity"
             android:screenOrientation="portrait"
             android:exported="true"
+            android:launchMode="singleTask"
             tools:ignore="LockedOrientationActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <!-- Text from the share sheet becomes a new note, after the title is confirmed. -->
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
         </activity>
     </application>
 

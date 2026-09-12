@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    The launcher's long-press menu: a new note, and the search. Static, because the two things
+    the app is opened for are always the same two — a snippet archive's entry points are capturing
+    the line before it is gone, and finding the one that was.
+-->
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:shortcutId="new_note"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_new_note"
+        android:shortcutShortLabel="@string/new_note"
+        android:shortcutLongLabel="@string/new_note">
+        <intent
+            android:action="de.singular.writer.action.NEW_NOTE"
+            android:targetPackage="de.singular.writer"
+            android:targetClass="de.singular.writer.MainActivity" />
+    </shortcut>
+    <shortcut
+        android:shortcutId="search"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_search"
+        android:shortcutShortLabel="@string/search_open"
+        android:shortcutLongLabel="@string/search_open">
+        <intent
+            android:action="de.singular.writer.action.SEARCH"
+            android:targetPackage="de.singular.writer"
+            android:targetClass="de.singular.writer.MainActivity" />
+    </shortcut>
+</shortcuts>

@@ -2,6 +2,7 @@
 
 package de.singular.writer
 
+import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import androidx.activity.compose.BackHandler
@@ -35,6 +36,7 @@ import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
@@ -112,9 +114,21 @@ import kotlinx.coroutines.launch
  */
 class MainActivity : AppCompatActivity() {
 
+    /**
+     * What the activity was opened *for*, when it was opened for something: the launcher shortcut
+     * asking for a new note, or the share sheet handing text in. Set from the intent here and in
+     * [onNewIntent] — the activity is `singleTask`, so a share into a running app arrives as a new
+     * intent rather than as a second copy of the app with its own view of the folder — and consumed
+     * by the composition, which nulls it so a rotation does not ask the question twice.
+     */
+    private val incoming = mutableStateOf<Incoming?>(null)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        // Only a fresh start reads the launching intent: after a recreation the same intent is
+        // still attached, and it was answered the first time.
+        if (savedInstanceState == null) incoming.value = Incoming.of(intent)
         // Created here rather than inside the composition: it outlives a recreation, and choosing
         // a theme causes one.
         val settings = Settings(this)
@@ -151,16 +165,58 @@ class MainActivity : AppCompatActivity() {
                 )
                 Surface(color = MaterialTheme.colorScheme.background) {
                     Box(Modifier.windowInsetsPadding(sides).consumeWindowInsets(sides)) {
-                        PocketProseApp(settings)
+                        PocketProseApp(settings, incoming)
                     }
                 }
             }
         }
     }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        Incoming.of(intent)?.let { incoming.value = it }
+    }
+}
+
+/**
+ * A request that came in with the intent.
+ *
+ * The two that make a note end in the new-note dialog rather than in a file: a shortcut has no
+ * title to give, and a share's first line is a guess at one. The dialog is where the title is typed
+ * for every other note, so it is where these are confirmed too — a note that appeared in the folder
+ * with a name nobody chose would be the app naming files, which it does once, at creation, and only
+ * after asking. The third opens the search over the library, and closes a note left open under it
+ * first, so the shortcut lands where it says it does.
+ */
+sealed class Incoming {
+    /** The launcher shortcut: a new note, title to be typed. */
+    data object NewNote : Incoming()
+
+    /** The launcher shortcut: the search dialog over the library. */
+    data object Search : Incoming()
+
+    /** Text from the share sheet: [body] is written whole, [title] is the dialog's proposal. */
+    data class Shared(val title: String, val body: String) : Incoming()
+
+    companion object {
+        /** The action the `shortcuts.xml` entry sends; not a public API, just not `MAIN`. */
+        const val ACTION_NEW_NOTE = "de.singular.writer.action.NEW_NOTE"
+        const val ACTION_SEARCH = "de.singular.writer.action.SEARCH"
+
+        fun of(intent: Intent?): Incoming? = when (intent?.action) {
+            ACTION_NEW_NOTE -> NewNote
+            ACTION_SEARCH -> Search
+            Intent.ACTION_SEND -> intent.getStringExtra(Intent.EXTRA_TEXT)
+                ?.takeIf { it.isNotBlank() }
+                ?.let { Shared(Vault.proposedTitle(it, intent.getStringExtra(Intent.EXTRA_SUBJECT)), it) }
+            else -> null
+        }
+    }
 }
 
 @Composable
-private fun PocketProseApp(settings: Settings) {
+private fun PocketProseApp(settings: Settings, incoming: MutableState<Incoming?>) {
     val context = LocalContext.current
     val vault = remember { Vault(context) }
     val scope = rememberCoroutineScope()
@@ -263,6 +319,10 @@ private fun PocketProseApp(settings: Settings) {
     var conflict by remember { mutableStateOf(false) }
     // The two things that need a yes before they happen: making a file and removing one.
     var naming by remember { mutableStateOf(false) }
+    // What the new-note dialog opens with and what the note is made of, when it was opened from
+    // outside — the share sheet, or the shortcut. Empty for the button in the bar.
+    var namingTitle by remember { mutableStateOf("") }
+    var namingBody by remember { mutableStateOf("") }
     // Set only by createNote, so the keyboard comes up for a note that was just made and for no
     // other. Cleared on leaving, or reopening that same note later would raise it again.
     var focusNewNote by remember { mutableStateOf(false) }
@@ -407,8 +467,8 @@ private fun PocketProseApp(settings: Settings) {
      * to is the one that was just written rather than nothing at all — the same ordering the save
      * path needs, and for the same reason.
      */
-    fun createNote(title: String) = scope.launch {
-        when (val result = vault.create(title)) {
+    fun createNote(title: String, body: String = "") = scope.launch {
+        when (val result = vault.create(title, body)) {
             is CreateResult.Failed -> message = context.getString(R.string.create_failed, result.reason)
             is CreateResult.Made -> {
                 refresh().join()
@@ -690,11 +750,29 @@ private fun PocketProseApp(settings: Settings) {
         )
     }
 
+    // Answered here and not in the activity, because the answer is this screen's dialog. Consumed
+    // on the spot: the request is fulfilled by *asking*, and the dialog's own state carries on.
+    LaunchedEffect(incoming.value) {
+        val request = incoming.value ?: return@LaunchedEffect
+        incoming.value = null
+        when (request) {
+            Incoming.NewNote -> { namingTitle = ""; namingBody = "" }
+            is Incoming.Shared -> { namingTitle = request.title; namingBody = request.body }
+            Incoming.Search -> {
+                openNoteUri = null
+                searchOpen = true
+                return@LaunchedEffect
+            }
+        }
+        naming = true
+    }
+
     if (naming) {
         NewNoteDialog(
+            initialTitle = namingTitle,
             onCreate = { title ->
                 naming = false
-                createNote(title)
+                createNote(title, namingBody)
             },
             onDismiss = { naming = false },
         )
@@ -1129,7 +1207,11 @@ private fun PocketProseApp(settings: Settings) {
             onOpenDrawer = { scope.launch { drawerState.open() } },
             onChooseFolder = { pickFolder.launch(null) },
             onOpenNote = { openNoteUri = it.file.uri.toString() },
-            onNewNote = { naming = true },
+            onNewNote = {
+                namingTitle = ""
+                namingBody = ""
+                naming = true
+            },
             message = message,
             onMessageShown = { message = null },
         )

@@ -64,6 +64,7 @@ interface Filterable {
 interface Sortable {
     val title: String
     val updated: Instant?
+    val created: Instant?
     val words: Int
 }
 
@@ -164,7 +165,7 @@ data class IndexedNote(
      *
      * Null if the key is missing or unparseable, which no note in the archive currently is.
      */
-    val created: Instant? get() = instant(note.frontmatter.created)
+    override val created: Instant? get() = instant(note.frontmatter.created)
 
     override val updated: Instant? get() = instant(note.frontmatter.updated)
 
@@ -350,23 +351,21 @@ class NoteIndex(notes: List<IndexedNote>) {
     fun <T : Sortable> sorted(notes: List<T>, by: SortBy, order: SortOrder): List<T> {
         val down = order == SortOrder.DESC
         val byTitle = compareBy<T, String>(String.CASE_INSENSITIVE_ORDER) { it.title }
+        // **Dateless notes stay last in both directions**, which is why the null test is a key of
+        // its own rather than something the direction gets to flip. An unknown date is not "the
+        // oldest": 40 notes in the archive carry none, and floating them to the top of an ascending
+        // sort would bury the note the reader asked for behind every note the app knows nothing
+        // about.
+        //
+        // Reversing a finished ascending list would have done exactly that — it was written that
+        // way first — and would have flipped the tiebreak with it.
+        fun byDate(date: (T) -> Instant?): Comparator<T> {
+            val dates = if (down) compareByDescending(date) else compareBy(date)
+            return compareBy<T> { date(it) == null }.then(dates).then(byTitle)
+        }
         val comparator = when (by) {
-            SortBy.UPDATED -> {
-                val dates = if (down) {
-                    compareByDescending<T> { it.updated }
-                } else {
-                    compareBy<T> { it.updated }
-                }
-                // **Dateless notes stay last in both directions**, which is why the null test is a
-                // key of its own rather than something the direction gets to flip. An unknown date
-                // is not "the oldest": 40 notes in the archive carry none, and floating them to the
-                // top of an ascending sort would bury the note the reader asked for behind every
-                // note the app knows nothing about.
-                //
-                // Reversing a finished ascending list would have done exactly that — it was written
-                // that way first — and would have flipped the tiebreak with it.
-                compareBy<T> { it.updated == null }.then(dates).then(byTitle)
-            }
+            SortBy.UPDATED -> byDate { it.updated }
+            SortBy.CREATED -> byDate { it.created }
             SortBy.TITLE -> if (down) byTitle.reversed() else byTitle
             SortBy.WORDS -> {
                 val counts = if (down) {

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Material Symbols note_add, outlined, 400 weight — drawn white on the launcher's own tile by
+  ic_shortcut_new_note.xml. The glyph fills 48dp of the 108dp layer, centred, which is inside the
+  66dp the launcher's mask is guaranteed to show. The source viewBox runs from y=-960, so the path
+  is scaled to size and then moved down by its own height.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group
+        android:scaleX="0.05"
+        android:scaleY="0.05"
+        android:translateX="30"
+        android:translateY="78">
+        <path
+            android:pathData="M440-280h80v-120h120v-80H520v-120h-80v120H320v80h120v120ZM240-80q-33 0-56.5-23.5T160-160v-640q0-33 23.5-56.5T240-880h320l240 240v480q0 33-23.5 56.5T720-80H240Zm280-520v-200H240v640h480v-440H520ZM240-800v200-200 640-640Z"
+            android:fillColor="#FFFFFFFF" />
+    </group>
+</vector>

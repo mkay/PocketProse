@@ -1258,8 +1258,10 @@ private fun oneLine(text: String): String = text.replace('\n', ' ').replace('\r'
  * that just occurred to somebody is: tap, type, done.
  */
 @Composable
-fun NewNoteDialog(onCreate: (String) -> Unit, onDismiss: () -> Unit) {
-    var typed by rememberSaveable { mutableStateOf("") }
+fun NewNoteDialog(onCreate: (String) -> Unit, onDismiss: () -> Unit, initialTitle: String = "") {
+    // [initialTitle] is the share sheet's proposal, the first line of what was shared; the field
+    // starts on it and the reader retypes it or does not.
+    var typed by rememberSaveable { mutableStateOf(initialTitle) }
     val focus = remember { FocusRequester() }
     val ready = typed.isNotBlank()
     val submit = { if (ready) onCreate(typed.trim()) else Unit }
