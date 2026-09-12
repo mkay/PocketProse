@@ -29,7 +29,9 @@ This is the short list, and it is the point of the app rather than a set of miss
 - **Pinned notes**, by tag. Notes carrying the pin tag — `pinned` unless you rename it — sit at the top of the library, whatever the sort. It is an ordinary tag in every other way, so it syncs with the note and survives the app; a flag stored anywhere else would not.
 - **Relative images and attachments**, resolved against the note's own folder, so `![](attachments/chords.png)` renders and a linked PDF opens in an external viewer.
 - **Scratch lines.** A line beginning with `+` glued to the text — `+an alternative line`, `+a comment` — is shown dimmed while writing (the format bar's crossed-out eye puts the `+` on the selected lines), and the eye button in the note's bar reads the note without those lines. `+ word` with a space is a bullet, as in CommonMark; the glued form is plain text everywhere else, and the app never adds or removes one.
-- **Dates from the file**, not from when the app first saw it.
+- **A plain editor** for ordinary Markdown. Selecting text brings up a small strip of its own — bold, italic, quotes, clipboard — and a source view shows the note with nothing hidden.
+- **Dates from the file**, not from when the app first saw it — and the library sorts by them, created or last changed.
+- **Text shared from another app** becomes a new note; the launcher icon's long-press menu offers New note and Search.
 - **Atomic writes** — temp file plus rename, so a sync client never sees a half-written note.
 
 ## Building
