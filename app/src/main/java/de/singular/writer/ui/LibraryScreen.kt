@@ -853,7 +853,10 @@ private fun NoteRow(
                 )
             }
             if (!compact) Spacer(Modifier.width(12.dp))
-            TagRow(note.tags, Modifier.weight(1f))
+            // Sorted for the eye only — the file keeps its own order, and two notes carrying the
+            // same tags in different orders read as the same row here. The same order as the
+            // drawer's, and as the editor's foot.
+            TagRow(note.tags.sorted(), Modifier.weight(1f))
         }
     }
     }

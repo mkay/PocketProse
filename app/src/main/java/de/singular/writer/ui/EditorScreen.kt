@@ -734,7 +734,8 @@ fun EditorScreen(
                 )
             } else {
                 NoteTagBar(
-                    tags = document.tags,
+                    // Display order only, the library row's — the frontmatter keeps its own.
+                    tags = document.tags.sorted(),
                     enabled = editable,
                     onEdit = { editingTags = true },
                 )
