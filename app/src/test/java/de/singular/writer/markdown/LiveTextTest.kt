@@ -220,6 +220,16 @@ class LiveTextTest {
     }
 
     @Test
+    fun `a rule directly above an indented line sits on the seam between the paragraphs`() {
+        // Rows: A, the rule's empty row, B. The indent's paragraph starts right where the rule's
+        // row ends, so the rule's offset is also the paragraph's start — `RuleLines` picks the
+        // row before the seam, not the one after.
+        val text = "A\n- - -\n> B"
+        assertEquals(listOf("A\n", "B"), paragraphs(text))
+        assertEquals(listOf(Rule(offset = 2, revealed = false)), Live.of(text, IntRange(-5, -5)).rules)
+    }
+
+    @Test
     fun `every spelling of a rule is one`() {
         for (rule in listOf("---", "- - -", "***", "___", "- - - -")) {
             assertEquals(rule, 1, Live.of("a\n$rule\nb", IntRange(-5, -5)).rules.size)

@@ -774,7 +774,13 @@ private fun RuleLines(
                 val stroke = 1.dp.toPx()
                 for (rule in rules) {
                     if (rule.offset > result.layoutInput.text.length) continue
-                    val line = result.getLineForOffset(rule.offset)
+                    var line = result.getLineForOffset(rule.offset)
+                    // An indented line under the rule is a paragraph of its own, and the rule's
+                    // empty row is then the last row of the paragraph before it, ending where the
+                    // indent begins. The lookup resolves an offset on that seam to the paragraph
+                    // that starts there, one row too low; the row that starts at the same offset
+                    // and comes first is the rule's.
+                    if (line > 0 && result.getLineStart(line - 1) == rule.offset) line--
                     val y = (result.getLineTop(line) + result.getLineBottom(line)) / 2
                     drawLine(colour, Offset(0f, y), Offset(size.width, y), stroke)
                 }
