@@ -46,7 +46,7 @@
     <string name="pin_note">Anheften</string>
     <string name="unpin_note">Loslösen</string>
     <string name="share_note">Teilen</string>
-    <string name="show_source">Markdown zeigen</string>
+    <string name="show_source">Markdown-Quelltext</string>
     <string name="show_draft">Nur den Entwurf zeigen</string>
     <string name="show_all_lines">Alle Zeilen zeigen</string>
     <string name="draft_hint">Nichts auszulassen. Zeilen, die mit + beginnen, bleiben aus dem Entwurf , wie zB +eine Alternative Zeile.</string>

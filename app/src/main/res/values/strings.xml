@@ -189,7 +189,7 @@
     <string name="unpin_note">Unpin note</string>
     <string name="share_note">Share note</string>
     <!-- Editor menu, a toggle: show the Markdown as written instead of hiding the markers. -->
-    <string name="show_source">Show Markdown</string>
+    <string name="show_source">Markdown source</string>
     <!-- The eye button in the editor's bar, a toggle: read the note without its scratch lines —
          lines beginning with a "+" glued to the text, see markdown/Scratch.kt. The two strings
          are its descriptions in each state. -->

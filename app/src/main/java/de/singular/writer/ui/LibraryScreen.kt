@@ -186,15 +186,14 @@ fun LibraryScreen(
             modifier = modifier,
         )
 
-        VaultFailure.FOLDER_EMPTY -> Invitation(
-            title = stringResource(R.string.library_empty),
-            body = folderName.orEmpty(),
-            action = stringResource(R.string.action_change_folder),
-            onAction = onChooseFolder,
-            modifier = modifier,
-        )
-
-        null -> Box(modifier.fillMaxSize()) {
+        // An empty folder is the library with nothing in it, not a fault. Until 2026-09-15 it got
+        // an invitation of its own — "No notes in this folder yet" over a "Change folder" button —
+        // and that screen had no way to write the first note: the + button lives on the list, and
+        // the list was never reached. Somebody starting from an empty folder rather than from an
+        // export had to leave and come back with a file already in it. A tester found it on the
+        // first run. So the folder falls through to the list, which says the same sentence in the
+        // list's own empty state and keeps the button.
+        VaultFailure.FOLDER_EMPTY, null -> Box(modifier.fillMaxSize()) {
             val snackbar = remember { SnackbarHostState() }
             LaunchedEffect(message) {
                 if (message != null) {
@@ -405,7 +404,7 @@ fun LibraryScreen(
                     val screen = maxHeight
                     Box(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
                         Box(Modifier.fillMaxWidth().height(screen)) {
-                            Empty(filters, onChooseFolder)
+                            Empty(filters, folderEmpty = error == VaultFailure.FOLDER_EMPTY)
                         }
                     }
                 }
@@ -873,11 +872,13 @@ private fun NoteRow(
 
 /** Nothing matched — either a search or a tag filter. */
 @Composable
-private fun Empty(filters: Filters, onChooseFolder: () -> Unit) {
+private fun Empty(filters: Filters, folderEmpty: Boolean) {
     val query = filters.text
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Text(
             text = when {
+                // Nothing to filter yet, whatever the filter says.
+                folderEmpty -> stringResource(R.string.library_empty)
                 query.isNotBlank() -> stringResource(R.string.search_no_results, query)
                 // The one empty list that is good news, and it should read as such.
                 filters.duplicates -> stringResource(R.string.filter_no_duplicates)
