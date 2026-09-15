@@ -1,0 +1,3 @@
+An empty folder is no longer a dead end: it shows the library with the new-note button, so the first note can be written where every later one is.
+
+The editor menu item that shows a note as written is now called "Markdown source" — "Show Markdown" read as if it meant the formatted view.
